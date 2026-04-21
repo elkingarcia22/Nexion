@@ -46,7 +46,7 @@ For specific areas:
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|-------|----------|
 | Frontend | Next.js 14 (App Router) |
 | Styling | Tailwind CSS with Ubits tokens |
 | Database | Supabase (PostgreSQL) |
@@ -132,7 +132,7 @@ README.md             → Project overview
 ## Naming Conventions (Critical)
 
 | Element | Convention | Example |
-|---------|-----------|-------|
+|---------|-----------|--------|
 | Folders | kebab-case | `day-engine`, `source-processing` |
 | TS files (modules) | kebab-case | `source-intake-service.ts` |
 | React components | PascalCase | `DayTodayView.tsx`, `SourceCard.tsx` |

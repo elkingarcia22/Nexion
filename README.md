@@ -58,7 +58,7 @@ El home operativo real es **Día > Hoy** — no el Dashboard.
 La documentación del sistema vive en `/docs`. Los documentos principales son:
 
 | Documento | Propósito |
-|-----------|-----------|
+|-----------|----------|
 | `PROJECT_MASTER_BRIEF` | Definición del producto, releases, módulos |
 | `INFORMATION_ARCHITECTURE` | Navegación y jerarquía de pantallas |
 | `DOMAIN_MODEL` | Entidades del dominio y sus relaciones |
