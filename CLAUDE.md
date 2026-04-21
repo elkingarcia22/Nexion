@@ -68,7 +68,7 @@ For specific areas:
 - `action` → `#3865f5` — interactive buttons
 - `dark-ui` → `#2a303f` — elevated dark panels
 - `accent` → `#f49e04` — warnings, special highlights
-- `border` → `#d0d2d5` — card borders when needed
+- `border-gray` → `#d0d2d5` — card borders
 - `bg` → `#f8faff` — app background
 - `white` → `#ffffff` — cards, content surfaces
 
@@ -77,7 +77,7 @@ For specific areas:
 - Numeric / KPI values: `Roboto Mono` — always use for metrics
 
 **Never use:**
-- `#223999` or any color from the old Stitch prototype
+- `#223999` or any color from old prototypes
 - `Manrope` font
 - Pure black `#000000`
 
@@ -101,12 +101,15 @@ Full design reference: `docs/00-foundation/DESIGN.md`
 
 /apps
   /web                → Next.js 14 App Router frontend
+    /src
+      /app            → Route tree (App Router)
+      /components     → brand/, layout/, day/, sources/, shared/
+      /lib            → utils.ts, constants.ts
 
 /packages
-  /ui                 → Shared UI components
-  /types              → Shared TypeScript types
-  /config             → Shared config (tailwind, eslint, tsconfig)
-  /lib                → Shared utilities
+  /types              → Shared TypeScript domain types
+  /ui                 → Shared UI components (grows over time)
+  /config             → Shared Tailwind base tokens
 
 /supabase
   /migrations         → Versioned SQL migrations (YYYYMMDDHHMMSS_description.sql)
@@ -119,12 +122,38 @@ Full design reference: `docs/00-foundation/DESIGN.md`
     /prompts          → AI prompts used in workflows
 
 /scripts              → Dev/ops helper scripts
-
 /.github              → CI/CD (future)
+```
 
-CLAUDE.md             → This file
-README.md             → Project overview
-.env.example          → Required environment variables
+---
+
+## App Router Structure
+
+```
+/apps/web/src/app/
+  page.tsx                    ← redirects to /day/today
+  layout.tsx                  ← root layout + fonts
+  globals.css                 ← Ubits design tokens + component classes
+  (auth)/
+    layout.tsx                ← gradient-brand background
+    login/page.tsx            ← Google OAuth (Phase 2)
+  (app)/
+    layout.tsx                ← Sidebar + main content shell
+    dashboard/page.tsx
+    day/
+      today/page.tsx          ← HOME OPERATIVO REAL
+      sources/page.tsx        ← Source list + Añadir recurso
+      analysis-summary/page.tsx
+      tasks-generated/page.tsx
+      insights/page.tsx
+      metrics/page.tsx
+      alerts/page.tsx
+      feedback/page.tsx
+    tasks/page.tsx
+    objectives/page.tsx
+    metrics/page.tsx
+    insights/page.tsx
+    alerts/page.tsx
 ```
 
 ---
@@ -143,34 +172,7 @@ README.md             → Project overview
 | SQL columns | snake_case | `workspace_id`, `created_at` |
 | Routes | kebab-case | `/day/today`, `/day/sources` |
 
-**Language rule:** All technical code in English. UI labels and copy in Spanish (product language).
-
----
-
-## App Router Structure
-
-```
-/apps/web/src/app/
-  (auth)/
-    login/page.tsx
-  (app)/
-    layout.tsx              ← Shell + sidebar
-    dashboard/page.tsx
-    day/
-      today/page.tsx        ← HOME OPERATIVO REAL
-      sources/page.tsx
-      analysis-summary/page.tsx
-      tasks-generated/page.tsx
-      insights/page.tsx
-      metrics/page.tsx
-      alerts/page.tsx
-      feedback/page.tsx
-    tasks/page.tsx
-    objectives/page.tsx
-    metrics/page.tsx
-    insights/page.tsx
-    alerts/page.tsx
-```
+**Language rule:** All technical code in English. UI labels and copy in Spanish.
 
 ---
 
@@ -180,7 +182,7 @@ README.md             → Project overview
 2. **AI proposes; human approves.** Never create `tasks` directly from AI output — always via `task_proposals` + approval.
 3. **Supabase is the single source of truth** — not Google Sheets, not Drive.
 4. **No secrets in code or docs.** Reference variable names only.
-5. **One slice at a time.** Don't open Release 2 features before Release 1 is verified.
+5. **One slice at a time.** Don’t open Release 2 features before Release 1 is verified.
 6. **Traceability is mandatory:** every task must trace back to → finding → analysis → source.
 7. **SQL must be reproducible** — always via versioned migrations in `/supabase/migrations`.
 
@@ -188,22 +190,41 @@ README.md             → Project overview
 
 ## Current Implementation Status
 
-### Release 1 Scope (Build Now)
-- [ ] Login with Google
-- [ ] App shell + sidebar navigation
-- [ ] Día > Hoy (`/day/today`) — mock data initially
-- [ ] Día > Fuentes (`/day/sources`) — list + "Añadir recurso" form
-- [ ] Source states: pending → processing → processed / error
-- [ ] Supabase schema (Release 1 tables)
-- [ ] n8n: `add-source` + `process-source` workflows
-- [ ] Gemini analysis → findings → day summary
+### ✅ Phase 0 — Docs to repo (COMPLETE)
+- [x] All master documents pushed to `/docs`
+- [x] CLAUDE.md, README.md, .env.example in root
+- [x] Repo structure initialized
 
-### Not Yet (Release 2+)
-- Task proposals UI and approval flow
-- Objectives & KRs module
-- Global metrics, insights, alerts modules
-- Auto-update engine
-- Google Calendar integration
+### ✅ Phase 1 — Shell del producto (COMPLETE)
+- [x] Next.js 14 App Router scaffolded in `/apps/web`
+- [x] Ubits brand tokens in Tailwind config
+- [x] App shell + Sidebar with full navigation
+- [x] Login page with Google OAuth placeholder
+- [x] `Día > Hoy` — operational home with mock data
+- [x] `Día > Fuentes` — source list + Añadir recurso form
+- [x] All route stubs: dashboard, day/*, tasks, objectives, metrics, insights, alerts
+- [x] Shared types (`packages/types`), utils, constants, shared components
+- [x] pnpm monorepo + turbo setup
+
+### 🔧 Phase 2 — Auth (NEXT — blocked by Google OAuth setup)
+**Requires before starting:**
+- [ ] Google Cloud project created
+- [ ] OAuth consent screen configured
+- [ ] `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` available
+- [ ] Supabase Auth configured with Google provider
+- [ ] Vercel project created + env vars loaded
+
+### ⏳ Phase 3 — SQL Release 1
+- [ ] Write migrations for: workspaces, profiles, workspace_memberships,
+       sources, source_runs, source_contents, analyses, findings, day_summaries
+- [ ] Apply to Supabase project `gcafhrdzndmgnimonfrt`
+
+### ⏳ Phase 4 — Slice 1: Añadir fuente → procesar → resultado
+- [ ] Wire AddSourceForm to Supabase insert
+- [ ] n8n: `add-source` workflow
+- [ ] n8n: `process-source` workflow
+- [ ] Gemini: basic analysis prompt
+- [ ] Show structured result in UI
 
 ---
 
@@ -218,7 +239,7 @@ See `.env.example` for all required variables. Never commit real values.
 1. Always read relevant doc(s) before implementing
 2. Propose structure/approach before writing code for anything that touches schema, auth, navigation, or services
 3. Keep changes small and verifiable
-4. If a decision contradicts a master document, stop and flag it — don't improvise
+4. If a decision contradicts a master document, stop and flag it — don’t improvise
 5. Commit format: `feat(day): add today summary shell`, `fix(sources): handle invalid link`
 6. Branch format: `feat/day-today-shell`, `feat/source-processing`
 
