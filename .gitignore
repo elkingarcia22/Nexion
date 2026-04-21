@@ -1,0 +1,32 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Environment files — NEVER commit real values
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Turbo
+.turbo/
+
+# Vercel
+.vercel
+
+# Supabase local dev
+supabase/.branches
+supabase/.temp
+
+# Misc
+.DS_Store
+*.pem
+Thumbs.db
+coverage/
+*.log
