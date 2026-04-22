@@ -332,11 +332,4 @@ create policy "users_can_view_day_summaries"
     )
   );
 
--- ============================================================================
--- Migration metadata
--- ============================================================================
 
--- Log this migration
-insert into public.migrations (name, executed_at)
-values ('20260421000001_release1_base', now())
-on conflict (name) do nothing;

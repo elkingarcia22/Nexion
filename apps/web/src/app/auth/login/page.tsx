@@ -25,6 +25,11 @@ export default function Login() {
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/spreadsheets email profile",
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
 
@@ -40,15 +45,6 @@ export default function Login() {
     }
   };
 
-  const handleDemoLogin = () => {
-    setLoading(true);
-    // Activar modo demo en localStorage
-    localStorage.setItem('NEXION_DEMO_MODE', 'true');
-    // Simular delay y redirigir
-    setTimeout(() => {
-      router.push('/auth/callback?type=demo');
-    }, 800);
-  };
 
   return (
     <div className="h-screen flex flex-col md:grid md:grid-cols-2 bg-white overflow-hidden">
@@ -130,16 +126,7 @@ export default function Login() {
               )}
             </button>
 
-            <button
-              onClick={handleDemoLogin}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-navy text-white hover:bg-navy/90 font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 shadow-soft hover:shadow-hard"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
-              </svg>
-              <span>Acceso Demo (Desarrollo)</span>
-            </button>
+
           </div>
 
           {/* Permissions Card */}

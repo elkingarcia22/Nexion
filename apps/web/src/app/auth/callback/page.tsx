@@ -22,6 +22,14 @@ function CallbackContent() {
         }
 
         if (data?.session?.user) {
+          // Store Google provider token for Drive/Gemini API access
+          const session = data.session as any;
+          if (session.provider_token) {
+            sessionStorage.setItem("google_provider_token", session.provider_token);
+          }
+          if (session.provider_refresh_token) {
+            sessionStorage.setItem("google_provider_refresh_token", session.provider_refresh_token);
+          }
           // Login exitoso
           console.log("✓ User authenticated:", data.session.user.email);
           router.push("/");

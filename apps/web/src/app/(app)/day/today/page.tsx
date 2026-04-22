@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { AddSourceDrawer } from "@/components/sources/AddSourceDrawer";
 import { getDaySummary } from "@/lib/services/summary-service";
-import { getSourcesByWorkspace } from "@/lib/services/source-service";
-import { getUserWorkspace } from "@/lib/services/workspace-service";
+import { getSourcesByWorkspace, createSource } from "@/lib/services/source-service";
+import { getOrCreateWorkspace } from "@/lib/services/workspace-service";
+import { fetchGoogleDriveFiles, DriveFile } from "@/lib/services/google-drive-service";
 import { supabase } from "@/lib/supabase";
 
 /* ─── Data ────────────────────────────────────────────────────── */
@@ -58,12 +59,13 @@ const tasks = [
 type SourceType = "FUENTE EXTERNA" | "NOTAS DE GEMINI";
 
 interface Source {
-  id: number;
+  id: string | number;
   name: string;
   type: SourceType;
   format: string;
   time: string;
   checked: boolean;
+  url?: string | null;
   icon: React.ReactNode;
 }
 
@@ -149,28 +151,65 @@ export default function DayTodayPage() {
   const [activeTab, setActiveTab] = useState<"hoy" | "fuentes">("hoy");
   const [checkedTasks, setCheckedTasks] = useState<number[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
+  const [user, setUser] = useState<any>(null);
   const [summaryData, setSummaryData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [formatFilter, setFormatFilter] = useState<string>("all");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [driveSyncing, setDriveSyncing] = useState(false);
+
+  // Map a raw DB row to the UI Source shape
+  const mapDbSource = (s: any): Source => {
+    const isGemini =
+      s.source_type === "meeting" ||
+      s.source_type === "gemini_note" ||
+      (s.title || "").toLowerCase().includes("gemini") ||
+      (s.title || "").toLowerCase().includes("meet") ||
+      (s.title || "").toLowerCase().includes("transcri");
+
+    const url: string = s.original_url || "";
+    let fmt = "DOC";
+    if (url.includes("spreadsheets")) fmt = "SHEET";
+    else if (url.includes(".pdf")) fmt = "PDF";
+    else if (url.includes("docs.google")) fmt = "DOC";
+    else if (url.includes(".docx")) fmt = "DOCX";
+
+    return {
+      id: s.id,
+      name: s.title,
+      type: (isGemini ? "NOTAS DE GEMINI" : "FUENTE EXTERNA") as SourceType,
+      format: fmt,
+      time: new Date(s.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      checked: s.current_status === "processed",
+      url: s.original_url || null,
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+        </svg>
+      ),
+    };
+  };
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData?.session?.user;
+      const sessionUser = sessionData?.session?.user;
 
-      if (!user) {
+      if (!sessionUser) {
         console.error("No user found");
         return;
       }
 
+      setUser(sessionUser);
+
       // 1. Get Workspace
-      const wsResult = await getUserWorkspace(user.id);
+      const wsResult = await getOrCreateWorkspace(sessionUser.id, sessionUser.email || "");
       if (!wsResult.success || !wsResult.data) {
-        console.error("No workspace found:", wsResult.error);
+        console.error("No workspace found or created:", wsResult.error);
         return;
       }
       const wsId = wsResult.data.id;
@@ -182,32 +221,51 @@ export default function DayTodayPage() {
         setSummaryData(summaryResult.data);
       }
 
-      // 3. Get Sources
+      // 3. Load existing DB sources for today
       const sourcesResult = await getSourcesByWorkspace(wsId);
-      if (sourcesResult.success && sourcesResult.data) {
-        // Map DB sources to UI format
-        const mappedSources: Source[] = sourcesResult.data.map((s: any) => ({
-          id: s.id,
-          name: s.title,
-          type: (s.source_type === "gemini_note" ? "NOTAS DE GEMINI" : "FUENTE EXTERNA") as SourceType,
-          format: s.original_url ? s.original_url.split(".").pop()?.toUpperCase() || "WEB" : "DOC",
-          time: new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          checked: s.current_status === "processed",
-          icon: (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-          ),
-        }));
-        setSources(mappedSources);
+      const dbRows = sourcesResult.success && sourcesResult.data ? sourcesResult.data : [];
+      const dbSources: Source[] = dbRows.map(mapDbSource);
+      setSources(dbSources);
+
+      // 4. Auto-sync today's Google Drive files (silent, no button needed)
+      const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+      const existingUrls = new Set(dbRows.map((s: any) => s.original_url).filter(Boolean));
+
+      setDriveSyncing(true);
+      const driveResult = await fetchGoogleDriveFiles("all", today);
+      setDriveSyncing(false);
+
+      if (driveResult.success && driveResult.files && driveResult.files.length > 0) {
+        // Only save files not already stored (deduplicate by URL)
+        const newFiles = driveResult.files.filter((f) => !existingUrls.has(f.webViewLink));
+
+        const autoAdded: Source[] = [];
+        for (const file of newFiles) {
+          const result = await createSource({
+            title: file.name,
+            url: file.webViewLink,
+            type: file.mimeType.includes("spreadsheet") ? "document" : "meeting",
+            workspaceId: wsId,
+            createdBy: sessionUser.id,
+          });
+          if (result.success && result.data) {
+            autoAdded.push(mapDbSource(result.data as any));
+          }
+        }
+
+        if (autoAdded.length > 0) {
+          setSources((prev) => [...autoAdded, ...prev]);
+        }
       }
     } catch (err) {
       console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+
 
   useEffect(() => {
     fetchData();
@@ -383,7 +441,15 @@ export default function DayTodayPage() {
         <div className="space-y-5">
           {/* Section header */}
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold tracking-widest text-navy/50 uppercase">Lista de fuentes</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold tracking-widest text-navy/50 uppercase">Fuentes del día</span>
+              {driveSyncing && (
+                <span className="flex items-center gap-1.5 text-[10px] font-semibold text-primary/70">
+                  <span className="w-3 h-3 rounded-full border-2 border-primary/40 border-t-primary animate-spin inline-block" />
+                  Sincronizando Drive...
+                </span>
+              )}
+            </div>
             <button
               onClick={() => setDrawerOpen(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border-2 border-primary/30 text-primary hover:bg-primary/5 transition-all"
@@ -423,7 +489,7 @@ export default function DayTodayPage() {
                   <option value="PDF">PDF</option>
                   <option value="DOCX">DOCX</option>
                   <option value="DOC">DOC</option>
-                  <option value="XLSX">XLSX</option>
+                  <option value="SHEET">SHEET</option>
                   <option value="TXT">TXT</option>
                 </select>
                 <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-navy/40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
@@ -441,11 +507,16 @@ export default function DayTodayPage() {
 
           {/* Sources list */}
           <div className="bg-white rounded-xl border border-border/20 shadow-soft divide-y divide-border/10">
+            {filteredSources.length === 0 && !driveSyncing && (
+              <div className="py-12 text-center text-navy/40 text-sm">
+                No hay fuentes para hoy todavía.
+              </div>
+            )}
             {filteredSources.map((source) => (
               <div key={source.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
                 {/* Checkbox */}
                 <button
-                  onClick={() => toggleSource(source.id)}
+                  onClick={() => toggleSource(source.id as number)}
                   className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                     source.checked ? "border-primary bg-primary" : "border-border/40 hover:border-primary/50"
                   }`}
@@ -460,7 +531,7 @@ export default function DayTodayPage() {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-navy mb-1">{source.name}</p>
+                  <p className="text-sm font-semibold text-navy mb-1 truncate">{source.name}</p>
                   <div className="flex items-center gap-3">
                     <span className={`text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-md ${typeStyles[source.type]}`}>
                       {source.type}
@@ -476,12 +547,28 @@ export default function DayTodayPage() {
                   </div>
                 </div>
 
-                {/* Arrow */}
-                <button className="text-navy/20 hover:text-primary transition-colors">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </button>
+                {/* Link + Arrow */}
+                <div className="flex items-center gap-1">
+                  {source.url && (
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-navy/20 hover:text-primary transition-colors p-1"
+                      title="Abrir en Drive"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                        <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                      </svg>
+                    </a>
+                  )}
+                  <button className="text-navy/20 hover:text-primary transition-colors">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
 
