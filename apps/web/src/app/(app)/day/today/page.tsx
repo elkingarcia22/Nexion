@@ -623,7 +623,7 @@ export default function DayTodayPage() {
         onClose={() => setDrawerOpen(false)} 
         onSuccess={() => {
           setDrawerOpen(false);
-          fetchData();
+          fetchData(selectedDate);
         }}
       />
     </div>

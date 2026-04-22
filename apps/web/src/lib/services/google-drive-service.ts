@@ -52,12 +52,9 @@ export async function fetchGoogleDriveFiles(
     // Convert local date → UTC range to account for timezone offset
     if (date) {
       // Parse the local day boundaries using the local timezone offset
-      const offsetMs = new Date().getTimezoneOffset() * 60 * 1000; // ms offset (e.g. 300*60*1000 for UTC-5)
-      const localStart = new Date(`${date}T00:00:00`);  // midnight local
-      const localEnd   = new Date(`${date}T23:59:59`);  // end of day local
-      // Shift to UTC
-      const startUtc = new Date(localStart.getTime() + offsetMs).toISOString();
-      const endUtc   = new Date(localEnd.getTime()   + offsetMs).toISOString();
+      // new Date("YYYY-MM-DDT00:00:00") without Z is local time — .toISOString() converts to UTC correctly.
+      const startUtc = new Date(`${date}T00:00:00`).toISOString();
+      const endUtc   = new Date(`${date}T23:59:59`).toISOString();
       params.set("startUtc", startUtc);
       params.set("endUtc",   endUtc);
     }

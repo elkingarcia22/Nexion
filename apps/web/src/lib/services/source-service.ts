@@ -86,9 +86,10 @@ export async function getSourcesByDate(
     const d = String(localDate.getDate()).padStart(2, "0");
     const dateStr = `${y}-${m}-${d}`;
 
-    const offsetMs = localDate.getTimezoneOffset() * 60 * 1000;
-    const startUtc = new Date(new Date(`${dateStr}T00:00:00`).getTime() + offsetMs).toISOString();
-    const endUtc   = new Date(new Date(`${dateStr}T23:59:59`).getTime() + offsetMs).toISOString();
+    // new Date("YYYY-MM-DDT00:00:00") without Z is interpreted as local time by JS,
+    // so .toISOString() already converts correctly to UTC — no manual offset needed.
+    const startUtc = new Date(`${dateStr}T00:00:00`).toISOString();
+    const endUtc   = new Date(`${dateStr}T23:59:59`).toISOString();
 
     const { data, error } = await supabase
       .from("sources")
