@@ -34,27 +34,46 @@ export async function GET(request: NextRequest) {
   const endUtc   = searchParams.get("endUtc");
 
   try {
-    // Base: not trashed, all supported doc types
-    let q =
-      "trashed=false and (" +
-      "mimeType='application/vnd.google-apps.document'" +
-      " or mimeType='application/vnd.google-apps.spreadsheet'" +
-      " or mimeType='application/pdf'" +
-      ")";
+    // Base filter:
+    // 1. Owned by me OR
+    // 2. Shared with me AND has relevant keywords (Objetivos, Meeting, Gemini, Transcript)
+    // Exclusions for noise like receipts, transfers, etc.
+    const noiseWords = ["Comprobante", "Transferencia", "Factura", "Payment"];
+    const noiseFilter = noiseWords.map(w => `not name contains '${w}'`).join(" and ");
 
-    // Filter by UTC range so the user's full local day is covered correctly
+    // We want all Docs, Sheets, Slides, PDFs and Office formats that are NOT noise and NOT trashed
+    const mimeTypes = [
+      "mimeType='application/vnd.google-apps.document'",
+      "mimeType='application/vnd.google-apps.spreadsheet'",
+      "mimeType='application/vnd.google-apps.presentation'",
+      "mimeType='application/pdf'",
+      "mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document'",
+      "mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'",
+      "mimeType='application/vnd.openxmlformats-officedocument.presentationml.presentation'",
+      "mimeType='application/msword'",
+      "mimeType='application/vnd.ms-excel'"
+    ];
+
+    let q = `(${noiseFilter}) and trashed=false and (${mimeTypes.join(" or ")})`;
+
+    // Filter by UTC range covering modifiedTime OR viewedByMeTime
+    // This captures files the user edited AND files they just opened to read.
     if (startUtc && endUtc) {
-      q += ` and modifiedTime >= '${startUtc}' and modifiedTime <= '${endUtc}'`;
+      q += ` and (modifiedTime >= '${startUtc}' and modifiedTime <= '${endUtc}' or viewedByMeTime >= '${startUtc}' and viewedByMeTime <= '${endUtc}')`;
     }
 
     const driveUrl = new URL("https://www.googleapis.com/drive/v3/files");
     driveUrl.searchParams.set("q", q);
     driveUrl.searchParams.set(
       "fields",
-      "files(id,name,mimeType,createdTime,modifiedTime,webViewLink,owners)"
+      "files(id,name,mimeType,createdTime,modifiedTime,viewedByMeTime,webViewLink,owners)"
     );
     driveUrl.searchParams.set("orderBy", "modifiedTime desc");
-    driveUrl.searchParams.set("pageSize", "100");
+    driveUrl.searchParams.set("pageSize", "1000");
+    
+    // Support Shared Drives and Items shared with me
+    driveUrl.searchParams.set("supportsAllDrives", "true");
+    driveUrl.searchParams.set("includeItemsFromAllDrives", "true");
 
     const driveRes = await fetch(driveUrl.toString(), {
       headers: { Authorization: `Bearer ${googleToken}` },

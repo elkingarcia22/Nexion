@@ -11,18 +11,34 @@ interface DaySummary {
 }
 
 export async function getDaySummary(
-  workspaceId: string
+  workspaceId: string,
+  summaryDate?: string
 ): Promise<{ success: boolean; data?: DaySummary; error?: string }> {
+  if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
+    return {
+      success: true,
+      data: {
+        sources_count: 3,
+        findings_count: 8,
+        tasks_count: 2,
+        alerts_count: 0,
+        insights_count: 1,
+        focus_text: "Resumen histórico para el día seleccionado. El sistema está funcionando en modo demo.",
+        summary_text: "Simulación de análisis operativo para pruebas de navegación temporal."
+      }
+    };
+  }
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const targetDate = summaryDate || new Date().toISOString().split("T")[0];
 
-    // Try to get existing summary for today
-    const { data: summaryData, error: summaryError } = await supabase
+    // Try to get existing summary for the target date
+    const { data: summaries, error: summaryError } = await supabase
       .from("day_summaries")
       .select("*")
       .eq("workspace_id", workspaceId)
-      .eq("summary_date", today)
-      .single();
+      .eq("summary_date", targetDate);
+
+    const summaryData = summaries && summaries.length > 0 ? summaries[0] : null;
 
     if (summaryData) {
       return {
@@ -30,7 +46,7 @@ export async function getDaySummary(
         data: {
           sources_count: summaryData.source_count || 0,
           findings_count: summaryData.finding_count || 0,
-          tasks_count: summaryData.task_count || 0,
+          tasks_count: summaryData.proposal_count || 0,
           alerts_count: summaryData.alert_count || 0,
           insights_count: 0,
           focus_text: summaryData.focus_text,
@@ -54,7 +70,7 @@ export async function getDaySummary(
       .from("task_proposals")
       .select("*", { count: "exact", head: true })
       .eq("workspace_id", workspaceId)
-      .in("status", ["pending", "in_progress"]);
+      .in("proposal_status", ["pending_review"]);
 
     return {
       success: true,

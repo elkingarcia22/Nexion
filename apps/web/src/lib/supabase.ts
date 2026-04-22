@@ -16,11 +16,11 @@ client.auth.getSession = async () => {
       data: {
         session: {
           user: {
-            id: '00000000-0000-0000-0000-000000000000',
+            id: '5b76deb4-31ea-4b7e-b791-5caf71e015d3',
             email: 'demo@ubits.com',
             user_metadata: { full_name: 'Demo User (Nexión)' }
           },
-          access_token: 'demo-token',
+          access_token: null,
           expires_at: Math.floor(Date.now() / 1000) + 3600,
         } as any
       },

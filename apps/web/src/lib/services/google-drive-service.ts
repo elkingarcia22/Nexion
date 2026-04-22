@@ -40,6 +40,32 @@ export async function fetchGoogleDriveFiles(
         : null);
 
     if (!googleToken) {
+      if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
+        // Return mock files for testing in Demo Mode
+        console.log("Using mock Drive files for Demo Mode");
+        return {
+          success: true,
+          files: [
+            {
+              id: "mock-doc-1",
+              name: "Propuesta Proyecto Nexion.docx",
+              mimeType: "application/vnd.google-apps.document",
+              createdTime: new Date().toISOString(),
+              modifiedTime: new Date().toISOString(),
+              webViewLink: "https://docs.google.com/document/d/mock-doc-1",
+            },
+            {
+              id: "mock-sheet-1",
+              name: "Presupuesto Operativo Q2.xlsx",
+              mimeType: "application/vnd.google-apps.spreadsheet",
+              createdTime: new Date().toISOString(),
+              modifiedTime: new Date().toISOString(),
+              webViewLink: "https://docs.google.com/spreadsheets/d/mock-sheet-1",
+            }
+          ],
+          total: 2
+        };
+      }
       return {
         success: false,
         error:

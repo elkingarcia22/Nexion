@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AddSourceDrawer } from "@/components/sources/AddSourceDrawer";
 import { getDaySummary } from "@/lib/services/summary-service";
-import { getSourcesByDate, createSource } from "@/lib/services/source-service";
+import { getSourcesByDate, createSource, deleteSource, updateSource } from "@/lib/services/source-service";
 import { getOrCreateWorkspace } from "@/lib/services/workspace-service";
 import { fetchGoogleDriveFiles, DriveFile } from "@/lib/services/google-drive-service";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { supabase } from "@/lib/supabase";
 
 /* ─── Data ────────────────────────────────────────────────────── */
@@ -57,7 +58,7 @@ const tasks = [
   { id: 3, title: "Revisar propuesta de diseño para el panel móvil", tag: "DISEÑO", tagColor: "bg-purple-50 text-purple-700", date: "15 Oct, 2023", file: "Feedback_Cliente.txt", priority: "BAJA", priorityColor: "text-gray-400" },
 ];
 
-type SourceType = "FUENTE EXTERNA" | "NOTAS DE GEMINI";
+type SourceType = "FUENTE EXTERNA" | "NOTAS DE GEMINI" | "DOCUMENTO";
 
 interface Source {
   id: string | number;
@@ -68,6 +69,7 @@ interface Source {
   checked: boolean;
   url?: string | null;
   icon: React.ReactNode;
+  isManual?: boolean;
 }
 
 const initialSources: Source[] = [
@@ -144,6 +146,7 @@ function CheckIcon() {
 const typeStyles: Record<SourceType, string> = {
   "FUENTE EXTERNA": "bg-orange-50 text-orange-600",
   "NOTAS DE GEMINI": "bg-purple-50 text-purple-600",
+  "DOCUMENTO": "bg-blue-50 text-blue-600",
 };
 
 /* ─── Page ────────────────────────────────────────────────────── */
@@ -161,15 +164,11 @@ export default function DayTodayPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [driveSyncing, setDriveSyncing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Map a raw DB row to the UI Source shape
   const mapDbSource = (s: any): Source => {
-    const isGemini =
-      s.source_type === "meeting" ||
-      s.source_type === "gemini_note" ||
-      (s.title || "").toLowerCase().includes("gemini") ||
-      (s.title || "").toLowerCase().includes("meet") ||
-      (s.title || "").toLowerCase().includes("transcri");
+    const isGoogle = s.source_origin === "google";
 
     const url: string = s.original_url || "";
     let fmt = "DOC";
@@ -178,14 +177,20 @@ export default function DayTodayPage() {
     else if (url.includes("docs.google")) fmt = "DOC";
     else if (url.includes(".docx")) fmt = "DOCX";
 
+    let label: SourceType = "FUENTE EXTERNA";
+    if (isGoogle) {
+      label = (fmt === "SHEET" ? "DOCUMENTO" : "NOTAS DE GEMINI") as SourceType;
+    }
+
     return {
       id: s.id,
       name: s.title,
-      type: (isGemini ? "NOTAS DE GEMINI" : "FUENTE EXTERNA") as SourceType,
+      type: label,
       format: fmt,
       time: new Date(s.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       checked: s.current_status === "processed",
       url: s.original_url || null,
+      isManual: s.source_origin === "manual",
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -195,9 +200,15 @@ export default function DayTodayPage() {
     };
   };
 
+  const isFetchingRef = useRef(false);
+
   const fetchData = useCallback(async (forDate: Date) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     try {
       setLoading(true);
+      console.log("DEBUG: fetchData starting for date:", forDate.toDateString(), "at", new Date().toLocaleTimeString());
       setSources([]);
       const { data: sessionData } = await supabase.auth.getSession();
       const sessionUser = sessionData?.session?.user;
@@ -218,10 +229,14 @@ export default function DayTodayPage() {
       const wsId = wsResult.data.id;
       setWorkspaceId(wsId);
 
-      // 2. Get Summary (only for today)
-      if (forDate.toDateString() === new Date().toDateString()) {
-        const summaryResult = await getDaySummary(wsId);
-        if (summaryResult.success) setSummaryData(summaryResult.data);
+      // 2. Load existing summary
+      const y = forDate.getFullYear();
+      const m = String(forDate.getMonth() + 1).padStart(2, "0");
+      const d = String(forDate.getDate()).padStart(2, "0");
+      const dateStr = `${y}-${m}-${d}`;
+      const summaryResult = await getDaySummary(wsId, dateStr);
+      if (summaryResult.success) {
+        setSummaryData(summaryResult.data);
       } else {
         setSummaryData(null);
       }
@@ -229,40 +244,106 @@ export default function DayTodayPage() {
       // 3. Load DB sources for the selected date only
       const sourcesResult = await getSourcesByDate(wsId, forDate);
       const dbRows = sourcesResult.success && sourcesResult.data ? sourcesResult.data : [];
+      console.log("DEBUG: DB Sources loaded:", dbRows.length, dbRows.map(r => r.title));
+
       const dbSources: Source[] = dbRows.map(mapDbSource);
-      setSources(dbSources);
+      
+      // Filter out noise AND duplicates that might already be in DB
+      const noiseWords = ["Comprobante", "Transferencia", "Factura", "Payment"];
+      const seenIdsInitial = new Set();
+      const seenUrlsInitial = new Set();
+      const normalize = (u: string) => u ? u.split("?")[0].replace(/\/$/, "") : "";
+
+      const cleanDbSources = dbSources.filter(s => {
+        if (seenIdsInitial.has(s.id)) return false;
+        seenIdsInitial.add(s.id);
+        
+        if (s.url) {
+          const norm = normalize(s.url);
+          if (seenUrlsInitial.has(norm)) return false;
+          seenUrlsInitial.add(norm);
+        }
+
+        return !noiseWords.some(w => s.name.toLowerCase().includes(w.toLowerCase()));
+      });
+
+      setSources(cleanDbSources);
 
       // 4. Auto-sync Drive files for the selected date
-      const dateStr = forDate.toLocaleDateString("sv-SE"); // "YYYY-MM-DD" in local time
       const existingUrls = new Set(dbRows.map((s: any) => s.original_url).filter(Boolean));
 
       setDriveSyncing(true);
+      console.log("DEBUG: Syncing Google Drive for date:", dateStr);
       const driveResult = await fetchGoogleDriveFiles("all", dateStr);
       setDriveSyncing(false);
 
       if (driveResult.success && driveResult.files && driveResult.files.length > 0) {
-        const newFiles = driveResult.files.filter((f) => !existingUrls.has(f.webViewLink));
+        console.log("DEBUG: Drive files found:", driveResult.files.length, driveResult.files.map(f => f.name));
+        
+
+        const normalizeUrl = (url: string) => url ? url.split("?")[0].replace(/\/$/, "") : "";
+        
         const autoAdded: Source[] = [];
-        for (const file of newFiles) {
+        for (const file of driveResult.files) {
+          const fileUrl = normalizeUrl(file.webViewLink);
+          const existing = dbRows.find((r: any) => normalizeUrl(r.original_url) === fileUrl);
+          
+          if (existing) {
+            // Fix: If it was auto-added but marked as manual due to a previous bug
+            if (existing.source_origin === "manual") {
+              console.log(`DEBUG: Fixing origin for source: ${file.name}`);
+              await updateSource(existing.id, { source_origin: "google" } as any);
+              
+              setSources(prev => prev.map(s => 
+                s.id === existing.id ? { ...s, isManual: false, type: "NOTAS DE GEMINI" } : s
+              ));
+            }
+            continue;
+          }
+
           const result = await createSource({
             title: file.name,
             url: file.webViewLink,
             type: file.mimeType.includes("spreadsheet") ? "document" : "meeting",
             workspaceId: wsId,
             createdBy: sessionUser.id,
+            origin: "google",
+            sourceDate: forDate.toISOString(),
           });
           if (result.success && result.data) {
             autoAdded.push(mapDbSource(result.data as any));
           }
         }
         if (autoAdded.length > 0) {
-          setSources((prev) => [...autoAdded, ...prev]);
+          setSources((prev) => {
+            const combined = [...autoAdded, ...prev];
+            // Filter noise AND duplicates by ID/URL
+            const seenIds = new Set();
+            const seenUrls = new Set();
+            const normalize = (u: string) => u ? u.split("?")[0].replace(/\/$/, "") : "";
+
+            return combined.filter(s => {
+              if (seenIds.has(s.id)) return false;
+              seenIds.add(s.id);
+              
+              if (s.url) {
+                const norm = normalize(s.url);
+                if (seenUrls.has(norm)) return false;
+                seenUrls.add(norm);
+              }
+              
+              return !noiseWords.some(w => s.name.toLowerCase().includes(w.toLowerCase()));
+            });
+          });
         }
+      } else {
+        console.log("DEBUG: No new files from Drive or sync error:", driveResult.error);
       }
     } catch (err) {
       console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -295,6 +376,33 @@ export default function DayTodayPage() {
 
   const toggleSource = (id: number) =>
     setSources((prev) => prev.map((s) => s.id === id ? { ...s, checked: !s.checked } : s));
+
+  const handleDeleteSource = (id: string) => {
+    setConfirmDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!confirmDeleteId) return;
+    const result = await deleteSource(confirmDeleteId);
+    if (result.success) {
+      setSources((prev) => prev.filter((s) => s.id !== confirmDeleteId));
+      setConfirmDeleteId(null);
+    } else {
+      alert("Error al eliminar la fuente: " + result.error);
+    }
+  };
+
+  const handleRenameSource = async (id: string, currentTitle: string) => {
+    const newTitle = prompt("Nuevo nombre de la fuente:", currentTitle);
+    if (!newTitle || newTitle === currentTitle) return;
+
+    const result = await updateSource(id, { title: newTitle });
+    if (result.success) {
+      setSources((prev) => prev.map((s) => s.id === id ? { ...s, name: newTitle } : s));
+    } else {
+      alert("Error al renombrar la fuente: " + result.error);
+    }
+  };
 
   const filteredSources = sources.filter((s) => {
     const typeOk = typeFilter === "all" || s.type === typeFilter;
@@ -360,7 +468,12 @@ export default function DayTodayPage() {
             )}
           </div>
           <button
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
+            onClick={() => {
+              // Trigger a fresh data fetch to simulate analysis check
+              fetchData(selectedDate);
+              // In a real app, this would call an API to trigger the Day Engine
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
             style={{ background: "linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%)" }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -579,14 +692,39 @@ export default function DayTodayPage() {
                   </div>
                 </div>
 
-                {/* Link + Arrow */}
+                {/* Actions: Edit, Delete, Link */}
                 <div className="flex items-center gap-1">
+                  {source.isManual && (
+                    <>
+                      <button
+                        onClick={() => handleRenameSource(source.id as string, source.name)}
+                        className="text-navy/20 hover:text-primary transition-colors p-1.5"
+                        title="Renombrar"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteSource(source.id as string)}
+                        className="text-navy/20 hover:text-red-500 transition-colors p-1.5"
+                        title="Eliminar"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+
                   {source.url && (
                     <a
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-navy/20 hover:text-primary transition-colors p-1"
+                      className="text-navy/20 hover:text-primary transition-colors p-1.5"
                       title="Abrir en Drive"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -595,7 +733,7 @@ export default function DayTodayPage() {
                       </svg>
                     </a>
                   )}
-                  <button className="text-navy/20 hover:text-primary transition-colors">
+                  <button className="text-navy/20 hover:text-primary transition-colors p-1.5">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
@@ -621,10 +759,22 @@ export default function DayTodayPage() {
       <AddSourceDrawer 
         open={drawerOpen} 
         onClose={() => setDrawerOpen(false)} 
-        onSuccess={() => {
+        onAdd={() => {
           setDrawerOpen(false);
           fetchData(selectedDate);
         }}
+        sourceDate={selectedDate}
+      />
+
+      <ConfirmModal
+        open={!!confirmDeleteId}
+        title="Eliminar Fuente"
+        message="¿Estás seguro de que deseas eliminar esta fuente? Esta acción no se puede deshacer y el contenido dejará de estar disponible para el análisis."
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmDeleteId(null)}
       />
     </div>
   );

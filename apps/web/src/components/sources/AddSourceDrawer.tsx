@@ -19,10 +19,11 @@ const SOURCE_TYPES = [
 interface AddSourceDrawerProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (source: { name: string; url: string; type: string }) => void;
+  onAdd: (source?: { name: string; url: string; type: string }) => void;
+  sourceDate?: Date;
 }
 
-export function AddSourceDrawer({ open, onClose, onAdd }: AddSourceDrawerProps) {
+export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceDrawerProps) {
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [type, setType] = useState("");
@@ -95,7 +96,8 @@ export function AddSourceDrawer({ open, onClose, onAdd }: AddSourceDrawerProps) 
         url: url,
         type: serviceType,
         workspaceId: workspace.id,
-        createdBy: session.user.id
+        createdBy: session.user.id,
+        sourceDate: sourceDate?.toISOString()
       });
 
       if (!result.success) {

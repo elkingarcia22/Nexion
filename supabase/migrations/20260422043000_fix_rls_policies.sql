@@ -24,6 +24,12 @@ CREATE POLICY "users_can_read_their_memberships"
 -- Workspaces: allow users to read workspaces they're a member of (already exists in base)
 -- This supplements the existing policy if needed
 
+-- Workspaces: allow authenticated users to create workspaces
+CREATE POLICY "users_can_create_workspaces"
+  ON public.workspaces FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() IS NOT NULL);
+
 -- Workspaces: allow users to update their own workspaces (owners only)
 -- Uses EXISTS to avoid recursion
 CREATE POLICY "users_can_update_their_workspaces"
