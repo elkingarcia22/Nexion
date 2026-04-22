@@ -71,6 +71,47 @@ export async function getSourcesByWorkspace(
   }
 }
 
+/**
+ * Returns sources for a workspace created on a specific local day.
+ * Converts the local date to UTC boundaries to handle timezone offsets correctly.
+ */
+export async function getSourcesByDate(
+  workspaceId: string,
+  localDate: Date
+): Promise<{ success: boolean; data?: Source[]; error?: string }> {
+  try {
+    // Build UTC range covering the full local day
+    const y = localDate.getFullYear();
+    const m = String(localDate.getMonth() + 1).padStart(2, "0");
+    const d = String(localDate.getDate()).padStart(2, "0");
+    const dateStr = `${y}-${m}-${d}`;
+
+    const offsetMs = localDate.getTimezoneOffset() * 60 * 1000;
+    const startUtc = new Date(new Date(`${dateStr}T00:00:00`).getTime() + offsetMs).toISOString();
+    const endUtc   = new Date(new Date(`${dateStr}T23:59:59`).getTime() + offsetMs).toISOString();
+
+    const { data, error } = await supabase
+      .from("sources")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .gte("created_at", startUtc)
+      .lte("created_at", endUtc)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data: data as Source[] };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+}
+
+
 export async function deleteSource(
   sourceId: string
 ): Promise<{ success: boolean; error?: string }> {

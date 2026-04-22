@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { AddSourceDrawer } from "@/components/sources/AddSourceDrawer";
 import { getDaySummary } from "@/lib/services/summary-service";
-import { getSourcesByWorkspace, createSource } from "@/lib/services/source-service";
+import { getSourcesByDate, createSource } from "@/lib/services/source-service";
 import { getOrCreateWorkspace } from "@/lib/services/workspace-service";
 import { fetchGoogleDriveFiles, DriveFile } from "@/lib/services/google-drive-service";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -226,8 +226,8 @@ export default function DayTodayPage() {
         setSummaryData(null);
       }
 
-      // 3. Load existing DB sources
-      const sourcesResult = await getSourcesByWorkspace(wsId);
+      // 3. Load DB sources for the selected date only
+      const sourcesResult = await getSourcesByDate(wsId, forDate);
       const dbRows = sourcesResult.success && sourcesResult.data ? sourcesResult.data : [];
       const dbSources: Source[] = dbRows.map(mapDbSource);
       setSources(dbSources);

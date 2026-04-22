@@ -21,7 +21,7 @@ export type DriveFilter = "all" | "gemini" | "meet" | "docs";
 
 export async function fetchGoogleDriveFiles(
   filter: DriveFilter = "gemini",
-  date?: string  // ISO date "YYYY-MM-DD" — if provided, only files from that day
+  date?: string  // local date "YYYY-MM-DD" — if provided, only files from that local day
 ): Promise<DriveFilesResult> {
   try {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -48,7 +48,19 @@ export async function fetchGoogleDriveFiles(
     }
 
     const params = new URLSearchParams({ filter });
-    if (date) params.set("date", date);
+
+    // Convert local date → UTC range to account for timezone offset
+    if (date) {
+      // Parse the local day boundaries using the local timezone offset
+      const offsetMs = new Date().getTimezoneOffset() * 60 * 1000; // ms offset (e.g. 300*60*1000 for UTC-5)
+      const localStart = new Date(`${date}T00:00:00`);  // midnight local
+      const localEnd   = new Date(`${date}T23:59:59`);  // end of day local
+      // Shift to UTC
+      const startUtc = new Date(localStart.getTime() + offsetMs).toISOString();
+      const endUtc   = new Date(localEnd.getTime()   + offsetMs).toISOString();
+      params.set("startUtc", startUtc);
+      params.set("endUtc",   endUtc);
+    }
 
     const res = await fetch(`/api/google/drive?${params.toString()}`, {
       headers: {

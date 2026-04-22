@@ -28,8 +28,10 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  // date = ISO date string like "2026-04-21" — filters files modified ON that day
-  const date = searchParams.get("date");
+  // startUtc / endUtc = full ISO strings in UTC covering the user's local day
+  // e.g. for UTC-5, April 20 local → startUtc=2026-04-20T05:00:00Z endUtc=2026-04-21T05:00:00Z
+  const startUtc = searchParams.get("startUtc");
+  const endUtc   = searchParams.get("endUtc");
 
   try {
     // Base: not trashed, all supported doc types
@@ -40,12 +42,9 @@ export async function GET(request: NextRequest) {
       " or mimeType='application/pdf'" +
       ")";
 
-    // Filter by day if provided (files modified or created on that specific date)
-    if (date) {
-      const startOfDay = `${date}T00:00:00`;
-      const endOfDay = `${date}T23:59:59`;
-      q += ` and (modifiedTime >= '${startOfDay}' or createdTime >= '${startOfDay}')`;
-      q += ` and (modifiedTime <= '${endOfDay}' or createdTime <= '${endOfDay}')`;
+    // Filter by UTC range so the user's full local day is covered correctly
+    if (startUtc && endUtc) {
+      q += ` and modifiedTime >= '${startUtc}' and modifiedTime <= '${endUtc}'`;
     }
 
     const driveUrl = new URL("https://www.googleapis.com/drive/v3/files");
