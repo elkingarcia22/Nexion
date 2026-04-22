@@ -1,164 +1,206 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { UbitsLogo } from '@/components/brand/UbitsLogo'
-import { cn } from '@/lib/utils'
-import {
-  LayoutDashboard,
-  Sunrise,
-  ListTodo,
-  Target,
-  BarChart2,
-  Lightbulb,
-  BellRing,
-  Home,
-  Database,
-  FileSearch,
-  ClipboardList,
-  TrendingUp,
-  Bell,
-  MessageSquare,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
-interface NavItem {
-  href: string
-  label: string
-  icon: LucideIcon
+const navItems = [
+  {
+    href: "/day/today",
+    label: "Día",
+    matchPrefix: "/day",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+    ),
+  },
+  {
+    href: "/tasks",
+    label: "Tareas",
+    matchPrefix: "/tasks",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+      </svg>
+    ),
+  },
+  {
+    href: "/objectives",
+    label: "Objetivos",
+    matchPrefix: "/objectives",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+        <path d="M4 22h16" />
+        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/metrics",
+    label: "Métricas",
+    matchPrefix: "/metrics",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+    ),
+  },
+  {
+    href: "/alerts",
+    label: "Alertas",
+    matchPrefix: "/alerts",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 01-3.46 0" />
+      </svg>
+    ),
+  },
+  {
+    href: "/insights",
+    label: "Boletines",
+    matchPrefix: "/insights",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M3 9h18" />
+        <path d="M3 15h18" />
+        <path d="M9 3v18" />
+      </svg>
+    ),
+  },
+];
+
+interface SidebarProps {
+  expanded: boolean;
+  onToggle: () => void;
 }
 
-interface NavSection {
-  title?: string
-  items: NavItem[]
-}
+export function Sidebar({ expanded, onToggle }: SidebarProps) {
+  const pathname = usePathname();
 
-const navigation: NavSection[] = [
-  {
-    items: [
-      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    ],
-  },
-  {
-    title: 'DÍA',
-    items: [
-      { href: '/day/today', label: 'Hoy', icon: Home },
-      { href: '/day/sources', label: 'Fuentes', icon: Database },
-      { href: '/day/analysis-summary', label: 'Análisis', icon: FileSearch },
-      { href: '/day/tasks-generated', label: 'Tareas generadas', icon: ClipboardList },
-      { href: '/day/insights', label: 'Insights', icon: Lightbulb },
-      { href: '/day/metrics', label: 'Métricas', icon: TrendingUp },
-      { href: '/day/alerts', label: 'Alertas', icon: Bell },
-      { href: '/day/feedback', label: 'Feedback', icon: MessageSquare },
-    ],
-  },
-  {
-    title: 'TRABAJO',
-    items: [
-      { href: '/tasks', label: 'Tareas', icon: ListTodo },
-      { href: '/objectives', label: 'Objetivos', icon: Target },
-    ],
-  },
-  {
-    title: 'SEÑALES',
-    items: [
-      { href: '/metrics', label: 'Métricas', icon: BarChart2 },
-      { href: '/insights', label: 'Insights', icon: Lightbulb },
-      { href: '/alerts', label: 'Alertas', icon: BellRing },
-    ],
-  },
-]
-
-export function Sidebar() {
-  const pathname = usePathname()
-
-  function isActive(href: string): boolean {
-    if (href === '/day/today') return pathname === '/day/today'
-    return pathname === href || pathname.startsWith(href + '/')
-  }
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/auth/login";
+  };
 
   return (
     <aside
-      className="flex flex-col w-[240px] flex-shrink-0 bg-navy border-r border-white/5"
-      style={{ height: '100vh', position: 'sticky', top: 0 }}
-      aria-label="Navegación principal"
+      className="fixed left-0 top-0 h-screen flex flex-col z-50 border-r border-[#e2e6f3] transition-all duration-300 ease-in-out"
+      style={{
+        width: expanded ? "224px" : "64px",
+        background: "#eef1fb",
+      }}
     >
-      {/* Brand */}
-      <div className="flex flex-col gap-0 px-4 pt-5 pb-4 border-b border-white/5">
-        <UbitsLogo color="white" width={68} />
-        <div className="flex items-center gap-2 mt-2.5">
-          <span className="text-white font-semibold text-[15px] tracking-tight">
+      {/* Header: logo + name + toggle */}
+      <div className="flex items-center h-16 px-3 gap-3 flex-shrink-0">
+        <div className="w-9 h-9 bg-navy rounded-lg flex items-center justify-center flex-shrink-0">
+          <span className="text-white font-bold text-sm">N</span>
+        </div>
+        {expanded && (
+          <span className="text-navy font-bold text-base tracking-tight whitespace-nowrap overflow-hidden">
             Nexión
           </span>
-          <span className="text-[9px] font-mono text-white/25 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
-            v0.1
-          </span>
-        </div>
+        )}
+        <button
+          onClick={onToggle}
+          className="ml-auto w-6 h-6 rounded-md flex items-center justify-center text-navy/30 hover:text-navy/60 hover:bg-white/60 transition-all flex-shrink-0"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`transition-transform duration-300 ${expanded ? "" : "rotate-180"}`}
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
-        {navigation.map((section, idx) => (
-          <div key={idx}>
-            {section.title && (
-              <p className="sidebar-section-label">{section.title}</p>
-            )}
-            <div className="space-y-0.5">
-              {section.items.map((item) => {
-                const active = isActive(item.href)
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn('sidebar-item', active && 'sidebar-item-active')}
-                    aria-current={active ? 'page' : undefined}
-                  >
-                    <item.icon size={14} className="flex-shrink-0" strokeWidth={2} />
-                    <span className="truncate">{item.label}</span>
-                    {/* Pending indicator for future features */}
-                    {!active &&
-                      [
-                        '/day/analysis-summary',
-                        '/day/tasks-generated',
-                        '/tasks',
-                        '/objectives',
-                        '/metrics',
-                        '/insights',
-                        '/alerts',
-                        '/dashboard',
-                      ].includes(item.href) && (
-                        <span className="ml-auto text-[9px] font-mono text-white/20">
-                          soon
-                        </span>
-                      )}
-                  </Link>
-                )
-              })}
+      {/* Nav */}
+      <nav className="flex-1 flex flex-col gap-0.5 px-2 py-3 overflow-hidden">
+        {navItems.map((item) => {
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.matchPrefix);
+
+          return (
+            <div key={item.href} className="relative group">
+              <Link
+                href={item.href}
+                className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 transition-all duration-150 ${
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-navy/40 hover:bg-white/60 hover:text-navy/70"
+                }`}
+              >
+                <span className="flex-shrink-0">{item.icon}</span>
+                {expanded && (
+                  <span className="text-sm font-medium whitespace-nowrap overflow-hidden">
+                    {item.label}
+                  </span>
+                )}
+              </Link>
+
+              {/* Tooltip when collapsed */}
+              {!expanded && (
+                <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  <div className="bg-navy text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-hard">
+                    {item.label}
+                  </div>
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-navy" />
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
-      {/* System status */}
-      <div className="px-3 py-2 border-t border-white/5">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg">
-          <span className="w-1.5 h-1.5 rounded-full bg-bright animate-pulse-soft flex-shrink-0" />
-          <span className="text-[10px] text-white/30 font-mono truncate">Sistema operativo</span>
-        </div>
-      </div>
+      {/* Logout */}
+      <div className="px-2 pb-4 flex-shrink-0">
+        <div className="relative group">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full rounded-xl px-2.5 py-2.5 text-navy/40 hover:bg-white/60 hover:text-navy/70 transition-all duration-150"
+          >
+            <span className="flex-shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </span>
+            {expanded && (
+              <span className="text-sm font-medium whitespace-nowrap overflow-hidden">
+                Cerrar sesión
+              </span>
+            )}
+          </button>
 
-      {/* User area */}
-      <div className="px-3 pb-4 border-t border-white/5 pt-2">
-        <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-dark-ui cursor-pointer transition-colors">
-          <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-[11px] font-semibold text-primary">U</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-medium text-white/80 truncate">Workspace</p>
-            <p className="text-[10px] text-white/30 truncate">ubits.co</p>
-          </div>
+          {/* Tooltip when collapsed */}
+          {!expanded && (
+            <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+              <div className="bg-navy text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-hard">
+                Cerrar sesión
+              </div>
+              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-navy" />
+            </div>
+          )}
         </div>
       </div>
     </aside>
-  )
+  );
 }

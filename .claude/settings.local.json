@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__computer",
+      "mcp__github__search_repositories",
+      "mcp__github__get_file_contents",
+      "mcp__github__push_files",
+      "mcp__github__create_or_update_file",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(PORT=3003 npm run dev)",
+      "Bash(curl -s http://localhost:3003)",
+      "Bash(pkill -f \"next dev\" sleep 2 cd /Users/ub-col-pro-lf4/Desktop/Nexión/apps/web)",
+      "mcp__21c9911c-3925-45ff-b8c5-f6d667b50042__list_tables",
+      "mcp__21c9911c-3925-45ff-b8c5-f6d667b50042__list_migrations",
+      "mcp__21c9911c-3925-45ff-b8c5-f6d667b50042__apply_migration",
+      "Bash(npx pnpm *)",
+      "Bash(curl -s http://localhost:3003/sources)",
+      "Bash(pnpm dev *)",
+      "mcp__Claude_in_Chrome__read_page",
+      "mcp__Claude_in_Chrome__read_console_messages",
+      "Bash(kill 40874)",
+      "mcp__Claude_in_Chrome__read_network_requests",
+      "mcp__21c9911c-3925-45ff-b8c5-f6d667b50042__execute_sql",
+      "Bash(curl -s -X GET 'https://gcafhrdzndmgnimonfrt.supabase.co/rest/v1/sources?select=*&workspace_id=eq.9d742ece-509e-44b7-a041-e428308aad74' -H 'apikey: sb_publishable_9DyVbZrBIASu9gPe27jHMg__1M-YMDH' -H 'Authorization: Bearer sb_publishable_9DyVbZrBIASu9gPe27jHMg__1M-YMDH')",
+      "Bash(pkill -f \"node.*next dev\")",
+      "Bash(curl -s http://localhost:3003/_next/static/css/app/layout.css)",
+      "Bash(pkill -f \"node\")",
+      "mcp__Claude_in_Chrome__find",
+      "mcp__Claude_in_Chrome__form_input",
+      "WebFetch(domain:stitch.withgoogle.com)",
+      "mcp__mcp-registry__search_mcp_registry"
+    ]
+  }
+}

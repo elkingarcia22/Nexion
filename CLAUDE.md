@@ -46,7 +46,7 @@ For specific areas:
 ## Tech Stack
 
 | Layer | Technology |
-|-------|----------|
+|-------|-----------|
 | Frontend | Next.js 14 (App Router) |
 | Styling | Tailwind CSS with Ubits tokens |
 | Database | Supabase (PostgreSQL) |
@@ -68,7 +68,7 @@ For specific areas:
 - `action` → `#3865f5` — interactive buttons
 - `dark-ui` → `#2a303f` — elevated dark panels
 - `accent` → `#f49e04` — warnings, special highlights
-- `border-gray` → `#d0d2d5` — card borders
+- `border` → `#d0d2d5` — card borders when needed
 - `bg` → `#f8faff` — app background
 - `white` → `#ffffff` — cards, content surfaces
 
@@ -77,7 +77,7 @@ For specific areas:
 - Numeric / KPI values: `Roboto Mono` — always use for metrics
 
 **Never use:**
-- `#223999` or any color from old prototypes
+- `#223999` or any color from the old Stitch prototype
 - `Manrope` font
 - Pure black `#000000`
 
@@ -101,15 +101,12 @@ Full design reference: `docs/00-foundation/DESIGN.md`
 
 /apps
   /web                → Next.js 14 App Router frontend
-    /src
-      /app            → Route tree (App Router)
-      /components     → brand/, layout/, day/, sources/, shared/
-      /lib            → utils.ts, constants.ts
 
 /packages
-  /types              → Shared TypeScript domain types
-  /ui                 → Shared UI components (grows over time)
-  /config             → Shared Tailwind base tokens
+  /ui                 → Shared UI components
+  /types              → Shared TypeScript types
+  /config             → Shared config (tailwind, eslint, tsconfig)
+  /lib                → Shared utilities
 
 /supabase
   /migrations         → Versioned SQL migrations (YYYYMMDDHHMMSS_description.sql)
@@ -122,8 +119,31 @@ Full design reference: `docs/00-foundation/DESIGN.md`
     /prompts          → AI prompts used in workflows
 
 /scripts              → Dev/ops helper scripts
+
 /.github              → CI/CD (future)
+
+CLAUDE.md             → This file
+README.md             → Project overview
+.env.example          → Required environment variables
 ```
+
+---
+
+## Naming Conventions (Critical)
+
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Folders | kebab-case | `day-engine`, `source-processing` |
+| TS files (modules) | kebab-case | `source-intake-service.ts` |
+| React components | PascalCase | `DayTodayView.tsx`, `SourceCard.tsx` |
+| Functions | camelCase | `createSourceFromLink`, `getDaySummary` |
+| Types/Interfaces | PascalCase | `Source`, `DaySummary`, `TaskProposal` |
+| Constants | UPPER_SNAKE_CASE | `DEFAULT_DAY_REFRESH_HOUR` |
+| SQL tables | snake_case plural | `task_proposals`, `day_summaries` |
+| SQL columns | snake_case | `workspace_id`, `created_at` |
+| Routes | kebab-case | `/day/today`, `/day/sources` |
+
+**Language rule:** All technical code in English. UI labels and copy in Spanish (product language).
 
 ---
 
@@ -131,18 +151,14 @@ Full design reference: `docs/00-foundation/DESIGN.md`
 
 ```
 /apps/web/src/app/
-  page.tsx                    ← redirects to /day/today
-  layout.tsx                  ← root layout + fonts
-  globals.css                 ← Ubits design tokens + component classes
   (auth)/
-    layout.tsx                ← gradient-brand background
-    login/page.tsx            ← Google OAuth (Phase 2)
+    login/page.tsx
   (app)/
-    layout.tsx                ← Sidebar + main content shell
+    layout.tsx              ← Shell + sidebar
     dashboard/page.tsx
     day/
-      today/page.tsx          ← HOME OPERATIVO REAL
-      sources/page.tsx        ← Source list + Añadir recurso
+      today/page.tsx        ← HOME OPERATIVO REAL
+      sources/page.tsx
       analysis-summary/page.tsx
       tasks-generated/page.tsx
       insights/page.tsx
@@ -158,31 +174,13 @@ Full design reference: `docs/00-foundation/DESIGN.md`
 
 ---
 
-## Naming Conventions (Critical)
-
-| Element | Convention | Example |
-|---------|-----------|--------|
-| Folders | kebab-case | `day-engine`, `source-processing` |
-| TS files (modules) | kebab-case | `source-intake-service.ts` |
-| React components | PascalCase | `DayTodayView.tsx`, `SourceCard.tsx` |
-| Functions | camelCase | `createSourceFromLink`, `getDaySummary` |
-| Types/Interfaces | PascalCase | `Source`, `DaySummary`, `TaskProposal` |
-| Constants | UPPER_SNAKE_CASE | `DEFAULT_DAY_REFRESH_HOUR` |
-| SQL tables | snake_case plural | `task_proposals`, `day_summaries` |
-| SQL columns | snake_case | `workspace_id`, `created_at` |
-| Routes | kebab-case | `/day/today`, `/day/sources` |
-
-**Language rule:** All technical code in English. UI labels and copy in Spanish.
-
----
-
 ## Non-Negotiable Rules
 
 1. **Frontend does NOT orchestrate backend logic.** n8n is the orchestrator.
 2. **AI proposes; human approves.** Never create `tasks` directly from AI output — always via `task_proposals` + approval.
 3. **Supabase is the single source of truth** — not Google Sheets, not Drive.
 4. **No secrets in code or docs.** Reference variable names only.
-5. **One slice at a time.** Don’t open Release 2 features before Release 1 is verified.
+5. **One slice at a time.** Don't open Release 2 features before Release 1 is verified.
 6. **Traceability is mandatory:** every task must trace back to → finding → analysis → source.
 7. **SQL must be reproducible** — always via versioned migrations in `/supabase/migrations`.
 
@@ -190,41 +188,22 @@ Full design reference: `docs/00-foundation/DESIGN.md`
 
 ## Current Implementation Status
 
-### ✅ Phase 0 — Docs to repo (COMPLETE)
-- [x] All master documents pushed to `/docs`
-- [x] CLAUDE.md, README.md, .env.example in root
-- [x] Repo structure initialized
+### Release 1 Scope (Build Now)
+- [ ] Login with Google
+- [ ] App shell + sidebar navigation
+- [ ] Día > Hoy (`/day/today`) — mock data initially
+- [ ] Día > Fuentes (`/day/sources`) — list + "Añadir recurso" form
+- [ ] Source states: pending → processing → processed / error
+- [ ] Supabase schema (Release 1 tables)
+- [ ] n8n: `add-source` + `process-source` workflows
+- [ ] Gemini analysis → findings → day summary
 
-### ✅ Phase 1 — Shell del producto (COMPLETE)
-- [x] Next.js 14 App Router scaffolded in `/apps/web`
-- [x] Ubits brand tokens in Tailwind config
-- [x] App shell + Sidebar with full navigation
-- [x] Login page with Google OAuth placeholder
-- [x] `Día > Hoy` — operational home with mock data
-- [x] `Día > Fuentes` — source list + Añadir recurso form
-- [x] All route stubs: dashboard, day/*, tasks, objectives, metrics, insights, alerts
-- [x] Shared types (`packages/types`), utils, constants, shared components
-- [x] pnpm monorepo + turbo setup
-
-### 🔧 Phase 2 — Auth (NEXT — blocked by Google OAuth setup)
-**Requires before starting:**
-- [ ] Google Cloud project created
-- [ ] OAuth consent screen configured
-- [ ] `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` available
-- [ ] Supabase Auth configured with Google provider
-- [ ] Vercel project created + env vars loaded
-
-### ⏳ Phase 3 — SQL Release 1
-- [ ] Write migrations for: workspaces, profiles, workspace_memberships,
-       sources, source_runs, source_contents, analyses, findings, day_summaries
-- [ ] Apply to Supabase project `gcafhrdzndmgnimonfrt`
-
-### ⏳ Phase 4 — Slice 1: Añadir fuente → procesar → resultado
-- [ ] Wire AddSourceForm to Supabase insert
-- [ ] n8n: `add-source` workflow
-- [ ] n8n: `process-source` workflow
-- [ ] Gemini: basic analysis prompt
-- [ ] Show structured result in UI
+### Not Yet (Release 2+)
+- Task proposals UI and approval flow
+- Objectives & KRs module
+- Global metrics, insights, alerts modules
+- Auto-update engine
+- Google Calendar integration
 
 ---
 
@@ -239,7 +218,7 @@ See `.env.example` for all required variables. Never commit real values.
 1. Always read relevant doc(s) before implementing
 2. Propose structure/approach before writing code for anything that touches schema, auth, navigation, or services
 3. Keep changes small and verifiable
-4. If a decision contradicts a master document, stop and flag it — don’t improvise
+4. If a decision contradicts a master document, stop and flag it — don't improvise
 5. Commit format: `feat(day): add today summary shell`, `fix(sources): handle invalid link`
 6. Branch format: `feat/day-today-shell`, `feat/source-processing`
 

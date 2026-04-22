@@ -1,39 +1,512 @@
-import type { Metadata } from 'next'
-import { PageHeader } from '@/components/shared/PageHeader'
-import { DayTodayView } from '@/components/day/DayTodayView'
+"use client";
 
-export const metadata: Metadata = {
-  title: 'Hoy',
+import { useState, useEffect, useCallback } from "react";
+import { AddSourceDrawer } from "@/components/sources/AddSourceDrawer";
+import { getDaySummary } from "@/lib/services/summary-service";
+import { getSourcesByWorkspace } from "@/lib/services/source-service";
+import { getUserWorkspace } from "@/lib/services/workspace-service";
+import { supabase } from "@/lib/supabase";
+
+/* ─── Data ────────────────────────────────────────────────────── */
+
+const focusCards = [
+  {
+    tag: "OBJETIVO CRÍTICO",
+    tagColor: "bg-red-50 text-red-600",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      </svg>
+    ),
+    title: "Cierre Alianza SteelCore",
+    description: "Finalizar términos de exclusividad para la región LATAM antes de las 17:00h.",
+  },
+  {
+    tag: "MÉTRICAS",
+    tagColor: "bg-blue-50 text-blue-600",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <line x1="8" y1="21" x2="16" y2="21" />
+        <line x1="12" y1="17" x2="12" y2="21" />
+      </svg>
+    ),
+    title: "Validación Q4",
+    description: "Revisar proyecciones de ingresos ajustadas tras la última ronda de inversión.",
+  },
+  {
+    tag: "ESTRATÉGICO",
+    tagColor: "bg-purple-50 text-purple-600",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+        <path d="M2 17l10 5 10-5" />
+        <path d="M2 12l10 5 10-5" />
+      </svg>
+    ),
+    title: "Aprobación Presupuesto Q4",
+    description: "Confirmar ajustes presupuestarios solicitados por la dirección financiera.",
+  },
+];
+
+const tasks = [
+  { id: 1, title: "Actualizar certificados SSL del cluster de producción", tag: "CERTIFICADOS", tagColor: "bg-blue-50 text-blue-700", date: "16 Oct, 2023", file: "Reporte Seguridad.pdf", priority: "ALTA", priorityColor: "text-red-500" },
+  { id: 2, title: "Definir KPIs para el módulo de fidelización", tag: "MÉTRICAS", tagColor: "bg-blue-50 text-blue-700", date: "20 Oct, 2023", file: "Minuta Reunión.docx", priority: "MEDIA", priorityColor: "text-orange-500" },
+  { id: 3, title: "Revisar propuesta de diseño para el panel móvil", tag: "DISEÑO", tagColor: "bg-purple-50 text-purple-700", date: "15 Oct, 2023", file: "Feedback_Cliente.txt", priority: "BAJA", priorityColor: "text-gray-400" },
+];
+
+type SourceType = "FUENTE EXTERNA" | "NOTAS DE GEMINI";
+
+interface Source {
+  id: number;
+  name: string;
+  type: SourceType;
+  format: string;
+  time: string;
+  checked: boolean;
+  icon: React.ReactNode;
 }
 
-// Mock date label — replaced with dynamic value once Day Engine is live
-const TODAY_LABEL = new Date().toLocaleDateString('es-CO', {
-  weekday: 'long',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-})
+const initialSources: Source[] = [
+  {
+    id: 1, name: "Minuta de Reunión", type: "FUENTE EXTERNA", format: "DOCX", time: "09:15", checked: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+  },
+  {
+    id: 2, name: "Reporte Trimestral Q3", type: "NOTAS DE GEMINI", format: "PDF", time: "10:30", checked: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <polyline points="10 9 9 9 8 9" />
+      </svg>
+    ),
+  },
+  {
+    id: 3, name: "Presupuesto Operativo 2024", type: "FUENTE EXTERNA", format: "XLSX", time: "11:00", checked: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+        <polyline points="22,6 12,13 2,6" />
+      </svg>
+    ),
+  },
+  {
+    id: 4, name: "Estrategia de Producto v2", type: "NOTAS DE GEMINI", format: "DOC", time: "12:45", checked: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+      </svg>
+    ),
+  },
+  {
+    id: 5, name: "Análisis de Mercado", type: "FUENTE EXTERNA", format: "PDF", time: "11:20", checked: false,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10" />
+        <line x1="12" y1="20" x2="12" y2="4" />
+        <line x1="6" y1="20" x2="6" y2="14" />
+      </svg>
+    ),
+  },
+  {
+    id: 6, name: "Feedback del Cliente VIP", type: "FUENTE EXTERNA", format: "TXT", time: "14:00", checked: false,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+  },
+];
+
+/* ─── Helpers ─────────────────────────────────────────────────── */
+
+function CheckIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+const typeStyles: Record<SourceType, string> = {
+  "FUENTE EXTERNA": "bg-orange-50 text-orange-600",
+  "NOTAS DE GEMINI": "bg-purple-50 text-purple-600",
+};
+
+/* ─── Page ────────────────────────────────────────────────────── */
 
 export default function DayTodayPage() {
+  const [activeTab, setActiveTab] = useState<"hoy" | "fuentes">("hoy");
+  const [checkedTasks, setCheckedTasks] = useState<number[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
+  const [summaryData, setSummaryData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [formatFilter, setFormatFilter] = useState<string>("all");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+
+      if (!user) {
+        console.error("No user found");
+        return;
+      }
+
+      // 1. Get Workspace
+      const wsResult = await getUserWorkspace(user.id);
+      if (!wsResult.success || !wsResult.data) {
+        console.error("No workspace found:", wsResult.error);
+        return;
+      }
+      const wsId = wsResult.data.id;
+      setWorkspaceId(wsId);
+
+      // 2. Get Summary
+      const summaryResult = await getDaySummary(wsId);
+      if (summaryResult.success) {
+        setSummaryData(summaryResult.data);
+      }
+
+      // 3. Get Sources
+      const sourcesResult = await getSourcesByWorkspace(wsId);
+      if (sourcesResult.success && sourcesResult.data) {
+        // Map DB sources to UI format
+        const mappedSources: Source[] = sourcesResult.data.map((s: any) => ({
+          id: s.id,
+          name: s.title,
+          type: (s.source_type === "gemini_note" ? "NOTAS DE GEMINI" : "FUENTE EXTERNA") as SourceType,
+          format: s.original_url ? s.original_url.split(".").pop()?.toUpperCase() || "WEB" : "DOC",
+          time: new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          checked: s.current_status === "processed",
+          icon: (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+          ),
+        }));
+        setSources(mappedSources);
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const dateLabel = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  const dateCapitalized = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
+
+  const toggleTask = (id: number) =>
+    setCheckedTasks((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+
+  const toggleSource = (id: number) =>
+    setSources((prev) => prev.map((s) => s.id === id ? { ...s, checked: !s.checked } : s));
+
+  const filteredSources = sources.filter((s) => {
+    const typeOk = typeFilter === "all" || s.type === typeFilter;
+    const fmtOk = formatFilter === "all" || s.format === formatFilter;
+    return typeOk && fmtOk;
+  });
+
+  const checkedCount = sources.filter((s) => s.checked).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  const userFullName = summaryData?.profiles?.full_name || "Usuario";
+
   return (
-    <div className="page-section">
-      <PageHeader
-        title="Día · Hoy"
-        subtitle={TODAY_LABEL}
-        badge="Home operativo"
-        badgeColor="primary"
-        actions={
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-navy/40 font-mono">
-              Última consolidación: hoy 18:00
-            </span>
-            <button className="btn-secondary text-xs py-1.5 px-3">
-              Actualizar
+    <div className="min-h-full">
+      {/* Page header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-6">
+          <h1 className="text-2xl font-bold text-navy">Día</h1>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-border/20 rounded-lg text-xs text-navy/60">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+            </svg>
+            Análisis automático en: <span className="font-semibold text-navy">04h 22m</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-white border border-border/20 rounded-lg px-3 py-1.5">
+            <button className="p-1 text-navy/40 hover:text-navy transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+            </button>
+            <div className="flex items-center gap-1.5 px-2 text-sm text-navy font-medium">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              {dateCapitalized}
+            </div>
+            <button className="p-1 text-navy/40 hover:text-navy transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
             </button>
           </div>
-        }
+          <button
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%)" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z" />
+            </svg>
+            Analizar día
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-6 border-b border-border/20 mb-8">
+        {(["hoy", "fuentes"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-3 text-sm font-medium transition-colors relative flex items-center gap-2 ${
+              activeTab === tab ? "text-navy" : "text-navy/40 hover:text-navy/60"
+            }`}
+          >
+            {tab === "hoy" ? "Hoy" : "Fuentes"}
+            {tab === "fuentes" && (
+              <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${
+                activeTab === "fuentes" ? "bg-primary text-white" : "bg-navy/10 text-navy/50"
+              }`}>
+                {sources.length}
+              </span>
+            )}
+            {activeTab === tab && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── TAB: HOY ── */}
+      {activeTab === "hoy" && (
+        <div className="space-y-6">
+          <h2 className="text-3xl font-bold text-navy">¡Bienvenido de nuevo!</h2>
+
+          {/* Executive Summary */}
+          <div className="bg-white rounded-xl border border-border/20 p-5 shadow-soft">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#1a6bff">
+                  <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-navy mb-2">Resumen Ejecutivo</p>
+                <p className="text-sm text-navy/70 leading-relaxed">
+                  {summaryData?.focus_text || "No hay un resumen disponible para hoy todavía. Añade fuentes para comenzar el análisis."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Focus cards */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-white rounded-xl border border-border/20 p-5 shadow-soft">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-9 h-9 rounded-lg bg-primary/8 flex items-center justify-center">
+                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                </div>
+                <span className={`text-[10px] font-bold tracking-widest px-2 py-1 rounded-full bg-blue-50 text-blue-600`}>FUENTES</span>
+              </div>
+              <p className="text-sm font-bold text-navy mb-1.5">{summaryData?.sources_count || 0} Fuentes</p>
+              <p className="text-xs text-navy/60 leading-relaxed">Documentos, reuniones y notas recolectadas hoy.</p>
+            </div>
+            
+            <div className="bg-white rounded-xl border border-border/20 p-5 shadow-soft">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-9 h-9 rounded-lg bg-primary/8 flex items-center justify-center">
+                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8">
+                    <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                </div>
+                <span className={`text-[10px] font-bold tracking-widest px-2 py-1 rounded-full bg-orange-50 text-orange-600`}>HALLAZGOS</span>
+              </div>
+              <p className="text-sm font-bold text-navy mb-1.5">{summaryData?.findings_count || 0} Hallazgos</p>
+              <p className="text-xs text-navy/60 leading-relaxed">Puntos clave identificados automáticamente.</p>
+            </div>
+
+            <div className="bg-white rounded-xl border border-border/20 p-5 shadow-soft">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-9 h-9 rounded-lg bg-primary/8 flex items-center justify-center">
+                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8">
+                    <polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                  </svg>
+                </div>
+                <span className={`text-[10px] font-bold tracking-widest px-2 py-1 rounded-full bg-purple-50 text-purple-600`}>TAREAS</span>
+              </div>
+              <p className="text-sm font-bold text-navy mb-1.5">{summaryData?.tasks_count || 0} Pendientes</p>
+              <p className="text-xs text-navy/60 leading-relaxed">Propuestas de acción basadas en el análisis.</p>
+            </div>
+          </div>
+
+          {/* Tasks Section (Simplified for now) */}
+          <div className="py-8 text-center border-2 border-dashed border-border/20 rounded-2xl">
+            <p className="text-navy/40 text-sm">El panel de tareas dinámicas estará disponible tras el análisis.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: FUENTES ── */}
+      {activeTab === "fuentes" && (
+        <div className="space-y-5">
+          {/* Section header */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold tracking-widest text-navy/50 uppercase">Lista de fuentes</span>
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border-2 border-primary/30 text-primary hover:bg-primary/5 transition-all"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+              </svg>
+              Añadir fuente
+            </button>
+          </div>
+
+          {/* Filters row */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {/* Type filter */}
+              <div className="relative">
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="appearance-none bg-white border border-border/30 text-sm text-navy/70 font-medium rounded-lg pl-3 pr-8 py-2 cursor-pointer hover:border-border/60 focus:outline-none focus:border-primary transition-colors"
+                >
+                  <option value="all">Tipo de recurso</option>
+                  <option value="FUENTE EXTERNA">Fuente Externa</option>
+                  <option value="NOTAS DE GEMINI">Notas de Gemini</option>
+                </select>
+                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-navy/40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
+              </div>
+
+              {/* Format filter */}
+              <div className="relative">
+                <select
+                  value={formatFilter}
+                  onChange={(e) => setFormatFilter(e.target.value)}
+                  className="appearance-none bg-white border border-border/30 text-sm text-navy/70 font-medium rounded-lg pl-3 pr-8 py-2 cursor-pointer hover:border-border/60 focus:outline-none focus:border-primary transition-colors"
+                >
+                  <option value="all">Formato</option>
+                  <option value="PDF">PDF</option>
+                  <option value="DOCX">DOCX</option>
+                  <option value="DOC">DOC</option>
+                  <option value="XLSX">XLSX</option>
+                  <option value="TXT">TXT</option>
+                </select>
+                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-navy/40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
+              </div>
+            </div>
+
+            {/* Sort */}
+            <button className="flex items-center gap-2 text-xs font-bold tracking-widest text-navy/50 uppercase hover:text-navy/70 transition-colors">
+              ORDENAR
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Sources list */}
+          <div className="bg-white rounded-xl border border-border/20 shadow-soft divide-y divide-border/10">
+            {filteredSources.map((source) => (
+              <div key={source.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
+                {/* Checkbox */}
+                <button
+                  onClick={() => toggleSource(source.id)}
+                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    source.checked ? "border-primary bg-primary" : "border-border/40 hover:border-primary/50"
+                  }`}
+                >
+                  {source.checked && <CheckIcon />}
+                </button>
+
+                {/* Icon box */}
+                <div className="w-11 h-11 rounded-xl bg-primary/8 flex items-center justify-center flex-shrink-0">
+                  {source.icon}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-navy mb-1">{source.name}</p>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-md ${typeStyles[source.type]}`}>
+                      {source.type}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs text-navy/40 font-medium">
+                      {source.format}
+                    </span>
+                    <span className="text-navy/20">·</span>
+                    <span className="flex items-center gap-1 text-xs text-navy/40">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                      {source.time}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Arrow */}
+                <button className="text-navy/20 hover:text-primary transition-colors">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+
+            {filteredSources.length === 0 && (
+              <div className="py-12 text-center text-navy/40 text-sm">
+                No hay fuentes con estos filtros.
+              </div>
+            )}
+          </div>
+
+          {/* Summary */}
+          <p className="text-xs text-navy/40 text-right">
+            {checkedCount} de {sources.length} fuentes seleccionadas para análisis
+          </p>
+        </div>
+      )}
+
+      <AddSourceDrawer 
+        open={drawerOpen} 
+        onClose={() => setDrawerOpen(false)} 
+        onSuccess={() => {
+          setDrawerOpen(false);
+          fetchData();
+        }}
       />
-      <DayTodayView />
     </div>
-  )
+  );
 }

@@ -1,144 +1,47 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* Ubits Brand Tokens */
-  --color-navy: #04101f;
-  --color-primary: #1a6bff;
-  --color-bright: #2ec6ff;
-  --color-light: #cadeff;
-  --color-action: #3865f5;
-  --color-dark-ui: #2a303f;
-  --color-accent: #f49e04;
-  --color-border: #d0d2d5;
-  --color-bg: #f8faff;
-  --color-white: #ffffff;
-
-  /* Layout */
-  --sidebar-width: 240px;
-  --topbar-height: 56px;
+* {
+  @apply m-0 p-0 box-border;
 }
 
-@layer base {
-  * {
-    box-sizing: border-box;
-  }
-
-  html {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  body {
-    @apply bg-bg text-navy font-sans;
-    margin: 0;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight;
-  }
-
-  :focus-visible {
-    @apply outline-2 outline-offset-2 outline-primary;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
+body {
+  @apply bg-bg text-navy;
+}
+
+/* Buttons */
 @layer components {
-  /* Sidebar navigation items */
-  .sidebar-item {
-    @apply flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium
-           text-white/60 hover:text-white hover:bg-dark-ui
-           transition-all duration-150 cursor-pointer no-underline;
-  }
-
-  .sidebar-item-active {
-    @apply text-white bg-primary/90 hover:bg-primary;
-  }
-
-  .sidebar-section-label {
-    @apply px-3 mb-1.5 text-[10px] font-semibold tracking-widest text-white/25 uppercase select-none;
-  }
-
-  /* Cards */
-  .page-card {
-    @apply bg-white rounded-xl border border-border-gray shadow-card p-6;
-  }
-
-  .page-card-sm {
-    @apply bg-white rounded-xl border border-border-gray shadow-card p-4;
-  }
-
-  /* Metrics */
-  .metric-value {
-    @apply font-mono text-3xl font-semibold text-navy leading-none;
-  }
-
-  .metric-value-lg {
-    @apply font-mono text-4xl font-semibold text-navy leading-none;
-  }
-
-  /* Badges */
-  .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold;
-  }
-
-  .badge-primary {
-    @apply bg-primary/10 text-primary;
-  }
-
-  .badge-ok {
-    @apply bg-status-ok-bg text-status-ok;
-  }
-
-  .badge-warn {
-    @apply bg-status-warn-bg text-status-warn;
-  }
-
-  .badge-error {
-    @apply bg-status-error-bg text-status-error;
-  }
-
-  .badge-info {
-    @apply bg-status-info-bg text-status-info;
-  }
-
-  .badge-ghost {
-    @apply bg-navy/5 text-navy/50;
-  }
-
-  /* Buttons */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
-           bg-primary text-white text-sm font-semibold rounded-lg
-           hover:bg-action transition-colors duration-150
-           disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 rounded-lg text-white font-medium hover:brightness-110 transition-all;
+    background: linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%);
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
-           bg-white text-navy text-sm font-semibold rounded-lg
-           border border-border-gray hover:bg-bg
-           transition-colors duration-150
-           disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 rounded-lg bg-light text-navy font-medium hover:brightness-95 transition-all;
   }
 
-  .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-3 py-2
-           text-navy/60 text-sm font-medium rounded-lg
-           hover:bg-navy/5 hover:text-navy
-           transition-colors duration-150;
+  .btn-outline {
+    @apply px-4 py-2 rounded-lg border border-border text-navy font-medium hover:bg-light transition-all;
   }
+}
 
-  /* Processing states */
-  .processing-dot {
-    @apply inline-block w-1.5 h-1.5 rounded-full bg-bright animate-pulse-soft;
+/* Cards */
+@layer components {
+  .card {
+    @apply rounded-lg bg-white border border-border shadow-soft;
   }
+}
 
-  /* Page section */
-  .page-section {
-    @apply p-6 md:p-8;
+/* Text utilities */
+@layer components {
+  .text-mono {
+    @apply font-mono text-action;
   }
 }

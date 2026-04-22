@@ -169,6 +169,8 @@ Nexión debe soportar como categorías principales:
 - métrica
 - feedback
 
+Estas categorías pueden venir de una fuente analizada o de una actualización automática del sistema.
+
 ---
 
 ## 11. Estados de tarea
@@ -181,12 +183,29 @@ Los estados oficiales de tarea son:
 - en pausa
 - deprecada
 
+La prioridad de una tarea debe depender de:
+- objetivo/KR relacionado
+- urgencia detectada en la conversación o fuente
+- fecha mencionada explícitamente
+- impacto operativo
+- cercanía temporal
+
 ---
 
 ## 12. Autoactualización del sistema
 
+Nexión debe incluir una lógica de autoactualización diaria.
+
 ### Frecuencia inicial
 - una corrida diaria después de las 6:00 pm
+
+### Qué puede proponer o actualizar
+- estado de tareas
+- estado de alertas
+- cambios en métricas
+- actualización de insights
+- actualización de feedback
+- detección de temas finalizados o riesgos ya atendidos
 
 ### Regla operativa
 El sistema puede proponer cambios automáticamente, pero el usuario debe poder:
@@ -195,11 +214,138 @@ El sistema puede proponer cambios automáticamente, pero el usuario debe poder:
 - aprobar o rechazar propuestas relevantes
 
 ### Regla operativa adicional
-Toda tarea propuesta por la IA deberá pasar por revisión humana antes de confirmarse.
+La detección de tareas por IA no implica creación automática definitiva.
+Toda tarea propuesta por la IA deberá pasar por revisión humana antes de confirmarse como tarea del sistema.
 
 ---
 
-## 13. Releases propuestos
+## 13. Métricas prioritarias
+
+### Métricas de negocio
+Se tomarán como base las métricas ya definidas por el equipo y el ejemplo compartido para el producto Encuestas, incluyendo entre otras:
+- Nuevo ARR
+- Empresas NSM
+- ARR empresas NSM
+- Cuentas pagas dentro del NSM
+- Completitud
+- métricas de funnel/adopción
+- avance de objetivos/OKRs
+
+### Métricas de usabilidad
+Se tomarán como base las métricas ya definidas por el equipo, incluyendo las señales detectadas en fuentes y análisis diarios.
+
+### Frecuencia inicial
+- actualización diaria a las 6:00 pm
+
+### Nota
+En esta fase, Nexión no tendrá un módulo visible de boletines. La salida editorial automática no es prioridad actual.
+
+---
+
+## 14. Objetivos y KRs
+
+La fuente oficial de objetivos/KRs será el Google Sheet compartido por el usuario.
+
+Reglas:
+- Nexión no será la fuente maestra de OKRs
+- Nexión leerá y usará la fuente oficial externa
+- las tareas y hallazgos podrán vincularse a objetivos y KRs
+- el avance de objetivos podrá enriquecerse con el trabajo detectado dentro del sistema
+
+---
+
+## 15. Fuentes de información
+
+### Fuente inicial priorizada
+- reunión de feedback ingresada por link
+
+### Fuentes previstas
+- Google Docs
+- Google Sheets
+- transcripciones
+- notas de reunión
+- recursos compartidos en Drive
+- calendario
+- otras fuentes futuras
+
+---
+
+## 16. Stack base del producto
+
+### Activo hoy
+- GitHub repo: sí
+- Antigravity sobre repo: sí
+- Claude Code sobre repo: sí
+- Supabase proyecto base: sí
+- n8n Cloud: sí
+- MCP GitHub: sí
+- MCP n8n: sí
+
+### Planeado / no activo aún
+- Google OAuth
+- Google Drive integration
+- Google Docs integration
+- Google Sheets integration
+- Google Calendar integration
+- Vercel project
+- Slack integration (opcional/futuro)
+- posibles MCPs adicionales
+
+### Regla
+La documentación debe contemplar activos y planeados, con estado explícito.
+
+---
+
+## 16A. Capa de IA y análisis
+
+### Proveedor inicial de análisis
+La capa inicial de análisis real se diseñará para usar Gemini Developer API como primera opción, aprovechando su free tier inicial mientras se validan flujos, calidad y límites operativos.
+
+### Regla de diseño
+La arquitectura de Nexión no debe depender rígidamente de un solo proveedor de IA.
+La capa de análisis debe diseñarse como intercambiable o adaptable a futuros proveedores.
+
+### Estado actual
+- proveedor decidido a nivel conceptual: sí
+- credenciales/API keys listas: no
+- setup técnico completo: pendiente
+
+### Regla de control humano
+La detección de tareas por IA no implica creación automática definitiva.
+Toda tarea propuesta por la IA deberá pasar por revisión humana antes de confirmarse como tarea del sistema.
+
+---
+
+## 17. Principios fijos del proyecto
+
+1. construir incrementalmente
+2. diseñar para el estado final sin rehacer innecesariamente
+3. priorizar claridad operativa sobre complejidad
+4. separar home operativo diario de vistas globales
+5. minimizar trabajo manual del usuario
+6. usar MCPs, APIs y automatización cuando aceleren y simplifiquen
+7. preferir SQL y estructuras reproducibles sobre configuración manual
+8. no depender de herramientas puente como base operativa final
+9. mantener trazabilidad entre fuente, hallazgo, tarea, objetivo y estado
+10. trabajar paso a paso con validación real
+
+---
+
+## 18. Elementos flexibles
+
+Pueden cambiar con aprendizaje:
+- orden fino de releases
+- profundidad de módulos globales
+- reglas exactas de clasificación
+- forma de autoactualización
+- prompts y capas de IA
+- herramientas específicas de integración
+- detalle del modelo de datos
+- nivel de aprobación manual por tipo de cambio
+
+---
+
+## 19. Releases propuestos
 
 ### Release 1
 Ingresar fuente por link y obtener salida estructurada visible
@@ -218,41 +364,43 @@ Potenciar Dashboard y lógica de autoactualización del día
 
 ---
 
-## 14. Stack base del producto
+## 20. Resultado esperado del producto
 
-### Activo hoy
-- GitHub repo: sí
-- Supabase proyecto base: sí
-- n8n Cloud: sí
-- MCP GitHub: sí
-- MCP n8n: sí
-
-### Planeado / no activo aún
-- Google OAuth
-- Google Drive integration
-- Google Docs integration
-- Google Sheets integration
-- Google Calendar integration
-- Vercel project
-- Gemini API
-- Slack integration (opcional/futuro)
+Nexión debe convertirse en un sistema que permita al usuario:
+- empezar el día con claridad
+- entender qué importa hoy
+- ver qué cambió automáticamente
+- convertir información dispersa en trabajo estructurado
+- conectar trabajo diario con objetivos
+- reducir seguimiento manual
+- operar con más foco y visibilidad
 
 ---
 
-## 15. Principios fijos del proyecto
+## 21. Estado actual del proyecto
 
-1. construir incrementalmente
-2. diseñar para el estado final sin rehacer innecesariamente
-3. priorizar claridad operativa sobre complejidad
-4. separar home operativo diario de vistas globales
-5. minimizar trabajo manual del usuario
-6. preferir SQL y estructuras reproducibles sobre configuración manual
-7. mantener trazabilidad entre fuente, hallazgo, tarea, objetivo y estado
-8. trabajar paso a paso con validación real
+### Ya definido
+- identidad del producto
+- arquitectura de información base
+- navegación principal
+- módulos principales
+- tabs internas de Día
+- pantallas visuales iniciales
+- stack base activo y planeado
+
+### Pendiente de documentar en detalle
+- arquitectura técnica completa
+- modelo de datos
+- contratos de servicios
+- reglas exactas de autoactualización
+- integración con Google
+- integración con Calendar
+- integración con métricas externas
+- prompts operativos y build rules
 
 ---
 
-## 16. Regla para Claude Code y Antigravity
+## 22. Regla para Claude Code y Antigravity
 
 Este documento debe tratarse como fuente madre de contexto.
 Ninguna decisión estructural importante debe contradecir este brief sin registrarse primero como decisión nueva o ajuste formal del proyecto.

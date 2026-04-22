@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#f9f9ff",
+                        "inverse-on-surface": "#ecf1ff",
+                        "on-background": "#111c2d",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f9f9ff",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "primary-container": "#3d52b2",
+                        "on-surface-variant": "#454652",
+                        "on-surface": "#111c2d",
+                        "surface-container": "#e7eeff",
+                        "on-primary-fixed-variant": "#273d9d",
+                        "surface-container-high": "#dee8ff",
+                        "on-tertiary-fixed-variant": "#005049",
+                        "primary": "#223999",
+                        "tertiary-fixed": "#89f5e7",
+                        "surface-tint": "#4157b6",
+                        "primary-fixed-dim": "#b9c3ff",
+                        "on-secondary": "#ffffff",
+                        "surface-dim": "#cfdaf2",
+                        "on-tertiary-container": "#78e4d6",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "surface": "#f9f9ff",
+                        "on-primary": "#ffffff",
+                        "surface-variant": "#d8e3fb",
+                        "surface-container-highest": "#d8e3fb",
+                        "secondary": "#515f74",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-tertiary-fixed": "#00201d",
+                        "on-error": "#ffffff",
+                        "tertiary": "#004c45",
+                        "inverse-primary": "#b9c3ff",
+                        "surface-container-low": "#f0f3ff",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "tertiary-container": "#00665d",
+                        "primary-fixed": "#dde1ff",
+                        "inverse-surface": "#263143",
+                        "on-primary-fixed": "#001257",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#d5e3fc",
+                        "tertiary-fixed-dim": "#6bd8cb",
+                        "outline": "#757684",
+                        "secondary-container": "#d5e3fc",
+                        "on-secondary-container": "#57657a",
+                        "outline-variant": "#c5c5d4",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-container": "#c8d0ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .bg-glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body overflow-hidden">
+<!-- TopAppBar (From JSON) -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/50 flex justify-between items-center px-6 py-4">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black text-indigo-900 dark:text-indigo-100 font-headline">Nexión Slate</span>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-manrope text-sm font-medium tracking-tight" href="#">Dashboard</a>
+<a class="text-indigo-700 dark:text-indigo-400 border-b-2 border-indigo-700 dark:border-indigo-400 pb-1 font-manrope text-sm font-medium tracking-tight" href="#">Objectives</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-manrope text-sm font-medium tracking-tight" href="#">Teams</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm w-64 focus:ring-2 focus:ring-primary" placeholder="Search objectives..." type="text"/>
+</div>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:opacity-80 transition-opacity">notifications</button>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:opacity-80 transition-opacity">account_circle</button>
+</div>
+</header>
+<!-- Background Content (Simulated Objectives List) -->
+<main class="pt-24 px-8 max-w-7xl mx-auto opacity-40 select-none pointer-events-none">
+<div class="flex justify-between items-end mb-10">
+<div>
+<h1 class="text-4xl font-headline font-extrabold tracking-tight text-on-background mb-2">Company Objectives</h1>
+<p class="text-on-surface-variant">Strategic Alignment 2024 • Q3 Focus</p>
+</div>
+<button class="bg-primary text-on-primary px-6 py-3 rounded-xl font-semibold shadow-lg">New Objective</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Background Cards -->
+<div class="bg-surface-container-lowest p-6 rounded-full border border-outline-variant/20">
+<div class="flex justify-between mb-4">
+<span class="bg-tertiary/10 text-tertiary px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">On Track</span>
+<span class="material-symbols-outlined text-outline">more_horiz</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2">Expansion to LATAM</h3>
+<div class="h-2 w-full bg-surface-container rounded-full mt-4">
+<div class="h-full bg-primary rounded-full w-[65%]"></div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-full border border-outline-variant/20 ring-4 ring-primary/10">
+<div class="flex justify-between mb-4">
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">In Progress</span>
+<span class="material-symbols-outlined text-outline">more_horiz</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2">Optimización de Infraestructura Cloud</h3>
+<div class="h-2 w-full bg-surface-container rounded-full mt-4">
+<div class="h-full bg-primary rounded-full w-[75%]"></div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-full border border-outline-variant/20">
+<div class="flex justify-between mb-4">
+<span class="bg-error/10 text-error px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">At Risk</span>
+<span class="material-symbols-outlined text-outline">more_horiz</span>
+</div>
+<h3 class="font-headline font-bold text-xl mb-2">Brand Refresh 2024</h3>
+<div class="h-2 w-full bg-surface-container rounded-full mt-4">
+<div class="h-full bg-error rounded-full w-[15%]"></div>
+</div>
+</div>
+</div>
+</main>
+<!-- Overlay Backdrop -->
+<div class="fixed inset-0 bg-on-background/20 backdrop-blur-sm z-50"></div>
+<!-- Navigation Drawer / Side Panel (Objective Details) -->
+<aside class="fixed right-0 top-0 h-screen w-full max-w-xl bg-slate-50 dark:bg-slate-950 z-[60] shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
+<!-- Drawer Header -->
+<div class="p-8 border-b border-slate-100 dark:border-slate-900">
+<div class="flex justify-between items-start mb-6">
+<button class="p-2 hover:bg-slate-200/50 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">close</span>
+</button>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-semibold rounded-lg transition-all active:scale-95">
+<span class="material-symbols-outlined text-sm">edit</span>
+                        Edit Objective
+                    </button>
+</div>
+</div>
+<div class="flex items-center gap-3 mb-4">
+<span class="bg-primary px-3 py-1 rounded-lg text-[10px] font-bold text-on-primary uppercase tracking-widest">Alta</span>
+<span class="bg-surface-container-high text-primary px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest">En curso</span>
+</div>
+<h2 class="text-3xl font-headline font-bold text-slate-900 dark:text-slate-50 leading-tight">Optimización de Infraestructura Cloud</h2>
+<p class="mt-2 font-inter text-slate-600 dark:text-slate-400">Strategic Alignment 2024</p>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-8 space-y-10">
+<!-- Quick Info Grid -->
+<div class="grid gap-4 grid-cols-2">
+<div class="p-4 bg-surface-container-low rounded-xl">
+<p class="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider mb-1">Weight</p>
+<span class="text-sm font-bold text-primary">25%</span>
+</div>
+<div class="p-4 bg-surface-container-low rounded-xl">
+<p class="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider mb-1">Timeline</p>
+<span class="text-sm font-semibold">Q3 - 2024</span>
+</div>
+</div>
+<!-- Key Results Section -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-lg text-slate-900 dark:text-slate-50 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">target</span>
+                        Key Results
+                    </h3>
+<span class="text-sm font-bold text-primary">75% Total Progress</span>
+</div>
+<div class="space-y-6">
+<!-- KR 1 -->
+<div class="group">
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-medium text-on-surface">Reducir latencia a &lt; 200ms</span>
+<span class="text-xs font-bold text-primary">85%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-1000" style="width: 85%"></div>
+</div>
+</div>
+<!-- KR 2 -->
+<div class="group">
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-medium text-on-surface">Migración de base de datos</span>
+<span class="text-xs font-bold text-tertiary flex items-center gap-1">
+<span class="material-symbols-outlined text-xs" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                100%
+                            </span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-tertiary rounded-full transition-all duration-1000" style="width: 100%"></div>
+</div>
+</div>
+<!-- KR 3 -->
+<div class="group">
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-medium text-on-surface">Optimización de costos</span>
+<span class="text-xs font-bold text-on-surface-variant">40%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary/40 rounded-full transition-all duration-1000" style="width: 40%"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Activity/Comments Section -->
+<section>
+<h3 class="font-headline font-bold text-lg text-slate-900 dark:text-slate-50 mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+                    Comentarios / Actividad
+                </h3>
+<div class="space-y-6 relative before:left-4 before:top-2 before:bottom-0 before:w-px before:bg-surface-container-high">
+<!-- Comment 1 -->
+<div class="relative">
+<div class="bg-surface-container-low p-4 rounded-xl">
+<p class="text-sm text-on-surface-variant">Se completó la migración del cluster de staging. Todos los servicios responden correctamente.</p>
+</div>
+</div>
+<!-- Comment 2 -->
+<div class="relative">
+<div class="bg-surface-container-low p-4 rounded-xl">
+<p class="text-sm text-on-surface-variant">Revisando las cuotas de AWS para el KR de optimización de costos. Necesitamos ajustar los RI.</p>
+</div>
+</div>
+</div>
+<!-- Comment Input -->
+<div class="mt-8 flex gap-3">
+<div class="flex-1 relative">
+<textarea class="w-full bg-surface-variant/30 border-none rounded-xl text-sm py-3 px-4 focus:ring-1 focus:ring-primary h-20 resize-none" placeholder="Escribe un comentario..."></textarea>
+<button class="absolute bottom-2 right-2 p-1.5 bg-primary text-on-primary rounded-lg">
+<span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+<!-- Drawer Footer (From JSON logic) -->
+<div class="p-6 bg-slate-100 dark:bg-slate-900 flex justify-between items-center">
+<div class="flex gap-4">
+<button class="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 font-inter text-sm transition-colors">
+<span class="material-symbols-outlined text-lg">settings</span>
+                    Settings
+                </button>
+<button class="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 font-inter text-sm transition-colors">
+<span class="material-symbols-outlined text-lg">help</span>
+                    Help
+                </button>
+</div>
+<span class="text-[10px] text-outline font-bold uppercase tracking-widest">ID: OBJ-2024-089</span>
+</div>
+</aside>
+</body></html>

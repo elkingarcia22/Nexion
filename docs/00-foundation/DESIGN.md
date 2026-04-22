@@ -44,20 +44,22 @@ background: linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%);
 background: linear-gradient(135deg, #cadeff 0%, #ffffff 100%);
 ```
 
-*   **The "No-Line" Rule:** 1px solid borders are strictly prohibited for sectioning. Define boundaries through background color shifts.
+*   **The "No-Line" Rule:** 1px solid borders are strictly prohibited for sectioning. Define boundaries through background color shifts. A `#f8faff` section sits directly on `#ffffff` — the tonal shift provides visual affordance without digital noise.
 
-*   **Surface Hierarchy & Nesting:**
+*   **Surface Hierarchy & Nesting:** Treat the UI as physical layers.
     *   **Level 0 (Base App):** `#f8faff` — app background
     *   **Level 1 (Sidebar / Nav):** `#04101f` — dark navy sidebar
     *   **Level 2 (Content Canvas):** `#ffffff` — main content area cards
     *   **Level 3 (Elevated):** `#cadeff` at low opacity — active/hover states, badges
     *   **Level 4 (Floating):** `#ffffff` at 85% opacity + `backdrop-filter: blur(24px)` — modals, popovers
 
-*   **The "Glass" Rule:** For floating elements, use `rgba(255,255,255,0.85)` with `backdrop-filter: blur(24px)`.
+*   **The "Glass" Rule:** For floating elements (navigation overlays, hover cards), use semi-transparent white `rgba(255,255,255,0.85)` with `backdrop-filter: blur(24px)` to create a frosted glass effect.
 
 ---
 
 ## 3. Typography: Ubits Editorial Scale
+
+We employ the official Ubits typeface system.
 
 ```html
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -102,21 +104,24 @@ font-size: 0.75rem;
 color: #6b7280;
 ```
 
-*   **Hierarchy Note:** Metric values must always use Roboto Mono — this creates the B2B "data-forward" identity.
+*   **Hierarchy Note:** Always maintain high contrast between headline and body. Metric values must always use Roboto Mono — this creates the B2B "data-forward" identity.
 
 ---
 
 ## 4. Elevation & Depth: Tonal Layering
 
+Traditional shadows are a crutch. Depth is achieved through **Tonal Layering** and selective use of Ubits shadows.
+
 *   **The Layering Principle:** A white card (`#ffffff`) on `#f8faff` background creates natural elevation without shadows.
 
-*   **Ambient Shadows:**
+*   **Ambient Shadows:** When a component must float (dropdown, modal), use:
     ```css
     box-shadow: 0 2px 8px rgba(4, 16, 31, 0.08);   /* subtle */
     box-shadow: 0 8px 24px rgba(4, 16, 31, 0.15);  /* pronounced */
     ```
+    Note: shadow tint is the Ubits navy `#04101f`, never pure black.
 
-*   **The "Ghost Border" Fallback:** Use `#d0d2d5` at **20% opacity** if a border is required for accessibility.
+*   **The "Ghost Border" Fallback:** If a border is required for accessibility, use `#d0d2d5` at **20% opacity**. It should be felt, not seen.
 
 ---
 
@@ -125,7 +130,7 @@ color: #6b7280;
 ### Buttons
 *   **Primary:** Gradient `#1a6bff → #2ec6ff` at 135°, `border-radius: 8px`, white text, no border.
 *   **Secondary:** `#cadeff` background with `#04101f` text, `border-radius: 8px`, no border.
-*   **Ghost:** Transparent background, `#1a6bff` text. Background `#cadeff` appears on hover only.
+*   **Ghost:** Transparent background, `#1a6bff` text, `border-radius: 8px`. Background `#cadeff` appears on hover only.
 *   **Destructive:** `#fee2e2` background, `#991b1b` text. Only for irreversible actions.
 
 ```css
@@ -143,6 +148,7 @@ font-size: 14px;
 ### Cards & Lists
 *   **Forbid Dividers:** No horizontal lines between list items. Use `16px` vertical whitespace or subtle `#f8faff` hover background.
 *   **Card structure:** White card (`#ffffff`) on `#f8faff`, `border-radius: 16px`, `border: 1px solid #d0d2d5`, shadow `0 2px 8px rgba(4,16,31,0.08)`.
+*   **Header Blocks within cards:** `#f8faff` top section transitioning to `#ffffff` body.
 
 ### KPI / Metric Cards
 ```html
@@ -154,7 +160,7 @@ font-size: 14px;
 ```
 
 ### Input Fields
-*   Full-box with `border: 1px solid #d0d2d5`, `border-radius: 8px`, `background: #f8faff`. On focus: `border-color: #1a6bff`, `box-shadow: 0 0 0 3px rgba(26,107,255,0.12)`.
+*   **Aesthetic:** Full-box with `border: 1px solid #d0d2d5`, `border-radius: 8px`, `background: #f8faff`. On focus: `border-color: #1a6bff`, `box-shadow: 0 0 0 3px rgba(26,107,255,0.12)`.
 *   **Error states:** `border-color: #991b1b`, `background: #fee2e2`.
 
 ### Badges / Status Tags
@@ -166,6 +172,10 @@ font-size: 14px;
 /* Neutral */             background: #cadeff; color: #04101f;
 /* border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600 */
 ```
+
+### Data Tables
+*   **Sober Tables:** Remove all vertical lines. White header row (`#ffffff`), `Inter 12px` in `#6b7280` for data. `24px` horizontal padding per cell.
+*   **Row hover:** `#f8faff` background on hover.
 
 ### Sidebar Navigation
 *   **Background:** `#04101f` navy.
@@ -182,6 +192,7 @@ font-size: 14px;
 *   **Component spacing:** multiples of 4 — use 8, 12, 16, 24, 32, 48, 64
 *   **Section padding:** 32px (desktop), 16px (mobile)
 *   **Card padding:** 24px
+*   **Sidebar padding:** 16px horizontal
 *   **Border radius system:** 4px (small), 8px (components), 12px (inputs), 16px (cards), 24px (modals), 999px (badges)
 
 ---
@@ -230,6 +241,7 @@ boxShadow: {
 *   **Do** use `Roboto Mono` for every numeric metric or KPI value.
 *   **Do** embrace whitespace. If a section feels cramped, double the padding.
 *   **Do** use `#f49e04` (accent yellow) for non-critical warnings or special highlights.
+*   **Do** use `border-radius: 16px` for large structural containers.
 *   **Do** use the sidebar as `#04101f` dark — it grounds the entire UI.
 
 ### Don't
@@ -238,11 +250,13 @@ boxShadow: {
 *   **Don't** use pure red `#ff0000` — use `#991b1b` (error text) and `#fee2e2` (error bg).
 *   **Don't** use a border to separate the sidebar — the `#04101f` vs `#f8faff` contrast is sufficient.
 *   **Don't** use standard "blue" for links — use `#1a6bff` to maintain brand consistency.
+*   **Don't** use "Alert Red" for everything — `#f49e04` accent yellow is for warnings; red only for errors.
 
 ---
 
 ## 9. Logo Usage
 
+### SVG embebido (para HTML sin archivos externos)
 ```svg
 <svg width="120" height="39" viewBox="0 0 99.201 32" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M14.9724 0V3.10208C11.8558 3.10208 8.86672 4.29447 6.66289 6.41695C4.45907 8.53943 3.22097 11.4181 3.22097 14.4198H0C0 10.5954 1.57745 6.92768 4.38533 4.22345C7.1932 1.51922 11.0015 0 14.9724 0ZM14.9722 5.18599C12.4292 5.18599 9.99039 6.1589 8.19223 7.89068C6.39407 9.62247 5.38387 11.9713 5.38387 14.4204H8.13865C8.13865 12.6748 8.85855 11.0006 10.14 9.76613C11.4215 8.53163 13.1597 7.83788 14.9722 7.83745V5.18599ZM14.9727 9.82667V22.4782C14.9727 25.9395 16.6679 27.982 20.1059 27.982C23.4845 27.982 25.173 25.9395 25.173 22.9746V10.3442H29.935V23.1019C29.935 28.3967 26.7886 32 20.1025 32C13.3469 32 10.2006 28.364 10.2006 23.133V14.4194C10.2006 13.2013 10.703 12.0331 11.5973 11.1718C12.4916 10.3105 13.7045 9.82667 14.9693 9.82667H14.9727ZM68.9796 31.6184V14.3316H62.5224V10.3446H80.1395V14.3316H73.7145V31.6184H68.9796ZM86.7718 27.3049C85.5651 26.8115 84.475 26.0873 83.5675 25.1762L80.989 28.613C83.0708 30.6228 86.1222 31.9943 90.3603 31.9943C96.3191 31.9943 99.201 29.0604 99.201 25.1697C99.201 20.448 94.5662 19.3966 90.9232 18.5982C88.3701 18.0317 86.5155 17.5843 86.5155 16.1492C86.5155 14.8741 87.6412 13.981 89.7602 13.981C91.9132 13.981 94.2967 14.7141 96.0852 16.3092L98.701 12.9916C96.5158 11.0471 93.6017 10.0267 90.0908 10.0267C84.8932 10.0267 81.7129 12.8969 81.7129 16.4365C81.7129 21.1245 86.224 22.1192 89.8106 22.9101L89.9586 22.9428C92.5082 23.5175 94.4289 24.0595 94.4289 25.6546C94.4289 26.8661 93.1711 28.0465 90.5875 28.0465C89.2766 28.0505 87.9785 27.7982 86.7718 27.3049ZM60.156 10.3446H55.4534V31.6167H60.156V10.3446ZM33.8867 10.3446V31.6184L45.8721 31.6135C50.078 31.6135 52.2971 29.0616 52.2971 25.8714C52.2971 23.1987 50.4103 20.9978 48.059 20.6468C50.1458 20.2321 51.8682 18.446 51.8682 15.7668C51.8682 12.9275 49.7152 10.3446 45.5093 10.3446H33.8867ZM44.4837 18.8917H38.5893V14.2043H44.4837C46.0721 14.2043 47.0655 15.2263 47.0655 16.5325C47.0655 17.9039 46.0721 18.8917 44.4837 18.8917ZM44.6481 27.7587H38.5893V22.7513H44.6481C46.5027 22.7513 47.4961 23.8991 47.4961 25.2395C47.4961 26.7693 46.4366 27.7587 44.6481 27.7587Z" fill="currentColor"/>

@@ -2,5 +2,5 @@
   "name": "@nexion/config",
   "version": "0.1.0",
   "private": true,
-  "main": "./tailwind.config.base.ts"
+  "files": ["*.config.js", "*.json"]
 }
