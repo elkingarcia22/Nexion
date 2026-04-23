@@ -6,6 +6,7 @@ import { getDaySummary } from "@/lib/services/summary-service";
 import { getSourcesByDate, createSource, deleteSource, updateSource } from "@/lib/services/source-service";
 import { getOrCreateWorkspace } from "@/lib/services/workspace-service";
 import { fetchGoogleDriveFiles, DriveFile } from "@/lib/services/google-drive-service";
+import { fetchGoogleCalendarEvents, CalendarEvent } from "@/lib/services/google-calendar-service";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { supabase } from "@/lib/supabase";
@@ -165,6 +166,11 @@ export default function DayTodayPage() {
   const [driveSyncing, setDriveSyncing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Map a raw DB row to the UI Source shape
   const mapDbSource = (s: any): Source => {
@@ -175,12 +181,24 @@ export default function DayTodayPage() {
     if (url.includes("spreadsheets")) fmt = "SHEET";
     else if (url.includes(".pdf")) fmt = "PDF";
     else if (url.includes("docs.google")) fmt = "DOC";
+    else if (url.includes("presentation")) fmt = "SLIDE";
     else if (url.includes(".docx")) fmt = "DOCX";
 
     let label: SourceType = "FUENTE EXTERNA";
     if (isGoogle) {
-      label = (fmt === "SHEET" ? "DOCUMENTO" : "NOTAS DE GEMINI") as SourceType;
+      if (fmt === "SHEET") label = "DOCUMENTO" as SourceType;
+      else if (fmt === "DOC" || fmt === "DOCX") label = "NOTAS DE GEMINI" as SourceType;
+      else label = "DOCUMENTO" as SourceType;
     }
+
+    // Enhancement: specific display label for the tag
+    const displayTag = isGoogle ? (
+      fmt === "SHEET" ? "GOOGLE SHEET" :
+      fmt === "PDF" ? "PDF" :
+      fmt === "SLIDE" ? "GOOGLE SLIDE" :
+      fmt === "DOC" || fmt === "DOCX" ? "GOOGLE DOC" :
+      "DOCUMENTO"
+    ) : label;
 
     return {
       id: s.id,
@@ -191,6 +209,7 @@ export default function DayTodayPage() {
       checked: s.current_status === "processed",
       url: s.original_url || null,
       isManual: s.source_origin === "manual",
+      displayTag: displayTag,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -200,16 +219,26 @@ export default function DayTodayPage() {
     };
   };
 
-  const isFetchingRef = useRef(false);
+
+  const currentFetchIdRef = useRef(0);
 
   const fetchData = useCallback(async (forDate: Date) => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
+    const fetchId = ++currentFetchIdRef.current;
+    
+    const y = forDate.getFullYear();
+    const m = String(forDate.getMonth() + 1).padStart(2, "0");
+    const d = String(forDate.getDate()).padStart(2, "0");
+    const dateStr = `${y}-${m}-${d}`;
 
     try {
       setLoading(true);
-      console.log("DEBUG: fetchData starting for date:", forDate.toDateString(), "at", new Date().toLocaleTimeString());
+      setIsRetrying(true);
+      setSyncError(null);
+      
+      // Clear data to show fresh loading state
       setSources([]);
+      setCalendarEvents([]);
+
       const { data: sessionData } = await supabase.auth.getSession();
       const sessionUser = sessionData?.session?.user;
 
@@ -244,8 +273,7 @@ export default function DayTodayPage() {
       // 3. Load DB sources for the selected date only
       const sourcesResult = await getSourcesByDate(wsId, forDate);
       const dbRows = sourcesResult.success && sourcesResult.data ? sourcesResult.data : [];
-      console.log("DEBUG: DB Sources loaded:", dbRows.length, dbRows.map(r => r.title));
-
+      
       const dbSources: Source[] = dbRows.map(mapDbSource);
       
       // Filter out noise AND duplicates that might already be in DB
@@ -267,20 +295,35 @@ export default function DayTodayPage() {
         return !noiseWords.some(w => s.name.toLowerCase().includes(w.toLowerCase()));
       });
 
+      if (fetchId !== currentFetchIdRef.current) return;
       setSources(cleanDbSources);
 
-      // 4. Auto-sync Drive files for the selected date
+      // 4. Fetch Calendar Events
+      setCalendarLoading(true);
+      const calendarResult = await fetchGoogleCalendarEvents(dateStr);
+      
+      if (fetchId !== currentFetchIdRef.current) return;
+      setCalendarLoading(false);
+      
+      if (calendarResult.success && calendarResult.events) {
+        setCalendarEvents(calendarResult.events);
+      } else if (!calendarResult.success && calendarResult.error) {
+        // If it's a 401/403 or token error, we want the global banner to show
+        setSyncError(calendarResult.error);
+        console.error("Calendar Sync Error:", calendarResult.error);
+      }
+
+      // 5. Auto-sync Drive files for the selected date
       const existingUrls = new Set(dbRows.map((s: any) => s.original_url).filter(Boolean));
 
+      if (fetchId !== currentFetchIdRef.current) return;
       setDriveSyncing(true);
-      console.log("DEBUG: Syncing Google Drive for date:", dateStr);
       const driveResult = await fetchGoogleDriveFiles("all", dateStr);
+      
+      if (fetchId !== currentFetchIdRef.current) return;
       setDriveSyncing(false);
 
-      if (driveResult.success && driveResult.files && driveResult.files.length > 0) {
-        console.log("DEBUG: Drive files found:", driveResult.files.length, driveResult.files.map(f => f.name));
-        
-
+      if (driveResult.success && driveResult.files && driveResult.files.length > 0) {        
         const normalizeUrl = (url: string) => url ? url.split("?")[0].replace(/\/$/, "") : "";
         
         const autoAdded: Source[] = [];
@@ -289,11 +332,8 @@ export default function DayTodayPage() {
           const existing = dbRows.find((r: any) => normalizeUrl(r.original_url) === fileUrl);
           
           if (existing) {
-            // Fix: If it was auto-added but marked as manual due to a previous bug
             if (existing.source_origin === "manual") {
-              console.log(`DEBUG: Fixing origin for source: ${file.name}`);
               await updateSource(existing.id, { source_origin: "google" } as any);
-              
               setSources(prev => prev.map(s => 
                 s.id === existing.id ? { ...s, isManual: false, type: "NOTAS DE GEMINI" } : s
               ));
@@ -314,10 +354,12 @@ export default function DayTodayPage() {
             autoAdded.push(mapDbSource(result.data as any));
           }
         }
+        
+        if (fetchId !== currentFetchIdRef.current) return;
+        
         if (autoAdded.length > 0) {
           setSources((prev) => {
             const combined = [...autoAdded, ...prev];
-            // Filter noise AND duplicates by ID/URL
             const seenIds = new Set();
             const seenUrls = new Set();
             const normalize = (u: string) => u ? u.split("?")[0].replace(/\/$/, "") : "";
@@ -325,25 +367,27 @@ export default function DayTodayPage() {
             return combined.filter(s => {
               if (seenIds.has(s.id)) return false;
               seenIds.add(s.id);
-              
               if (s.url) {
                 const norm = normalize(s.url);
                 if (seenUrls.has(norm)) return false;
                 seenUrls.add(norm);
               }
-              
               return !noiseWords.some(w => s.name.toLowerCase().includes(w.toLowerCase()));
             });
           });
         }
-      } else {
-        console.log("DEBUG: No new files from Drive or sync error:", driveResult.error);
+        setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      } else if (!driveResult.success) {
+        setSyncError(driveResult.error || "Error al sincronizar con Google Drive");
       }
     } catch (err) {
       console.error("Error fetching data:", err);
+      setSyncError("Error inesperado al cargar datos.");
     } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
+      if (fetchId === currentFetchIdRef.current) {
+        setLoading(false);
+        setIsRetrying(false);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -508,6 +552,71 @@ export default function DayTodayPage() {
           </button>
         ))}
       </div>
+      
+      {/* ── SYNC ERROR BANNER (Global) ── */}
+      {syncError && (
+        <div className="mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl shadow-sm flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-inner">
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-amber-900 mb-0.5">Problema de Sincronización</h4>
+              <p className="text-xs text-amber-700/80 font-medium max-w-lg">{syncError}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {syncError.toLowerCase().includes("token") || 
+             syncError.toLowerCase().includes("expirado") || 
+             syncError.toLowerCase().includes("sesión") || 
+             syncError.toLowerCase().includes("auth") || 
+             syncError.toLowerCase().includes("401") || 
+             syncError.toLowerCase().includes("403") || 
+             syncError.toLowerCase().includes("unauthorized") ? (
+               <button 
+                onClick={() => {
+                  console.log("Redirecting to login with force=true");
+                  window.location.href = "/auth/login?force=true&reconnect=true";
+                }}
+                className="px-6 py-2.5 bg-amber-600 text-white text-[11px] font-black tracking-wider rounded-xl hover:bg-amber-700 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-600/30 uppercase whitespace-nowrap flex items-center gap-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>
+                RECONECTAR CUENTA
+              </button>
+            ) : (
+              <div className="flex flex-col items-end gap-1">
+                <button 
+                  onClick={() => fetchData(selectedDate)}
+                  disabled={isRetrying}
+                  className="px-5 py-2 bg-white text-amber-700 text-[11px] font-black tracking-wider rounded-xl border border-amber-200 hover:bg-amber-50 hover:scale-105 active:scale-95 transition-all shadow-sm uppercase flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
+                >
+                  {isRetrying && <span className="w-3 h-3 rounded-full border-2 border-amber-600/30 border-t-amber-600 animate-spin" />}
+                  {isRetrying ? "REINTENTANDO..." : "REINTENTAR"}
+                </button>
+                <button 
+                  onClick={() => window.location.href = "/auth/login?force=true&reconnect=true"}
+                  className="text-[9px] text-amber-600/60 hover:text-amber-600 font-bold underline underline-offset-2 transition-colors uppercase tracking-tighter"
+                >
+                  ¿Sigue sin funcionar? Forzar reconexión
+                </button>
+              </div>
+            )}
+            
+            <button 
+              onClick={() => setSyncError(null)}
+              className="p-2 text-amber-400 hover:text-amber-600 transition-colors"
+              title="Cerrar aviso"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── TAB: HOY ── */}
       {activeTab === "hoy" && (
@@ -574,9 +683,168 @@ export default function DayTodayPage() {
             </div>
           </div>
 
-          {/* Tasks Section (Simplified for now) */}
-          <div className="py-8 text-center border-2 border-dashed border-border/20 rounded-2xl">
-            <p className="text-navy/40 text-sm">El panel de tareas dinámicas estará disponible tras el análisis.</p>
+          {/* Meetings Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </div>
+                <h3 className="text-[11px] font-bold tracking-[0.2em] text-navy/40 uppercase">Tu Agenda (Google Calendar)</h3>
+                {calendarEvents.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                    {calendarEvents.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {calendarLoading && (
+                  <div className="flex items-center gap-2 text-[10px] text-primary font-bold uppercase tracking-widest animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Sincronizando
+                  </div>
+                )}
+                <button 
+                  onClick={() => fetchData(selectedDate)}
+                  disabled={calendarLoading}
+                  className="p-1.5 text-navy/20 hover:text-primary transition-colors bg-white border border-border/10 rounded-lg shadow-sm"
+                  title="Sincronizar calendario y archivos"
+                >
+                  <svg 
+                    className={`${calendarLoading ? "animate-spin" : ""}`}
+                    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  >
+                    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                    <polyline points="21 3 21 8 16 8" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {calendarEvents.length === 0 ? (
+              <div className="bg-white/40 backdrop-blur-md rounded-3xl border border-dashed border-navy/10 p-10 text-center transition-all hover:bg-white/60">
+                <div className="w-16 h-16 rounded-2xl bg-navy/5 flex items-center justify-center mx-auto mb-4 border border-white shadow-sm">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-navy/20">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </div>
+                <h4 className="text-navy/60 font-bold text-sm mb-1">Agenda despejada</h4>
+                <p className="text-xs text-navy/30">No se encontraron reuniones programadas para este día.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {calendarEvents.map((event) => {
+                  const startD = new Date(event.start);
+                  const endD = new Date(event.end);
+                  const startTime = startD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  const endTime = endD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  const isAllDay = !event.start.includes('T');
+                  
+                  // Check if meeting is happening now
+                  const now = new Date();
+                  const isNow = !isAllDay && now >= startD && now <= endD;
+
+                  return (
+                    <div key={event.id} className={`group relative bg-white rounded-3xl border p-5 shadow-soft hover:shadow-hard transition-all duration-500 hover:-translate-y-1.5 ${isNow ? 'border-primary/30 ring-4 ring-primary/5' : 'border-border/20'}`}>
+                      {isNow && (
+                        <div className="absolute -top-2 -right-2 px-2 py-1 bg-red-500 text-white text-[9px] font-black rounded-lg shadow-lg z-10 animate-bounce">
+                          EN VIVO
+                        </div>
+                      )}
+                      
+                      <div className="flex flex-col h-full relative z-10">
+                        <div className="flex items-center justify-between gap-2 mb-4">
+                          <div className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border ${
+                            isAllDay 
+                              ? 'bg-amber-50 text-amber-600 border-amber-100' 
+                              : isNow 
+                                ? 'bg-primary text-white border-primary shadow-sm'
+                                : 'bg-navy/5 text-navy/60 border-navy/5'
+                          }`}>
+                            {isAllDay ? 'TODO EL DÍA' : `${startTime} — ${endTime}`}
+                          </div>
+                          
+                          {event.hangoutLink && (
+                            <a 
+                              href={event.hangoutLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="w-9 h-9 rounded-xl bg-primary/5 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm group-hover:scale-110 active:scale-90"
+                              title="Unirse a la videollamada"
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path d="M23 7l-7 5 7 5V7z" />
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                              </svg>
+                            </a>
+                          )}
+                        </div>
+
+                        <h4 className="text-base font-bold text-navy mb-3 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+                          {event.summary || '(Sin título)'}
+                        </h4>
+                        
+                        {(event.location || event.description) && (
+                          <div className="mt-auto pt-4 border-t border-navy/5 space-y-2">
+                            {event.location && (
+                              <p className="text-[11px] text-navy/40 truncate flex items-center gap-2 font-medium">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary/40"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                                {event.location}
+                              </p>
+                            )}
+                            {event.description && (
+                              <p className="text-[11px] text-navy/30 line-clamp-1 italic font-medium leading-relaxed">
+                                {event.description.replace(/<[^>]*>/g, '')}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Background decoration */}
+                      <div className="absolute bottom-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-3xl -mb-12 -mr-12 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Tasks Section */}
+          <div className="space-y-4 pt-6">
+            <h3 className="text-[11px] font-bold tracking-[0.2em] text-navy/40 uppercase">Tareas Prioritarias</h3>
+            
+            <div className="bg-gradient-to-br from-navy/[0.03] to-navy/[0.01] border border-navy/5 rounded-3xl p-10 text-center backdrop-blur-sm relative overflow-hidden group">
+              {/* Animated sparkles/background items */}
+              <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary rounded-full blur-[80px] animate-pulse" />
+                <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-blue-400 rounded-full blur-[80px] animate-pulse delay-700" />
+              </div>
+
+              <div className="relative z-10">
+                <div className="w-20 h-20 rounded-3xl bg-white shadow-hard flex items-center justify-center mx-auto mb-6 border border-border/10 group-hover:scale-110 transition-transform duration-500">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary">
+                    <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z" />
+                  </svg>
+                </div>
+                <h4 className="text-xl font-bold text-navy mb-3">Análisis Inteligente en Espera</h4>
+                <p className="text-sm text-navy/50 max-w-md mx-auto mb-8 leading-relaxed">
+                  Procesa tus reuniones y documentos de hoy para que <span className="text-primary font-bold">Nexión Intelligence</span> genere automáticamente tus próximos pasos críticos.
+                </p>
+                <button
+                  onClick={() => fetchData(selectedDate)}
+                  className="inline-flex items-center gap-3 px-8 py-3.5 rounded-2xl text-sm font-bold text-white shadow-xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all duration-300"
+                  style={{ background: "linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%)" }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z" />
+                  </svg>
+                  Analizar Prioridades de Hoy
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -588,6 +856,11 @@ export default function DayTodayPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold tracking-widest text-navy/50 uppercase">Fuentes del día</span>
+              {lastSyncTime && !driveSyncing && (
+                <span className="text-[10px] text-navy/30 font-medium">
+                  Sincronizado: {lastSyncTime}
+                </span>
+              )}
               {driveSyncing && (
                 <span className="flex items-center gap-1.5 text-[10px] font-semibold text-primary/70">
                   <span className="w-3 h-3 rounded-full border-2 border-primary/40 border-t-primary animate-spin inline-block" />
@@ -595,16 +868,38 @@ export default function DayTodayPage() {
                 </span>
               )}
             </div>
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border-2 border-primary/30 text-primary hover:bg-primary/5 transition-all"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
-              </svg>
-              Añadir fuente
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => fetchData(selectedDate)}
+                disabled={driveSyncing}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  driveSyncing 
+                    ? "bg-navy/5 text-navy/30 cursor-not-allowed" 
+                    : "bg-white border border-border/20 text-navy/60 hover:text-primary hover:border-primary/50 shadow-sm"
+                }`}
+              >
+                <svg 
+                  className={`${driveSyncing ? "animate-spin" : ""}`}
+                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                  <polyline points="21 3 21 8 16 8" />
+                </svg>
+                {driveSyncing ? "Sincronizando..." : "Sincronizar ahora"}
+              </button>
+
+              <button
+                onClick={() => setDrawerOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border-2 border-primary/30 text-primary hover:bg-primary/5 transition-all"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+                Añadir fuente
+              </button>
+            </div>
           </div>
+
 
           {/* Filters row */}
           <div className="flex items-center justify-between gap-4">
@@ -679,7 +974,7 @@ export default function DayTodayPage() {
                   <p className="text-sm font-semibold text-navy mb-1 truncate">{source.name}</p>
                   <div className="flex items-center gap-3">
                     <span className={`text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-md ${typeStyles[source.type]}`}>
-                      {source.type}
+                      {source.displayTag || source.type}
                     </span>
                     <span className="flex items-center gap-1 text-xs text-navy/40 font-medium">
                       {source.format}

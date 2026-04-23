@@ -56,10 +56,10 @@ export async function GET(request: NextRequest) {
 
     let q = `(${noiseFilter}) and trashed=false and (${mimeTypes.join(" or ")})`;
 
-    // Filter by UTC range covering modifiedTime OR viewedByMeTime
-    // This captures files the user edited AND files they just opened to read.
+    // Filter by UTC range covering createdTime, modifiedTime OR viewedByMeTime
+    // This captures files the user created, edited AND files they just opened to read.
     if (startUtc && endUtc) {
-      q += ` and (modifiedTime >= '${startUtc}' and modifiedTime <= '${endUtc}' or viewedByMeTime >= '${startUtc}' and viewedByMeTime <= '${endUtc}')`;
+      q += ` and (createdTime >= '${startUtc}' and createdTime <= '${endUtc}' or modifiedTime >= '${startUtc}' and modifiedTime <= '${endUtc}')`;
     }
 
     const driveUrl = new URL("https://www.googleapis.com/drive/v3/files");
@@ -77,13 +77,23 @@ export async function GET(request: NextRequest) {
 
     const driveRes = await fetch(driveUrl.toString(), {
       headers: { Authorization: `Bearer ${googleToken}` },
+      cache: 'no-store', // Ensure we always get fresh data from Google
     });
 
     if (!driveRes.ok) {
       const errText = await driveRes.text();
       console.error("Google Drive API error:", errText);
+      
+      // If Google says unauthorized, it's a token issue
+      if (driveRes.status === 401 || driveRes.status === 403) {
+        return NextResponse.json(
+          { error: "Su sesión de Google ha expirado. Por favor, reconecte su cuenta.", detail: errText },
+          { status: driveRes.status }
+        );
+      }
+
       return NextResponse.json(
-        { error: "Google Drive API error", detail: errText },
+        { error: "Error en la API de Google Drive", detail: errText },
         { status: driveRes.status }
       );
     }

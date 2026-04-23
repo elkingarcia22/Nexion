@@ -36,7 +36,7 @@ export async function fetchGoogleDriveFiles(
     const googleToken =
       (session as any).provider_token ||
       (typeof window !== "undefined"
-        ? sessionStorage.getItem("google_provider_token")
+        ? (localStorage.getItem("google_provider_token") || sessionStorage.getItem("google_provider_token"))
         : null);
 
     if (!googleToken) {
@@ -94,6 +94,15 @@ export async function fetchGoogleDriveFiles(
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
+      
+      // If unauthorized, clear tokens to force re-login
+      if (res.status === 401 || res.status === 403) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem("google_provider_token");
+          sessionStorage.removeItem("google_provider_token");
+        }
+      }
+
       return {
         success: false,
         error: errData.error || `Error ${res.status} al acceder a Google Drive`,

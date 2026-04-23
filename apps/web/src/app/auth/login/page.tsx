@@ -10,17 +10,25 @@ export default function Login() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        router.push("/");
-      }
-    });
+    const searchParams = new URLSearchParams(window.location.search);
+    const force = searchParams.get("force") === "true";
+
+    if (!force) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          setUser(session.user);
+          router.push("/");
+        }
+      });
+    }
   }, [router]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const force = searchParams.get("force") === "true";
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -28,7 +36,7 @@ export default function Login() {
           scopes: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/spreadsheets email profile",
           queryParams: {
             access_type: "offline",
-            prompt: "consent",
+            ...(force ? { prompt: "consent" } : {}),
           },
         },
       });

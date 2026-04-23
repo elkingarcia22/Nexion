@@ -11,35 +11,68 @@ function CallbackContent() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Supabase ya procesó el callback automáticamente
-        // Solo verificamos la sesión
-        const { data, error } = await supabase.auth.getSession();
+        console.log("DEBUG: Auth callback starting...");
+        
+        // 1. Check if we have tokens in the hash fragment (most reliable for provider tokens)
+        let hashProviderToken = null;
+        let hashRefreshToken = null;
 
-        if (error) {
-          console.error("Auth error:", error);
-          router.push("/auth/login?error=" + encodeURIComponent(error.message));
-          return;
+        if (typeof window !== "undefined" && window.location.hash) {
+          console.log("DEBUG: Parsing tokens from URL hash...");
+          const hash = window.location.hash.substring(1);
+          const params = new URLSearchParams(hash);
+          
+          hashProviderToken = params.get("provider_token");
+          hashRefreshToken = params.get("provider_refresh_token");
+          
+          if (hashProviderToken) console.log("DEBUG: Found provider_token in hash fragment");
+          if (hashRefreshToken) console.log("DEBUG: Found provider_refresh_token in hash fragment");
         }
 
-        if (data?.session?.user) {
-          // Store Google provider token for Drive/Gemini API access
-          const session = data.session as any;
-          if (session.provider_token) {
-            sessionStorage.setItem("google_provider_token", session.provider_token);
-          }
-          if (session.provider_refresh_token) {
-            sessionStorage.setItem("google_provider_refresh_token", session.provider_refresh_token);
-          }
-          // Login exitoso
-          console.log("✓ User authenticated:", data.session.user.email);
-          router.push("/");
+        // 2. Wait for Supabase to process the session
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Auth error from getSession:", error);
+        }
+
+        const session = data?.session;
+        let providerToken = hashProviderToken || (session as any)?.provider_token;
+        let providerRefreshToken = hashRefreshToken || (session as any)?.provider_refresh_token;
+
+        console.log("DEBUG: Session user:", session?.user?.email || "none");
+        console.log("DEBUG: Final providerToken present:", !!providerToken);
+        console.log("DEBUG: Final refreshToken present:", !!providerRefreshToken);
+
+        // 3. Save tokens explicitly
+        if (providerToken) {
+          localStorage.setItem("google_provider_token", providerToken);
+          sessionStorage.setItem("google_provider_token", providerToken);
+          console.log("DEBUG: Token saved to storage");
+        }
+
+        if (providerRefreshToken) {
+          localStorage.setItem("google_provider_refresh_token", providerRefreshToken);
+          sessionStorage.setItem("google_provider_refresh_token", providerRefreshToken);
+          console.log("DEBUG: Refresh token saved to storage");
+        }
+
+        // 4. Force a small wait to ensure storage is committed and Supabase state is stable
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // 5. Final check and redirect
+        if (session?.user || providerToken) {
+          console.log("✓ Authentication successful, redirecting...");
+          // Use window.location for a harder refresh of the app state if needed, 
+          // but router.push is usually fine if we wait.
+          router.push("/day/today");
         } else {
-          // Sin sesión
-          router.push("/auth/login?error=no_session");
+          console.warn("DEBUG: Authentication failed - no session or token");
+          router.push("/auth/login?error=auth_failed");
         }
       } catch (err) {
-        console.error("Callback error:", err);
-        router.push("/auth/login?error=callback_error");
+        console.error("Callback critical error:", err);
+        router.push("/auth/login?error=callback_exception");
       }
     };
 
