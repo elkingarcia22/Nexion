@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     `;
 
     // Call Gemini (Using stable 1.5 flash model)
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     
     const response = await fetch(geminiUrl, {
       method: "POST",
@@ -53,10 +53,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         contents: [{
           parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          responseMimeType: "application/json"
-        }
+        }]
       }),
     });
 
@@ -81,12 +78,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Respuesta de IA inválida" }, { status: 500 });
     }
 
-    const aiResponseText = data.candidates[0].content.parts[0].text;
+    let aiResponseText = data.candidates[0].content.parts[0].text;
+    console.log("AI Response:", aiResponseText);
+    
+    // Clean markdown if present
+    if (aiResponseText.includes("```json")) {
+      aiResponseText = aiResponseText.split("```json")[1].split("```")[0].trim();
+    } else if (aiResponseText.includes("```")) {
+      aiResponseText = aiResponseText.split("```")[1].split("```")[0].trim();
+    }
+
     const result = JSON.parse(aiResponseText);
 
     return NextResponse.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in analyze route:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
   }
 }
