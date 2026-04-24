@@ -8,11 +8,9 @@ import { getOrCreateWorkspace } from "@/lib/services/workspace-service";
 import { fetchGoogleDriveFiles, DriveFile } from "@/lib/services/google-drive-service";
 import { fetchGoogleCalendarEvents, CalendarEvent } from "@/lib/services/google-calendar-service";
 import { analyzeDay } from "@/lib/services/analyze-service";
-import { syncObjectives, getObjectives, getInitiatives } from "@/lib/services/objectives-service";
 import { DayNavigator } from "@/components/ui/DayNavigator";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ResumenDelAnalisisTab } from "@/components/day/ResumenDelAnalisisTab";
-import { ObjectivesTab } from "@/components/day/ObjectivesTab";
 import { supabase } from "@/lib/supabase";
 
 /* ─── Data ────────────────────────────────────────────────────── */
@@ -642,7 +640,7 @@ function AlertsTab({ items }: { items: any[] }) {
 
 /* ─── Page ────────────────────────────────────────────────────── */
 
-type TabType = "hoy" | "resumen-del-analisis" | "fuentes" | "feedback" | "tasks" | "insights" | "metrics" | "alerts" | "objetivos";
+type TabType = "hoy" | "resumen-del-analisis" | "fuentes" | "feedback" | "tasks" | "insights" | "metrics" | "alerts";
 
 export default function DayTodayPage() {
   const [activeTab, setActiveTab] = useState<TabType>("hoy");
@@ -664,9 +662,6 @@ export default function DayTodayPage() {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [objectives, setObjectives] = useState<any[]>([]);
-  const [initiatives, setInitiatives] = useState<any[]>([]);
-  const [isSyncingObjectives, setIsSyncingObjectives] = useState(false);
 
   // Map a raw DB row to the UI Source shape
   const mapDbSource = (s: any): Source => {
@@ -882,18 +877,6 @@ export default function DayTodayPage() {
       } else if (!driveResult.success) {
         setSyncError(driveResult.error || "Error al sincronizar con Google Drive");
       }
-
-      // 6. Sync Objectives from Google Sheets
-      if (fetchId !== currentFetchIdRef.current) return;
-      setIsSyncingObjectives(true);
-      const objectivesResult = await syncObjectives(wsId);
-      if (objectivesResult.success) {
-        const { data: objs } = await getObjectives(wsId);
-        const { data: inis } = await getInitiatives(wsId);
-        setObjectives(objs || []);
-        setInitiatives(inis || []);
-      }
-      setIsSyncingObjectives(false);
     } catch (err) {
       console.error("Error fetching data:", err);
       setSyncError("Error inesperado al cargar datos.");
@@ -1090,7 +1073,6 @@ export default function DayTodayPage() {
         {[
           { id: "hoy", label: "Hoy" },
           { id: "fuentes", label: "Fuentes" },
-          { id: "objetivos", label: "Objetivos & OKRs", count: objectives.length },
           { id: "resumen-del-analisis", label: "Resumen del Análisis", show: summaryData?.summary_text },
           { id: "tasks", label: "Tareas", count: summaryData?.tasks_count || summaryData?.tasks?.length },
           { id: "insights", label: "Insights", count: summaryData?.insights_count || summaryData?.insights?.length },
@@ -1628,14 +1610,6 @@ export default function DayTodayPage() {
       )}
 
       {/* ── TABS: DYNAMIC CONTENT ── */}
-
-      {activeTab === "objetivos" && (
-        <ObjectivesTab 
-          objectives={objectives} 
-          initiatives={initiatives} 
-          isSyncing={isSyncingObjectives} 
-        />
-      )}
 
       {activeTab === "resumen-del-analisis" && summaryData && (
         <div className="space-y-6">
