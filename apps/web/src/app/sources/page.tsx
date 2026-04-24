@@ -7,6 +7,7 @@ import {
   createSource,
   getSourcesByWorkspace,
   deleteSource,
+  type Source,
 } from "@/lib/services/source-service";
 import {
   fetchGoogleDriveFiles,
@@ -15,16 +16,6 @@ import {
   getMimeTypeLabel,
   getMimeTypeIcon,
 } from "@/lib/services/google-drive-service";
-
-interface Source {
-  id: string;
-  workspace_id: string;
-  title: string;
-  url: string | null;
-  type: string;
-  status: "pending" | "processing" | "processed" | "error";
-  created_at: string;
-}
 
 const FILTER_TABS: { key: DriveFilter; label: string; icon: string; desc: string }[] = [
   { key: "gemini", label: "Gemini / Meet", icon: "✨", desc: "Transcripciones y notas de reuniones con Gemini" },
@@ -387,25 +378,25 @@ export default function Sources() {
             >
               <div className="flex items-start gap-3 flex-1 min-w-0">
                 <span className="text-xl mt-0.5 flex-shrink-0">
-                  {source.type === "meeting" ? "🎙️" : source.type === "document" ? "📄" : "📁"}
+                  {source.source_type === "meeting" ? "🎙️" : source.source_type === "document" ? "📄" : "📁"}
                 </span>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-navy text-sm truncate">{source.title}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        source.status === "processed"
+                        source.current_status === "processed"
                           ? "bg-green-100 text-green-700"
-                          : source.status === "error"
+                          : source.current_status === "error"
                           ? "bg-red-100 text-red-700"
                           : "bg-navy/5 text-navy/50"
                       }`}
                     >
-                      {source.status === "processed"
+                      {source.current_status === "processed"
                         ? "✓ Procesado"
-                        : source.status === "error"
+                        : source.current_status === "error"
                         ? "Error"
-                        : source.status === "processing"
+                        : source.current_status === "processing"
                         ? "⏳ Procesando"
                         : "Pendiente"}
                     </span>
@@ -415,14 +406,14 @@ export default function Sources() {
                       })}
                     </span>
                   </div>
-                  {source.url && (
+                  {source.original_url && (
                     <a
-                      href={source.url}
+                      href={source.original_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-primary hover:underline mt-1 inline-block truncate max-w-sm"
                     >
-                      {source.url}
+                      {source.original_url}
                     </a>
                   )}
                 </div>

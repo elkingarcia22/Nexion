@@ -16,6 +16,7 @@
     "type-check": "pnpm --filter web type-check"
   },
   "devDependencies": {
+    "supabase": "^2.95.0",
     "typescript": "^5.3.3"
   }
 }

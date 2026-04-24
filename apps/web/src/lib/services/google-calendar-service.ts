@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { refreshGoogleToken } from "./google-auth-service";
 
 export interface CalendarEvent {
   id: string;
@@ -91,6 +92,24 @@ export async function fetchGoogleCalendarEvents(date: string): Promise<CalendarR
       const errData = await res.json().catch(() => ({}));
       
       if (res.status === 401 || res.status === 403) {
+        console.log("Calendar token expired, attempting auto-refresh...");
+        const newToken = await refreshGoogleToken();
+        
+        if (newToken) {
+          // Retry
+          const retryRes = await fetch(`/api/google/calendar?${params.toString()}`, {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              "x-google-token": newToken,
+            },
+          });
+          
+          if (retryRes.ok) {
+            const data = await retryRes.json();
+            return { success: true, events: data.events };
+          }
+        }
+
         if (typeof window !== 'undefined') {
           localStorage.removeItem("google_provider_token");
           sessionStorage.removeItem("google_provider_token");

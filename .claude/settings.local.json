@@ -32,7 +32,8 @@
       "mcp__Claude_in_Chrome__find",
       "mcp__Claude_in_Chrome__form_input",
       "WebFetch(domain:stitch.withgoogle.com)",
-      "mcp__mcp-registry__search_mcp_registry"
+      "mcp__mcp-registry__search_mcp_registry",
+      "Bash(curl -s http://localhost:3003/day/today)"
     ]
   }
 }

@@ -8,9 +8,11 @@ interface CreateSourceInput {
   createdBy: string;
   origin?: "manual" | "google";
   sourceDate?: string;
+  externalSourceId?: string;
+  metadata?: any;
 }
 
-interface Source {
+export interface Source {
   id: string;
   workspace_id: string;
   title: string;
@@ -37,6 +39,8 @@ export async function createSource(
         current_status: "pending",
         created_by_profile_id: input.createdBy,
         source_date: input.sourceDate || new Date().toISOString(),
+        external_source_id: input.externalSourceId || null,
+        metadata: input.metadata || {},
       },
     ]).select();
 

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { refreshGoogleToken } from "./google-auth-service";
 
 export interface DriveFile {
   id: string;
@@ -95,8 +96,27 @@ export async function fetchGoogleDriveFiles(
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       
-      // If unauthorized, clear tokens to force re-login
+      // If unauthorized, try to refresh the token once
       if (res.status === 401 || res.status === 403) {
+        console.log("Token expired, attempting auto-refresh...");
+        const newToken = await refreshGoogleToken();
+        
+        if (newToken) {
+          // Retry the request with the new token
+          const retryRes = await fetch(`/api/google/drive?${params.toString()}`, {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              "x-google-token": newToken,
+            },
+          });
+          
+          if (retryRes.ok) {
+            const data = await retryRes.json();
+            return { success: true, files: data.files, total: data.total };
+          }
+        }
+
+        // If refresh failed or retry failed, clear tokens
         if (typeof window !== 'undefined') {
           localStorage.removeItem("google_provider_token");
           sessionStorage.removeItem("google_provider_token");
@@ -116,6 +136,60 @@ export async function fetchGoogleDriveFiles(
       success: false,
       error: err instanceof Error ? err.message : "Error desconocido",
     };
+  }
+}
+
+/**
+ * Fetches the actual content of a file from Google Drive.
+ * For Google Docs, it exports as text/plain.
+ */
+export async function fetchGoogleFileContent(fileId: string, mimeType: string): Promise<string | null> {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData?.session;
+    if (!session) return null;
+
+    const googleToken =
+      (session as any).provider_token ||
+      (typeof window !== "undefined"
+        ? (localStorage.getItem("google_provider_token") || sessionStorage.getItem("google_provider_token"))
+        : null);
+
+    if (!googleToken) return null;
+
+    const params = new URLSearchParams({ fileId, mimeType });
+    const res = await fetch(`/api/google/drive/content?${params.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "x-google-token": googleToken,
+      },
+    });
+
+    if (!res.ok) {
+      // If 401/403, try refresh
+      if (res.status === 401 || res.status === 403) {
+        const newToken = await refreshGoogleToken();
+        if (newToken) {
+          const retryRes = await fetch(`/api/google/drive/content?${params.toString()}`, {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              "x-google-token": newToken,
+            },
+          });
+          if (retryRes.ok) {
+            const data = await retryRes.json();
+            return data.content;
+          }
+        }
+      }
+      return null;
+    }
+
+    const data = await res.json();
+    return data.content;
+  } catch (err) {
+    console.error("Error fetching file content:", err);
+    return null;
   }
 }
 
