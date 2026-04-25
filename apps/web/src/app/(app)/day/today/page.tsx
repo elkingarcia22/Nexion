@@ -11,7 +11,9 @@ import { analyzeDay } from "@/lib/services/analyze-service";
 import { DayNavigator } from "@/components/ui/DayNavigator";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ResumenDelAnalisisTab } from "@/components/day/ResumenDelAnalisisTab";
+import { TaskDrawer } from "@/components/day/TaskDrawer";
 import { supabase } from "@/lib/supabase";
+import { getTasks } from "@/lib/services/task-service";
 
 /* ─── Data ────────────────────────────────────────────────────── */
 
@@ -265,16 +267,58 @@ function FeedbackTab({ items }: { items: any[] }) {
   );
 }
 
-function TasksTab({ items }: { items: any[] }) {
+function TasksTab({ 
+  items, 
+  objectives = [], 
+  onTaskClick, 
+  onAddTask,
+  onReorder,
+  onDelete
+}: { 
+  items: any[], 
+  objectives: any[], 
+  onTaskClick: (task: any) => void, 
+  onAddTask: () => void,
+  onReorder: (newItems: any[]) => void,
+  onDelete: (id: string) => void
+}) {
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const getPriorityTextColor = (priority: string) => {
     switch(priority?.toLowerCase()) {
+      case 'high':
       case 'alta': return 'text-red-600 font-bold';
+      case 'medium':
       case 'media': return 'text-orange-500 font-bold';
+      case 'low':
       case 'baja': return 'text-gray-400 font-bold';
       default: return 'text-gray-500 font-bold';
     }
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    // Add a ghost image or just set data
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    
+    const newItems = [...items];
+    const draggedItem = newItems[draggedIndex];
+    newItems.splice(draggedIndex, 1);
+    newItems.splice(index, 0, draggedItem);
+    
+    setDraggedIndex(index);
+    onReorder(newItems);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
   };
 
   return (
@@ -285,7 +329,10 @@ function TasksTab({ items }: { items: any[] }) {
           <h3 className="text-sm font-black text-navy/60 uppercase tracking-widest">TAREAS DEL DÍA</h3>
           <span className="text-xs font-medium px-2 py-1 bg-navy/5 rounded-lg text-navy/40">{items.length} items</span>
         </div>
-        <button className="px-4 py-2 rounded-lg border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/5 transition-colors flex items-center gap-2">
+        <button 
+          onClick={onAddTask}
+          className="px-4 py-2 rounded-lg border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/5 transition-colors flex items-center gap-2"
+        >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
@@ -297,101 +344,129 @@ function TasksTab({ items }: { items: any[] }) {
       {/* Fila de filtros */}
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/20">
         <div className="flex items-center gap-2">
-          <select className="px-3 py-2 rounded-lg border border-border/30 text-sm text-navy/70 bg-white hover:border-primary/40 transition-colors cursor-pointer">
+          <select className="px-3 py-2 rounded-lg border border-border/30 text-sm text-navy/70 bg-white hover:border-primary/40 transition-colors cursor-pointer outline-none">
             <option>Objetivo</option>
           </select>
-          <select className="px-3 py-2 rounded-lg border border-border/30 text-sm text-navy/70 bg-white hover:border-primary/40 transition-colors cursor-pointer">
+          <select className="px-3 py-2 rounded-lg border border-border/30 text-sm text-navy/70 bg-white hover:border-primary/40 transition-colors cursor-pointer outline-none">
             <option>Prioridad</option>
           </select>
-          <select className="px-3 py-2 rounded-lg border border-border/30 text-sm text-navy/70 bg-white hover:border-primary/40 transition-colors cursor-pointer">
+          <select className="px-3 py-2 rounded-lg border border-border/30 text-sm text-navy/70 bg-white hover:border-primary/40 transition-colors cursor-pointer outline-none">
             <option>Estado</option>
           </select>
         </div>
-        <button className="flex items-center gap-1.5 text-sm text-navy/60 hover:text-navy font-medium transition-colors">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="4" y1="6" x2="20" y2="6" />
-            <line x1="8" y1="12" x2="20" y2="12" />
-            <line x1="12" y1="18" x2="20" y2="18" />
-          </svg>
-          Ordenar
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-navy/40 italic">Arrastra para reordenar</span>
+          <button className="flex items-center gap-1.5 text-sm text-navy/60 hover:text-navy font-medium transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="8" y1="12" x2="20" y2="12" />
+              <line x1="12" y1="18" x2="20" y2="18" />
+            </svg>
+            Ordenar
+          </button>
+        </div>
       </div>
 
       {/* Lista de tareas */}
       <div className="space-y-2">
         {items.map((item, i) => (
-          <div key={i} className="bg-white rounded-xl border border-border/20 px-5 py-4 flex items-center gap-4 hover:shadow-sm hover:border-border/40 transition-all group">
-            {/* Radio */}
-            <input
-              type="radio"
-              name="task-selection"
-              value={i}
-              checked={selectedTask === String(i)}
-              onChange={(e) => setSelectedTask(e.target.value)}
-              className="w-[18px] h-[18px] flex-shrink-0 cursor-pointer accent-primary"
-            />
+          <div 
+            key={item.id || i} 
+            draggable
+            onDragStart={(e) => handleDragStart(e, i)}
+            onDragOver={(e) => handleDragOver(e, i)}
+            onDragEnd={handleDragEnd}
+            className={`bg-white rounded-xl border ${draggedIndex === i ? 'border-primary shadow-lg scale-[1.02] z-50' : 'border-border/20'} px-5 py-4 flex items-center gap-4 hover:shadow-sm hover:border-border/40 transition-all group cursor-grab active:cursor-grabbing`}
+          >
+            {/* Drag Handle Icon */}
+            <div className="text-navy/20 group-hover:text-navy/40 transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="9" cy="5" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="9" cy="19" r="1" />
+                <circle cx="15" cy="5" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="19" r="1" />
+              </svg>
+            </div>
+
+            {/* Checkbox-style Radio */}
+            <div 
+              onClick={() => setSelectedTask(String(i))}
+              className={`w-[20px] h-[20px] rounded-full border-2 flex-shrink-0 cursor-pointer flex items-center justify-center transition-all ${
+                selectedTask === String(i) ? "bg-primary border-primary" : "border-border/40 hover:border-primary/40"
+              }`}
+            >
+              {selectedTask === String(i) && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </div>
 
             {/* Contenido */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-navy mb-1.5 leading-tight">{item.title}</p>
+            <div className="flex-1 min-w-0" onClick={() => onTaskClick(item)}>
+              <p className="text-sm font-bold text-navy mb-1.5 leading-tight group-hover:text-primary transition-colors cursor-pointer">{item.title}</p>
               <div className="flex items-center gap-3 flex-wrap">
-                {/* Objetivo tag con icono target */}
-                {item.objetivo && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-primary px-2.5 py-1 rounded-md bg-primary/8 border border-primary/15">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <circle cx="12" cy="12" r="10" />
-                      <circle cx="12" cy="12" r="6" />
-                      <circle cx="12" cy="12" r="2" />
-                    </svg>
-                    {item.objetivo}
+                {/* Objetivo tag */}
+                {(item.objetivo || item.goal_id) && (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-primary px-2 py-0.5 rounded bg-primary/5 border border-primary/10 uppercase tracking-tighter">
+                    <circle cx="12" cy="12" r="10" className="opacity-20" />
+                    {item.objetivo || (objectives.find(o => o.id === item.goal_id)?.title) || "Objetivo"}
                   </span>
                 )}
+                
+                {/* Status Badge */}
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${
+                  item.status === 'Listo' ? 'bg-green-50 text-green-600 border-green-100' : 
+                  item.status === 'En Progreso' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                  'bg-gray-50 text-gray-500 border-gray-100'
+                }`}>
+                  {item.status || 'Pendiente'}
+                </span>
+
                 {/* Fecha */}
-                {item.fecha_vencimiento && (
-                  <span className="inline-flex items-center gap-1 text-xs text-navy/50">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12 6 12 12 16 14" />
+                {(item.fecha_vencimiento || item.due_date) && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-navy/40 font-medium">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                     </svg>
-                    {item.fecha_vencimiento}
+                    {item.fecha_vencimiento || new Date(item.due_date).toLocaleDateString()}
                   </span>
                 )}
-                {/* Documento */}
-                {item.documento && (
-                  <span className="inline-flex items-center gap-1 text-xs text-navy/50">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
-                      <polyline points="13 2 13 9 20 9" />
-                    </svg>
-                    {item.documento}
+
+                {/* Equipo */}
+                {item.team && (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-navy/50 px-2 py-0.5 rounded bg-navy/5 border border-black/5 uppercase">
+                    {item.team}
                   </span>
                 )}
-                {/* Prioridad como texto coloreado */}
-                <span className={`text-xs ${getPriorityTextColor(item.prioridad)}`}>
-                  {item.prioridad?.toUpperCase() || 'MEDIA'}
+
+                {/* Prioridad */}
+                <span className={`text-[11px] uppercase tracking-wider ${getPriorityTextColor(item.priority || item.prioridad)}`}>
+                  {(item.priority || item.prioridad || 'MEDIA')}
                 </span>
               </div>
             </div>
 
-            {/* Derecha: estado + acciones */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-xs font-bold px-3 py-1.5 rounded-md bg-indigo-50 text-indigo-600">
-                PENDIENTE
-              </span>
-              <button className="hidden group-hover:flex items-center gap-1 px-2.5 py-1.5 rounded-md hover:bg-primary/5 text-primary font-medium text-xs transition-colors whitespace-nowrap">
-                Ver detalles
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-              <button className="hidden group-hover:flex p-1.5 rounded-lg hover:bg-navy/5 text-navy/40 hover:text-navy/70 transition-colors" title="Editar">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            {/* Acciones */}
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button 
+                onClick={(e) => { e.stopPropagation(); onTaskClick(item); }}
+                className="p-1.5 rounded-lg hover:bg-primary/10 text-primary transition-colors" title="Editar"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </button>
-              <button className="hidden group-hover:flex p-1.5 rounded-lg hover:bg-red-50 text-navy/40 hover:text-red-500 transition-colors" title="Eliminar">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <button 
+                className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors" 
+                title="Eliminar"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm('¿Estás seguro de que deseas eliminar esta tarea?')) {
+                    onDelete(item.id);
+                  }
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                 </svg>
@@ -654,14 +729,49 @@ export default function DayTodayPage() {
   const [formatFilter, setFormatFilter] = useState<string>("all");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [driveSyncing, setDriveSyncing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
+  const [structuredTasks, setStructuredTasks] = useState<any[]>([]);
+  const [objectives, setObjectives] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
+
+  const fetchProfiles = async () => {
+    const { data } = await supabase.from("profiles").select("*");
+    if (data) setProfiles(data);
+  };
+
+  const fetchObjectives = async () => {
+    const { data } = await supabase.from("objectives").select("*");
+    if (data) setObjectives(data);
+  };
+
+  const loadStructuredTasks = async (wsId: string) => {
+    const result = await getTasks(wsId);
+    if (result.success) {
+      setStructuredTasks(result.data || []);
+    }
+  };
+
+  const handleReorderTasks = async (newTasks: any[]) => {
+    setStructuredTasks(newTasks);
+    await reorderTasks(newTasks.map(t => t.id));
+  };
+
+  const handleDeleteTaskAction = async (id: string) => {
+    const { error } = await supabase.from("task_proposals").delete().eq("id", id);
+    if (!error && workspaceId) {
+      loadStructuredTasks(workspaceId);
+    }
+  };
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
 
   // Map a raw DB row to the UI Source shape
   const mapDbSource = (s: any): Source => {
@@ -728,6 +838,7 @@ export default function DayTodayPage() {
     try {
       setLoading(true);
       setIsRetrying(true);
+      setIsSyncing(true);
       setSyncError(null);
       
       // Clear data to show fresh loading state
@@ -752,6 +863,18 @@ export default function DayTodayPage() {
       }
       const wsId = wsResult.data.id;
       setWorkspaceId(wsId);
+      loadStructuredTasks(wsId);
+      fetchProfiles();
+      fetchObjectives();
+
+      // Load objectives and profiles for mapping
+      const { data: objData } = await supabase
+        .from("workspace_objectives")
+        .select("id, title")
+        .eq("workspace_id", wsId);
+      if (objData) setObjectives(objData);
+      
+      fetchProfiles();
 
       // 2. Load existing summary
       const y = forDate.getFullYear();
@@ -884,6 +1007,7 @@ export default function DayTodayPage() {
       if (fetchId === currentFetchIdRef.current) {
         setLoading(false);
         setIsRetrying(false);
+        setIsSyncing(false);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1010,6 +1134,22 @@ export default function DayTodayPage() {
     }
   };
 
+  const handleEditTask = (task: any) => {
+    setEditingTask(task);
+    setTaskDrawerOpen(true);
+  };
+
+  const handleAddTask = () => {
+    setEditingTask(null);
+    setTaskDrawerOpen(true);
+  };
+
+  const handleSaveTask = async (taskData: any) => {
+    // Optimistic refresh
+    await fetchData(selectedDate);
+    setTaskDrawerOpen(false);
+  };
+
   const filteredSources = sources.filter((s) => {
     const typeOk = typeFilter === "all" || s.type === typeFilter;
     const fmtOk = formatFilter === "all" || s.format === formatFilter;
@@ -1044,6 +1184,18 @@ export default function DayTodayPage() {
 
         <div className="flex items-center gap-4">
           <DayNavigator value={selectedDate} onChange={handleDateChange} />
+
+          <button
+            onClick={() => fetchData(selectedDate)}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl text-[12px] font-black tracking-widest text-[#0a1b3d] border-2 border-[#1a6bff]/10 hover:border-[#1a6bff]/30 transition-all bg-white"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={isSyncing ? "animate-spin" : ""}>
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.04 6.67 2.87L21 8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            SINCRONIZAR
+          </button>
 
           <button
             onClick={handleAnalyzeDay}
@@ -1237,7 +1389,10 @@ export default function DayTodayPage() {
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                 </div>
-                <h3 className="text-[11px] font-bold tracking-[0.2em] text-navy/40 uppercase">Tu Agenda (Google Calendar)</h3>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  <span className="text-[10px] font-black tracking-widest text-navy/40 uppercase">Calendario Hoy</span>
+                </div>
                 {calendarEvents.length > 0 && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                     {calendarEvents.length}
@@ -1368,32 +1523,64 @@ export default function DayTodayPage() {
               <h3 className="text-[11px] font-bold tracking-[0.2em] text-navy/40 uppercase">Próximas Tareas</h3>
             </div>
             
-            {summaryData?.tasks && summaryData.tasks.length > 0 ? (
+            {(structuredTasks.length > 0 || (summaryData?.tasks && summaryData.tasks.length > 0)) ? (
               <div className="space-y-3">
-                {summaryData.tasks.slice(0, 3).map((task: any, idx: number) => (
-                  <div key={idx} className="bg-white rounded-2xl border border-border/10 p-4 shadow-sm hover:shadow-soft transition-all flex items-center justify-between group">
+                {/* Structured Tasks (Source of Truth) */}
+                {structuredTasks.map((task: any) => (
+                  <div 
+                    key={task.id} 
+                    onClick={() => handleEditTask(task)}
+                    className="bg-white rounded-2xl border-2 border-primary/10 p-4 shadow-sm hover:shadow-primary/10 hover:-translate-y-0.5 transition-all flex items-center justify-between group cursor-pointer"
+                  >
                     <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-full border-2 border-navy/5 flex items-center justify-center text-navy/20 group-hover:border-primary/20 group-hover:text-primary transition-colors">
-                        {idx + 1}
+                      <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
                       </div>
-                      <p className="text-sm font-bold text-navy/80">{task.title}</p>
+                      <div>
+                        <p className="text-sm font-bold text-navy/80">{task.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[9px] font-bold text-navy/20 uppercase tracking-tighter">Tarea Activa</span>
+                          {task.due_date && (
+                            <span className="text-[9px] font-bold text-primary/60">📅 {new Date(task.due_date).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <span className={`text-[9px] font-black tracking-widest px-2 py-1 rounded-lg uppercase ${
-                      task.priority === 'alta' ? 'bg-red-50 text-red-500' : 
-                      task.priority === 'media' ? 'bg-amber-50 text-amber-500' : 'bg-green-50 text-green-500'
+                      task.priority === 'High' ? 'bg-red-50 text-red-500' : 
+                      task.priority === 'Medium' ? 'bg-amber-50 text-amber-500' : 'bg-green-50 text-green-500'
                     }`}>
-                      {task.priority}
+                      {task.priority || 'Low'}
                     </span>
                   </div>
                 ))}
-                {summaryData.tasks.length > 3 && (
-                  <button 
-                    onClick={() => setActiveTab("tasks")}
-                    className="w-full py-2 text-[10px] font-bold text-navy/30 hover:text-primary transition-colors uppercase tracking-widest"
-                  >
-                    Ver todas las tareas ({summaryData.tasks.length})
-                  </button>
-                )}
+
+                {/* AI Suggestions (Lighter style) */}
+                {summaryData?.tasks?.map((task: any, idx: number) => {
+                  // Only show if not already promoting to structured (optional logic here)
+                  return (
+                    <div 
+                      key={`suggest-${idx}`} 
+                      className="bg-white/50 rounded-2xl border border-dashed border-navy/10 p-4 hover:border-primary/20 hover:bg-white transition-all flex items-center justify-between group cursor-help"
+                      title="Sugerencia de IA"
+                    >
+                      <div className="flex items-center gap-4 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <div className="w-8 h-8 rounded-full border border-dashed border-navy/20 flex items-center justify-center text-navy/30">
+                          {idx + 1}
+                        </div>
+                        <p className="text-sm font-medium text-navy/60">{task.title}</p>
+                      </div>
+                      <button 
+                        onClick={() => handleEditTask({ ...task, isSuggestion: true })}
+                        className="text-[9px] font-black tracking-widest px-3 py-1.5 rounded-lg border border-primary/20 text-primary opacity-0 group-hover:opacity-100 hover:bg-primary hover:text-white transition-all"
+                      >
+                        REVISAR
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="bg-white/40 backdrop-blur-sm rounded-3xl border border-dashed border-navy/5 p-8 text-center">
@@ -1661,8 +1848,18 @@ export default function DayTodayPage() {
         <FeedbackTab items={summaryData.feedback} />
       )}
 
-      {activeTab === "tasks" && summaryData?.tasks && (
-        <TasksTab items={summaryData.tasks} />
+      {activeTab === "tasks" && (
+        <TasksTab 
+          items={[
+            ...(structuredTasks || []),
+            ...(summaryData?.tasks || [])
+          ]} 
+          objectives={objectives}
+          onTaskClick={handleEditTask}
+          onAddTask={handleAddTask}
+          onReorder={handleReorderTasks}
+          onDelete={handleDeleteTaskAction}
+        />
       )}
 
       {activeTab === "insights" && summaryData?.insights && (
@@ -1691,6 +1888,20 @@ export default function DayTodayPage() {
           fetchData(selectedDate);
         }}
         sourceDate={selectedDate}
+      />
+
+      <TaskDrawer 
+        open={taskDrawerOpen}
+        onClose={() => setTaskDrawerOpen(false)}
+        task={editingTask}
+        workspaceId={workspaceId || ""}
+        objectives={objectives}
+        profiles={profiles}
+        currentUserProfileId={user?.id}
+        onSave={() => {
+          if (workspaceId) loadStructuredTasks(workspaceId);
+          setTaskDrawerOpen(false);
+        }}
       />
 
       <ConfirmModal

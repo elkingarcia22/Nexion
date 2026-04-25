@@ -27,6 +27,23 @@ export interface Source {
 export async function createSource(
   input: CreateSourceInput
 ): Promise<{ success: boolean; data?: Source; error?: string }> {
+  if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
+    console.log("DEMO_MODE: Using mock createSource");
+    return {
+      success: true,
+      data: {
+        id: Math.random().toString(36).substring(7),
+        workspace_id: input.workspaceId,
+        title: input.title,
+        original_url: input.url || null,
+        source_type: input.type,
+        source_origin: input.origin || "google",
+        current_status: "processed",
+        created_at: new Date().toISOString()
+      } as any
+    };
+  }
+
   try {
     const { data, error } = await supabase.from("sources").insert([
       {
@@ -45,22 +62,6 @@ export async function createSource(
     ]).select();
 
     if (error) {
-      if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
-        console.warn("Using mock createSource for Demo Mode");
-        return {
-          success: true,
-          data: {
-            id: Math.random().toString(36).substring(7),
-            workspace_id: input.workspaceId,
-            title: input.title,
-            original_url: input.url || null,
-            source_type: input.type,
-            source_origin: "google",
-            current_status: "processed",
-            created_at: new Date().toISOString()
-          } as any
-        };
-      }
       return { success: false, error: error.message };
     }
 

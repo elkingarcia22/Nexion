@@ -7,11 +7,13 @@ export async function GET(request: Request) {
     const range = searchParams.get("range");
     const googleToken = request.headers.get("x-google-token");
 
-    if (!spreadsheetId || !range || !googleToken) {
+    if (!spreadsheetId || !googleToken) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`;
+    const url = range 
+      ? `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`
+      : `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
     
     const res = await fetch(url, {
       headers: {
@@ -22,7 +24,7 @@ export async function GET(request: Request) {
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
       return NextResponse.json(
-        { error: error.error?.message || "Error fetching sheet values" },
+        { error: error.error?.message || "Error fetching sheet data" },
         { status: res.status }
       );
     }

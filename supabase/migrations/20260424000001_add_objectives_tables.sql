@@ -6,20 +6,22 @@ CREATE TABLE IF NOT EXISTS public.workspace_objectives (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
     team TEXT,
+    owner TEXT,
     quarter TEXT,
     objective_title TEXT,
     narrative TEXT,
     type TEXT,
     key_result TEXT,
-    weight NUMERIC,
-    progress NUMERIC,
-    score NUMERIC,
+    sub_tasks JSONB DEFAULT '[]'::jsonb,
+    weight NUMERIC DEFAULT 0,
+    progress NUMERIC DEFAULT 0,
+    score NUMERIC DEFAULT 0,
     initiatives_comments TEXT,
     external_row_index INTEGER,
     last_synced_at TIMESTAMPTZ DEFAULT now(),
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(workspace_id, quarter, objective_title, key_result)
+    UNIQUE(workspace_id, quarter, objective_title, key_result, owner)
 );
 
 -- 2. Initiatives Table (from Tablero Producto tab)
