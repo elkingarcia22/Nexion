@@ -57,7 +57,6 @@ export async function getTasks(workspaceId: string, date?: string) {
     .from("task_proposals")
     .select("*")
     .eq("workspace_id", workspaceId)
-    .order('position', { ascending: true })
     .order('created_at', { ascending: false });
   
   if (taskError) {

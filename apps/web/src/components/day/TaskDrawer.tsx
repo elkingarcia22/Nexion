@@ -1,8 +1,83 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { createOrUpdateTask } from "@/lib/services/task-service";
+import { DatePicker } from "../ui/DatePicker";
+
+/* ─── Custom Components ─────────────────────────────────────── */
+
+const CustomSelect = ({ 
+  value, 
+  onChange, 
+  options, 
+  placeholder = "Selecciona...", 
+  icon: Icon,
+  className = ""
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+  options: { value: string; label: string; icon?: any }[];
+  placeholder?: string;
+  icon?: any;
+  className?: string;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(o => o.value === value);
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-[#161927]/50 border border-white/5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white hover:border-primary/40 transition-all text-left"
+      >
+        <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+          {Icon && <Icon className="w-3 h-3 text-white/40" />}
+          <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
+        </div>
+        <svg 
+          className={`w-3 h-3 text-white/20 transition-transform ${isOpen ? "rotate-180" : ""}`} 
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[150] bg-[#161927] border border-white/10 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
+                value === opt.value ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              {opt.icon && <opt.icon className="w-3 h-3" />}
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 /* ─── Icons (Inline SVGs) ─────────────────────────────────────── */
 
@@ -22,6 +97,114 @@ const MoreIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="non
 const TrashIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
 const EditIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
 const DragHandleIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>;
+
+const SubtaskRow = ({ 
+  subtask, 
+  profiles, 
+  PRIORITIES, 
+  STATUSES, 
+  onUpdate, 
+  onRemove,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  isDragged
+}: any) => {
+  const assigneeOptions = useMemo(() => {
+    const base = profiles.map((p: any) => ({ value: p.id, label: p.full_name }));
+    if (subtask.assignee_id && !profiles.find((p: any) => p.id === subtask.assignee_id)) {
+      base.unshift({ value: subtask.assignee_id, label: subtask.assignee_name || "Jira User" });
+    } else if (!subtask.assignee_id) {
+      base.unshift({ value: "", label: "Sin asignar" });
+    }
+    return base;
+  }, [profiles, subtask.assignee_id, subtask.assignee_name]);
+
+  return (
+    <tr 
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+      className={`group border-b border-white/[0.03] hover:bg-white/[0.02] transition-all ${isDragged ? "opacity-30 bg-card" : ""}`}
+    >
+      {/* Drag Handle */}
+      <td className="p-2 w-8">
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-white/20">
+          <DragHandleIcon />
+        </div>
+      </td>
+
+      {/* Subtask Main Info: Icon + Key + Title */}
+      <td className="p-2">
+        <div className="flex items-center gap-3">
+          {/* Jira Subtask Icon (Blue branch icon style) */}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4c9aff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M9 18V5l12 2-12 11Z"/><path d="M12 11h9"/><path d="M12 7h9"/><path d="M12 15h9"/></svg>
+          
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] font-black text-primary/60 tracking-tighter whitespace-nowrap">
+              {subtask.key || `NEX-${String(subtask.id).slice(-3)}`}
+            </span>
+            <input
+              type="text"
+              value={subtask.title}
+              onChange={(e) => onUpdate(subtask.id, { title: e.target.value })}
+              placeholder="Título de la subtarea"
+              className={`bg-transparent border-none focus:ring-0 p-0 text-[13px] font-medium transition-all w-full ${subtask.status.toLowerCase() === 'done' || subtask.status.toLowerCase() === 'finalizada' ? "text-white/20 line-through" : "text-white/80 hover:text-white"}`}
+            />
+          </div>
+        </div>
+      </td>
+
+      {/* Jira Style Metadatos (Right Aligned) */}
+      <td className="p-2 w-[350px]">
+        <div className="flex items-center justify-end gap-5">
+          {/* Priority Icon (Using defined PriorityIcon component) */}
+          <div className="w-8 h-8 flex items-center justify-center hover:bg-white/5 rounded-lg transition-colors cursor-pointer" title={`Prioridad: ${subtask.priority}`}>
+            <PriorityIcon value={subtask.priority.toLowerCase()} />
+          </div>
+
+          {/* Assignee Avatar */}
+          <div className="flex items-center justify-center group/avatar relative">
+            <div 
+              className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-primary overflow-hidden shadow-sm cursor-help"
+              title={subtask.assignee_name || "Sin asignar"}
+            >
+              {subtask.assignee_name ? (
+                subtask.assignee_name.split(' ').map((n: any) => n[0]).join('').slice(0, 2).toUpperCase()
+              ) : (
+                <UserIcon className="w-3.5 h-3.5 opacity-30" />
+              )}
+            </div>
+            {/* Tooltip on hover */}
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-black text-[9px] font-bold text-white rounded opacity-0 group-hover/avatar:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-white/10 z-50">
+              {subtask.assignee_name || "Sin asignar"}
+            </div>
+          </div>
+
+          {/* Status Badge */}
+          <div className="min-w-[100px] flex justify-end">
+            <button className={`px-2 py-0.5 rounded-[4px] text-[9px] font-black uppercase tracking-widest border transition-all ${
+              subtask.status.toLowerCase() === 'done' || subtask.status.toLowerCase() === 'finalizada' ? 'bg-green-500/10 border-green-500/20 text-green-500' :
+              subtask.status.toLowerCase() === 'in progress' || subtask.status.toLowerCase() === 'en curso' || subtask.status.toLowerCase() === 'in_progress' ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' :
+              'bg-white/5 border-white/10 text-white/40'
+            }`}>
+              {subtask.status}
+            </button>
+          </div>
+
+          {/* Trash Action */}
+          <button 
+            onClick={() => onRemove(subtask.id)}
+            className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-500/10 rounded-lg text-white/10 hover:text-red-500 transition-all"
+          >
+            <TrashIcon className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+};
 
 const PriorityIcon = ({ value }: { value: string }) => {
   switch (value) {
@@ -50,21 +233,70 @@ interface TaskDrawerProps {
 const PRIORITIES = [
   { value: "highest", label: "Highest", color: "text-rose-600", bg: "bg-rose-50" },
   { value: "high", label: "High", color: "text-rose-500", bg: "bg-rose-50/50" },
-  { value: "medium", label: "Medium", color: "text-amber-500", bg: "bg-amber-50" },
-  { value: "low", label: "Low", color: "text-blue-500", bg: "bg-blue-50" },
-  { value: "lowest", label: "Lowest", color: "text-blue-400", bg: "bg-blue-50/50" },
+  { value: "medium", label: "Medium", color: "text-amber-500", bg: "bg-amber-500/10" },
+  { value: "low", label: "Low", color: "text-blue-500", bg: "bg-primary/100/10" },
+  { value: "lowest", label: "Lowest", color: "text-blue-400", bg: "bg-primary/100/50" },
 ];
 
 const STATUSES = [
-  { value: "backlog", label: "Backlog", color: "text-navy/40", bg: "bg-navy/5" },
-  { value: "todo", label: "Tareas por hacer", color: "text-navy/60", bg: "bg-navy/5" },
-  { value: "in_progress", label: "En curso", color: "text-blue-600", bg: "bg-blue-50" },
-  { value: "blocked", label: "Blocked/On Hold", color: "text-red-500", bg: "bg-red-50" },
-  { value: "review", label: "En aprobación", color: "text-amber-600", bg: "bg-amber-50" },
-  { value: "done", label: "Finalizada", color: "text-green-600", bg: "bg-green-500/10" },
+  { value: "backlog", label: "Backlog", color: "text-white/40", bg: "bg-[#161927]/5" },
+  { value: "todo", label: "Tareas por hacer", color: "text-white/60", bg: "bg-[#161927]/5" },
+  { value: "in_progress", label: "En curso", color: "text-blue-600", bg: "bg-primary/100/10" },
+  { value: "blocked", label: "Blocked/On Hold", color: "text-red-500", bg: "bg-red-500/100/10" },
+  { value: "review", label: "En aprobación", color: "text-amber-600", bg: "bg-amber-500/10" },
+  { value: "done", label: "Finalizada", color: "text-green-600", bg: "bg-green-500/100/10" },
 ];
 
-/* ─── Component ─────────────────────────────────────────────── */
+/* ─── Helpers ────────────────────────────────────────────────── */
+
+const mapJiraStatus = (jiraStatus: string) => {
+  if (!jiraStatus) return "todo";
+  const s = jiraStatus.toLowerCase().replace(/\s+/g, "_");
+  if (s === "to_do" || s === "todo" || s === "tareas_por_hacer" || s === "tareas_por_hacer") return "todo";
+  if (s === "in_progress" || s === "en_curso") return "in_progress";
+  if (s === "done" || s === "finalizada") return "done";
+  if (s === "backlog") return "backlog";
+  if (s === "review" || s === "en_aprobación") return "review";
+  return "todo";
+};
+
+const mapJiraPriority = (jiraPriority: string) => {
+  if (!jiraPriority) return "medium";
+  const p = jiraPriority.toLowerCase();
+  if (p === "highest") return "highest";
+  if (p === "high") return "high";
+  if (p === "medium") return "medium";
+  if (p === "low") return "low";
+  if (p === "lowest") return "lowest";
+  return "medium";
+};
+
+const parseJiraDescription = (node: any): string => {
+  if (!node) return "";
+  if (typeof node === 'string') return node;
+  
+  // If it's a Jira ADF text node
+  if (node.text) return node.text;
+  
+  // If it's a mention
+  if (node.type === 'mention') return `@${node.attrs?.text || 'User'}`;
+  
+  // If it has content (ADF structure)
+  if (node.content && Array.isArray(node.content)) {
+    const content = node.content.map((child: any) => parseJiraDescription(child)).join("");
+    
+    // Add spacing for block elements
+    if (['paragraph', 'heading', 'listItem', 'bulletList', 'orderedList'].includes(node.type)) {
+      return content + "\n";
+    }
+    return content;
+  }
+
+  // Fallback for objects that might have a value property
+  if (node.value && typeof node.value === 'string') return node.value;
+  
+  return "";
+};
 
 export function TaskDrawer({ 
   open, 
@@ -95,27 +327,57 @@ export function TaskDrawer({
   const [newComment, setNewComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editCommentText, setEditCommentText] = useState("");
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [objectives, setObjectives] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>(propsProfiles);
+  const [objectives, setObjectives] = useState<any[]>(propsObjectives);
   const [submitting, setSubmitting] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [draggedSubtaskId, setDraggedSubtaskId] = useState<number | null>(null);
 
   useEffect(() => {
+    console.log("TaskDrawer Received Task:", task);
     if (task) {
+      console.log("Setting formData for task:", task.title);
+      const isJira = task.origin === 'jira';
+      
+      // Parse Jira comments into activity format
+      const jiraComments = (task.comments || []).map((c: any) => ({
+        id: c.id,
+        type: "comment",
+        user: c.author?.displayName || "Jira User",
+        text: parseJiraDescription(c.body),
+        timestamp: c.created,
+        isJira: true
+      }));
+
+      // Jira history is already parsed in page.tsx and passed in task.activity
+      const combinedActivity = [...jiraComments, ...(task.activity || [])].sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
       setFormData({
         title: task.title || "",
-        description: task.description || "",
-        priority: task.priority || "medium",
-        status: task.status || "pendiente",
+        description: parseJiraDescription(task.description),
+        priority: isJira ? mapJiraPriority(task.priority) : (task.priority || "medium"),
+        status: isJira ? mapJiraStatus(task.status) : (task.status || "pendiente"),
         assignee_id: task.assignee_id || "",
         reporter_id: task.reporter_id || "",
-        due_date: task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : "",
+        due_date: task.due_date ? (task.due_date.includes('T') ? task.due_date.split('T')[0] : task.due_date) : "",
         team: task.team || "",
         labels: task.labels || [],
-        subtasks: task.subtasks || [],
-        activity: task.activity || [],
+        subtasks: (task.subtasks || []).map((sub: any) => {
+          if (sub.fields) { // Jira format
+            return {
+              id: sub.id,
+              title: sub.fields.summary,
+              status: mapJiraStatus(sub.fields.status.name),
+              priority: mapJiraPriority(sub.fields.priority?.name || "medium"),
+              assignee_id: sub.fields.assignee?.accountId || ""
+            };
+          }
+          return sub;
+        }),
+        activity: combinedActivity,
         goal_id: task.goal_id || "",
       });
     } else {
@@ -238,6 +500,14 @@ export function TaskDrawer({
 
   // Sync team when goal changes
   useEffect(() => {
+    if (propsProfiles?.length > 0) setProfiles(propsProfiles);
+  }, [propsProfiles]);
+
+  useEffect(() => {
+    if (propsObjectives?.length > 0) setObjectives(propsObjectives);
+  }, [propsObjectives]);
+
+  useEffect(() => {
     if (formData.goal_id && objectives.length > 0) {
       const selectedObj = objectives.find(o => o.id === formData.goal_id);
       if (selectedObj && selectedObj.team && !formData.team) {
@@ -256,6 +526,27 @@ export function TaskDrawer({
     }
     setNewLabel("");
   };
+
+  // Memoized options for people selects to avoid hook rule violations
+  const assigneeOptions = useMemo(() => {
+    const base = profiles.map(p => ({ value: p.id, label: p.full_name }));
+    if (formData.assignee_id && !profiles.find(p => p.id === formData.assignee_id)) {
+      base.unshift({ value: formData.assignee_id, label: task?.assignee?.displayName || "Jira Assignee" });
+    } else if (!formData.assignee_id) {
+      base.unshift({ value: "", label: "Sin asignar" });
+    }
+    return base;
+  }, [profiles, formData.assignee_id, task]);
+
+  const reporterOptions = useMemo(() => {
+    const base = profiles.map(p => ({ value: p.id, label: p.full_name }));
+    if (formData.reporter_id && !profiles.find(p => p.id === formData.reporter_id)) {
+      base.unshift({ value: formData.reporter_id, label: task?.reporter?.displayName || "Jira Reporter" });
+    } else if (!formData.reporter_id) {
+      base.unshift({ value: "", label: "Sin asignar" });
+    }
+    return base;
+  }, [profiles, formData.reporter_id, task]);
 
   const handleAddComment = () => {
     if (!newComment.trim()) return;
@@ -373,26 +664,20 @@ export function TaskDrawer({
     }
   };
 
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-[100] flex justify-end overflow-hidden">
-      <div
-        className={`absolute inset-0 bg-navy/20 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={onClose}
+  if (!open || typeof document === 'undefined') return null;
+  
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex justify-end">
+      <div 
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" 
+        onClick={onClose} 
       />
-
-      <aside
-        className={`relative h-full w-full md:w-[950px] bg-white flex flex-col shadow-hard transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
+      
+      <div className={`fixed inset-y-0 right-0 z-[100] w-full max-w-[1400px] bg-[#0A0C14] shadow-2xl transition-transform duration-500 ease-out flex flex-col border-l border-white/5 ${open ? "translate-x-0" : "translate-x-full"}`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-black/5 bg-gray-50/50">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-[#161927]/50">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-[10px] font-black tracking-widest text-navy/40">
+            <div className="flex items-center gap-2 text-[10px] font-black tracking-widest text-white/40">
               <LayoutIcon />
               <span>DÍA</span>
               <span>/</span>
@@ -400,26 +685,26 @@ export function TaskDrawer({
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button className="p-2 hover:bg-black/5 rounded-md text-navy/40 transition-colors">
+            <button className="p-2 hover:bg-[#161927]/5 rounded-md text-white/40 transition-colors">
               <ShareIcon />
             </button>
             <div className="relative group/menu">
-              <button className="p-2 hover:bg-black/5 rounded-md text-navy/40 transition-colors">
+              <button className="p-2 hover:bg-[#161927]/5 rounded-md text-white/40 transition-colors">
                 <MoreIcon />
               </button>
-              <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-black/5 rounded-xl shadow-xl opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all z-[120]">
+              <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-white/5 rounded-xl shadow-xl opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all z-[120]">
                 <button 
                   onClick={handleDeleteTask}
-                  className="w-full px-4 py-2 text-left text-xs font-black text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2"
+                  className="w-full px-4 py-2 text-left text-xs font-black text-red-500 hover:bg-red-500/100/10 transition-colors flex items-center gap-2"
                 >
                   <TrashIcon /> ELIMINAR TAREA
                 </button>
               </div>
             </div>
-            <div className="w-[1px] h-4 bg-black/10 mx-1" />
+            <div className="w-[1px] h-4 bg-[#161927]/10 mx-1" />
             <button 
               onClick={onClose}
-              className="p-2 hover:bg-black/5 rounded-md text-navy/40 transition-colors"
+              className="p-2 hover:bg-[#161927]/5 rounded-md text-white/40 transition-colors"
             >
               <XIcon />
             </button>
@@ -429,7 +714,7 @@ export function TaskDrawer({
         {/* Content Area */}
         <div className="flex-1 overflow-hidden flex">
           {/* Main Content (Left) */}
-          <div className="flex-1 overflow-y-auto p-10 space-y-10 no-scrollbar border-r border-black/5">
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar border-r border-white/5">
             {/* Title Section */}
             <div className="space-y-4">
               <input
@@ -437,11 +722,11 @@ export function TaskDrawer({
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Título de la tarea"
-                className="w-full text-4xl font-black text-navy placeholder:text-navy/5 border-none focus:ring-0 p-0 bg-transparent leading-tight"
+                className="w-full text-4xl font-black text-white placeholder:text-white/5 border-none focus:ring-0 p-0 bg-transparent leading-tight"
               />
               
               <div className="flex gap-2">
-                <button className="flex items-center gap-2 px-3 py-1.5 bg-black/5 hover:bg-black/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-navy/60 transition-all">
+                <button className="flex items-center gap-2 px-3 py-1.5 bg-[#161927]/5 hover:bg-[#161927]/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-white/60 transition-all">
                   <PlusIcon />
                   Añadir descripción
                 </button>
@@ -450,12 +735,12 @@ export function TaskDrawer({
 
             {/* Description */}
             <div className="space-y-3">
-              <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-navy/30">Descripción</h3>
+              <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/30">Descripción</h3>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Escribe una descripción detallada..."
-                className="w-full h-32 p-4 bg-gray-50/50 rounded-2xl border-none focus:ring-2 focus:ring-primary/20 text-sm text-navy placeholder:text-navy/20 resize-none transition-all"
+                className="w-full h-32 p-4 bg-[#161927]/50 rounded-2xl border-none focus:ring-2 focus:ring-primary/20 text-sm text-white placeholder:text-white/20 resize-none transition-all"
               />
             </div>
 
@@ -463,16 +748,16 @@ export function TaskDrawer({
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-navy/30">Subtareas</h3>
+                  <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/30">Subtareas</h3>
                   {formData.subtasks.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <div className="w-32 h-1.5 bg-black/5 rounded-full overflow-hidden">
+                      <div className="w-32 h-1.5 bg-[#161927]/5 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-green-500 transition-all duration-500" 
+                          className="h-full bg-green-500/100 transition-all duration-500" 
                           style={{ width: `${Math.round((formData.subtasks.filter(s => s.status === 'done').length / formData.subtasks.length) * 100)}%` }}
                         />
                       </div>
-                      <span className="text-[9px] font-black text-navy/40">
+                      <span className="text-[9px] font-black text-white/40">
                         {Math.round((formData.subtasks.filter(s => s.status === 'done').length / formData.subtasks.length) * 100)}% COMPLETADO
                       </span>
                     </div>
@@ -487,87 +772,33 @@ export function TaskDrawer({
                 </button>
               </div>
               
-              <div className="border border-black/5 rounded-2xl overflow-hidden bg-white shadow-sm">
+              <div className="border border-white/5 rounded-2xl overflow-hidden bg-card shadow-sm">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50/50 border-b border-black/5">
+                  <thead className="hidden">
                     <tr>
                       <th className="p-3 w-8"></th>
-                      <th className="p-3 text-[9px] font-black uppercase tracking-widest text-navy/40">Actividad</th>
-                      <th className="p-3 text-[9px] font-black uppercase tracking-widest text-navy/40 w-24">Prioridad</th>
-                      <th className="p-3 text-[9px] font-black uppercase tracking-widest text-navy/40 w-28">Responsable</th>
-                      <th className="p-3 text-[9px] font-black uppercase tracking-widest text-navy/40 w-32">Estado</th>
+                      <th className="p-3 text-[9px] font-black uppercase tracking-widest text-white/40">Subtarea</th>
+                      <th className="p-3">Prioridad</th>
+                      <th className="p-3">Responsable</th>
+                      <th className="p-3">Estado</th>
                       <th className="p-3 w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {formData.subtasks.map((subtask) => (
-                      <tr 
-                        key={subtask.id} 
-                        draggable
+                      <SubtaskRow
+                        key={subtask.id}
+                        subtask={subtask}
+                        profiles={profiles}
+                        PRIORITIES={PRIORITIES}
+                        STATUSES={STATUSES}
+                        onUpdate={handleUpdateSubtask}
+                        onRemove={handleRemoveSubtask}
                         onDragStart={() => handleDragStart(subtask.id)}
-                        onDragOver={(e) => handleDragOver(e, subtask.id)}
+                        onDragOver={(e: any) => handleDragOver(e, subtask.id)}
                         onDragEnd={handleDragEnd}
-                        className={`group border-b border-black/5 hover:bg-gray-50/50 transition-colors ${draggedSubtaskId === subtask.id ? "opacity-30 bg-gray-100" : ""}`}
-                      >
-                        <td className="p-3 cursor-grab active:cursor-grabbing opacity-20 group-hover:opacity-100">
-                          <DragHandleIcon />
-                        </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-navy/20 whitespace-nowrap">NEX-{String(subtask.id).slice(-3)}</span>
-                            <input
-                              type="text"
-                              value={subtask.title}
-                              onChange={(e) => handleUpdateSubtask(subtask.id, { title: e.target.value })}
-                              placeholder="Título de la subtarea"
-                              className={`flex-1 text-[13px] font-medium bg-transparent border-none focus:ring-0 p-0 ${subtask.status === 'done' ? "text-navy/30 line-through" : "text-navy"}`}
-                            />
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <PriorityIcon value={subtask.priority} />
-                            <select
-                              value={subtask.priority}
-                              onChange={(e) => handleUpdateSubtask(subtask.id, { priority: e.target.value })}
-                              className="bg-transparent border-none p-0 text-[10px] font-black focus:ring-0 cursor-pointer text-navy/60"
-                            >
-                              {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label[0]}</option>)}
-                            </select>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-navy/5 flex items-center justify-center text-[8px] font-black overflow-hidden border border-black/5 flex-shrink-0">
-                              {profiles.find(p => p.id === subtask.assignee_id)?.avatar_url ? (
-                                <img src={profiles.find(p => p.id === subtask.assignee_id)?.avatar_url} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                profiles.find(p => p.id === subtask.assignee_id)?.full_name?.[0] || "?"
-                              )}
-                            </div>
-                            <select
-                              value={subtask.assignee_id}
-                              onChange={(e) => handleUpdateSubtask(subtask.id, { assignee_id: e.target.value })}
-                              className="bg-transparent border-none p-0 text-[10px] font-black focus:ring-0 cursor-pointer text-navy/60 max-w-[60px]"
-                            >
-                              <option value="">User</option>
-                              {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name.split(' ')[0]}</option>)}
-                            </select>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <select
-                            value={subtask.status}
-                            onChange={(e) => handleUpdateSubtask(subtask.id, { status: e.target.value })}
-                            className={`px-2 py-1 rounded text-[9px] font-black uppercase border-none focus:ring-0 cursor-pointer ${STATUSES.find(s => s.value === subtask.status)?.bg} ${STATUSES.find(s => s.value === subtask.status)?.color}`}
-                          >
-                            {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                          </select>
-                        </td>
-                        <td className="p-3">
-                          <button onClick={() => handleRemoveSubtask(subtask.id)} className="opacity-0 group-hover:opacity-40 hover:!opacity-100 text-red-500 transition-all"><XIcon /></button>
-                        </td>
-                      </tr>
+                        isDragged={draggedSubtaskId === subtask.id}
+                      />
                     ))}
                   </tbody>
                 </table>
@@ -582,11 +813,11 @@ export function TaskDrawer({
 
             {/* Activity / Comments */}
             <div className="space-y-6">
-              <div className="flex border-b border-black/5">
+              <div className="flex border-b border-white/5">
                 <button 
                   onClick={() => setActiveTab("comentarios")}
                   className={`px-6 py-3 text-[11px] font-black uppercase tracking-widest transition-all relative ${
-                    activeTab === "comentarios" ? "text-primary" : "text-navy/30 hover:text-navy"
+                    activeTab === "comentarios" ? "text-primary" : "text-white/30 hover:text-white"
                   }`}
                 >
                   Actividad
@@ -595,7 +826,7 @@ export function TaskDrawer({
                 <button 
                   onClick={() => setActiveTab("historial")}
                   className={`px-6 py-3 text-[11px] font-black uppercase tracking-widest transition-all relative ${
-                    activeTab === "historial" ? "text-primary" : "text-navy/30 hover:text-navy"
+                    activeTab === "historial" ? "text-primary" : "text-white/30 hover:text-white"
                   }`}
                 >
                   Historial
@@ -613,7 +844,7 @@ export function TaskDrawer({
                           value={newComment}
                           onChange={(e) => setNewComment(e.target.value)}
                           placeholder="Escribe un comentario..."
-                          className="w-full p-4 bg-gray-50/50 rounded-2xl border-none focus:ring-2 focus:ring-primary/20 text-sm text-navy placeholder:text-navy/20 resize-none transition-all h-24"
+                          className="w-full p-4 bg-[#161927]/50 rounded-2xl border-none focus:ring-2 focus:ring-primary/20 text-sm text-white placeholder:text-white/20 resize-none transition-all h-24"
                         />
                         <button 
                           onClick={handleAddComment}
@@ -627,7 +858,7 @@ export function TaskDrawer({
                     <div className="space-y-6 pt-4">
                       {formData.activity.filter(a => a.type === "comment").map((item) => (
                         <div key={item.id} className="flex gap-4 group">
-                          <div className="w-8 h-8 rounded-full bg-navy/5 flex items-center justify-center text-navy/40 text-[10px] font-black overflow-hidden">
+                          <div className="w-8 h-8 rounded-full bg-[#161927]/5 flex items-center justify-center text-white/40 text-[10px] font-black overflow-hidden">
                             {profiles.find(p => p.full_name === item.user)?.avatar_url ? (
                               <img src={profiles.find(p => p.full_name === item.user)?.avatar_url} alt="" className="w-full h-full object-cover" />
                             ) : (
@@ -637,12 +868,15 @@ export function TaskDrawer({
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-black text-navy">{item.user}</span>
-                                <span className="text-[9px] font-medium text-navy/30">{new Date(item.timestamp).toLocaleString()}</span>
+                                <span className="text-[11px] font-black text-white">{item.user}</span>
+                                {item.isJira && (
+                                  <span className="text-[8px] font-black px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded border border-blue-500/20 tracking-tighter">JIRA</span>
+                                )}
+                                <span className="text-[9px] font-medium text-white/30">{new Date(item.timestamp).toLocaleString()}</span>
                               </div>
                               <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2 transition-all">
-                                <button onClick={() => handleStartEditComment(item.id, item.text)} className="p-1 hover:bg-black/5 rounded text-navy/40"><EditIcon /></button>
-                                <button onClick={() => handleDeleteComment(item.id)} className="p-1 hover:bg-black/5 rounded text-red-400"><TrashIcon /></button>
+                                <button onClick={() => handleStartEditComment(item.id, item.text)} className="p-1 hover:bg-[#161927]/5 rounded text-white/40"><EditIcon /></button>
+                                <button onClick={() => handleDeleteComment(item.id)} className="p-1 hover:bg-[#161927]/5 rounded text-red-400"><TrashIcon /></button>
                               </div>
                             </div>
                             
@@ -651,15 +885,15 @@ export function TaskDrawer({
                                 <textarea
                                   value={editCommentText}
                                   onChange={(e) => setEditCommentText(e.target.value)}
-                                  className="w-full p-3 bg-gray-50 border-black/5 rounded-xl text-sm text-navy focus:ring-primary/20 h-20"
+                                  className="w-full p-3 bg-card border-white/5 rounded-xl text-sm text-white focus:ring-primary/20 h-20"
                                 />
                                 <div className="flex gap-2">
                                   <button onClick={handleSaveEditComment} className="px-3 py-1.5 bg-primary text-white rounded-lg text-[9px] font-black uppercase tracking-widest">Guardar</button>
-                                  <button onClick={() => setEditingCommentId(null)} className="px-3 py-1.5 bg-black/5 text-navy/60 rounded-lg text-[9px] font-black uppercase tracking-widest">Cancelar</button>
+                                  <button onClick={() => setEditingCommentId(null)} className="px-3 py-1.5 bg-[#161927]/5 text-white/60 rounded-lg text-[9px] font-black uppercase tracking-widest">Cancelar</button>
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-sm text-navy/70 leading-relaxed">{item.text}</p>
+                              <p className="text-sm text-white/70 leading-relaxed">{item.text}</p>
                             )}
                           </div>
                         </div>
@@ -672,14 +906,14 @@ export function TaskDrawer({
                   <div className="space-y-6">
                     {formData.activity.filter(a => a.type === "history").map((item) => (
                       <div key={item.id} className="flex gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-navy/20">
+                        <div className="w-8 h-8 rounded-full bg-card flex items-center justify-center text-white/20">
                           <HistoryIcon />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-navy/60">
-                            <span className="font-black text-navy">{item.user}</span> {item.text}
+                          <p className="text-sm text-white/60">
+                            <span className="font-black text-white">{item.user}</span> {item.text}
                           </p>
-                          <span className="text-[9px] font-medium text-navy/30">{new Date(item.timestamp).toLocaleString()}</span>
+                          <span className="text-[9px] font-medium text-white/30">{new Date(item.timestamp).toLocaleString()}</span>
                         </div>
                       </div>
                     ))}
@@ -696,11 +930,11 @@ export function TaskDrawer({
           </div>
 
           {/* Sidebar (Right) */}
-          <div className="w-[320px] bg-gray-50/30 overflow-y-auto p-8 space-y-8 no-scrollbar border-l border-black/5">
+          <div className="w-[320px] bg-[#161927]/30 overflow-y-auto p-8 space-y-8 no-scrollbar border-l border-white/5">
             {/* Status & Priority */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-navy/40">Estado</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Estado</label>
                 <div className="relative group">
                   <div className={`flex items-center gap-2 px-4 py-2.5 border rounded-xl transition-all ${STATUSES.find(s => s.value === formData.status)?.bg} ${STATUSES.find(s => s.value === formData.status)?.color} border-transparent shadow-sm`}>
                     <AlertCircleIcon />
@@ -710,7 +944,7 @@ export function TaskDrawer({
                       className="flex-1 appearance-none bg-transparent border-none p-0 text-xs font-black uppercase tracking-widest focus:ring-0 cursor-pointer"
                     >
                       {STATUSES.map(s => (
-                        <option key={s.value} value={s.value} className="bg-white text-navy">{s.label.toUpperCase()}</option>
+                        <option key={s.value} value={s.value} className="bg-card text-white">{s.label.toUpperCase()}</option>
                       ))}
                     </select>
                   </div>
@@ -718,7 +952,7 @@ export function TaskDrawer({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-navy/40">Prioridad</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Prioridad</label>
                 <div className="flex gap-2">
                   {PRIORITIES.map(p => (
                     <button
@@ -727,7 +961,7 @@ export function TaskDrawer({
                       className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
                         formData.priority === p.value 
                           ? `${p.bg} ${p.color} border-transparent shadow-sm` 
-                          : "bg-white border-black/5 text-navy/30 hover:border-black/10"
+                          : "bg-card border-white/5 text-white/30 hover:border-black/10"
                       }`}
                     >
                       {p.label}
@@ -738,113 +972,92 @@ export function TaskDrawer({
             </div>
 
             {/* People Section */}
-            <div className="space-y-6 pt-6 border-t border-black/5">
+            <div className="space-y-6 pt-6 border-t border-white/5">
               <div className="space-y-3">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-navy/40">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
                   <UserIcon /> Responsable
                 </label>
-                <select
+                <CustomSelect
                   value={formData.assignee_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, assignee_id: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-white border border-black/5 rounded-xl text-xs font-black text-navy focus:ring-2 focus:ring-primary/20 transition-all"
-                >
-                  <option value="">Sin asignar</option>
-                  {profiles.map(p => (
-                    <option key={p.id} value={p.id}>{p.full_name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData(prev => ({ ...prev, assignee_id: val }))}
+                  options={assigneeOptions}
+                />
               </div>
 
               <div className="space-y-3">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-navy/40">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
                   <UsersIcon /> Informador
                 </label>
-                <select
+                <CustomSelect
                   value={formData.reporter_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reporter_id: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-white border border-black/5 rounded-xl text-xs font-black text-navy focus:ring-2 focus:ring-primary/20 transition-all"
-                >
-                  <option value="">Sin asignar</option>
-                  {profiles.map(p => (
-                    <option key={p.id} value={p.id}>{p.full_name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData(prev => ({ ...prev, reporter_id: val }))}
+                  options={reporterOptions}
+                />
               </div>
             </div>
 
             {/* Project Context */}
-            <div className="space-y-6 pt-6 border-t border-black/5">
+            <div className="space-y-6 pt-6 border-t border-white/5">
               <div className="space-y-3">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-navy/40">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
                   <TargetIcon /> Objetivo Relacionado
                 </label>
-                <select
+                <CustomSelect
                   value={formData.goal_id}
-                  onChange={(e) => {
-                    const selectedObj = objectives.find(o => o.id === e.target.value);
+                  onChange={(val) => {
+                    const selectedObj = objectives.find(o => o.id === val);
                     setFormData(prev => ({ 
                       ...prev, 
-                      goal_id: e.target.value,
-                      // Auto-suggest team if objective is selected and team is empty
+                      goal_id: val,
                       team: !prev.team && selectedObj ? selectedObj.team : prev.team
                     }));
                   }}
-                  className="w-full px-4 py-2.5 bg-white border border-black/5 rounded-xl text-xs font-black text-navy focus:ring-2 focus:ring-primary/20 transition-all"
-                >
-                  <option value="">Ninguno</option>
-                  {objectives.map(obj => (
-                    <option key={obj.id} value={obj.id}>{obj.title}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "Ninguno" },
+                    ...objectives.map(obj => ({ value: obj.id, label: obj.title }))
+                  ]}
+                />
               </div>
 
               <div className="space-y-3">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-navy/40">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
                   <UsersIcon /> Equipo / Producto
                 </label>
-                <div className="relative">
-                  <select
-                    value={formData.team}
-                    onChange={(e) => setFormData(prev => ({ ...prev, team: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-white border border-black/5 rounded-xl text-xs font-black text-navy focus:ring-2 focus:ring-primary/20 transition-all appearance-none"
-                  >
-                    <option value="">Sin equipo</option>
-                    {Array.from(new Set(objectives.map(o => o.team).filter(Boolean))).map(team => (
-                      <option key={team} value={team}>{team.toUpperCase()}</option>
-                    ))}
-                    {!Array.from(new Set(objectives.map(o => o.team).filter(Boolean))).includes(formData.team) && formData.team && (
-                      <option value={formData.team}>{formData.team.toUpperCase()}</option>
-                    )}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-20">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                  </div>
-                </div>
+                <CustomSelect
+                  value={formData.team}
+                  onChange={(val) => setFormData(prev => ({ ...prev, team: val }))}
+                  options={[
+                    { value: "", label: "Sin equipo" },
+                    ...Array.from(new Set(objectives.map(o => o.team).filter(Boolean))).map(team => ({ 
+                      value: String(team), 
+                      label: String(team).toUpperCase() 
+                    }))
+                  ]}
+                />
                 <input 
                   type="text"
                   value={formData.team}
                   onChange={(e) => setFormData(prev => ({ ...prev, team: e.target.value }))}
                   placeholder="O escribe un nuevo equipo..."
-                  className="w-full px-4 py-2 bg-transparent border-b border-black/5 text-[10px] font-bold text-navy placeholder:text-navy/20 focus:border-primary transition-all"
+                  className="w-full px-4 py-2 bg-transparent border-b border-white/5 text-[10px] font-bold text-white placeholder:text-white/20 focus:border-primary transition-all"
                 />
               </div>
 
               <div className="space-y-3">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-navy/40">
-                  <CalendarIcon /> Fecha de vencimiento
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
+                  <CalendarIcon /> Fecha de Vencimiento
                 </label>
-                <input
-                  type="date"
-                  value={formData.due_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, due_date: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-white border border-black/5 rounded-xl text-xs font-black text-navy focus:ring-2 focus:ring-primary/20 transition-all"
+                <DatePicker 
+                  value={formData.due_date ? new Date(formData.due_date) : new Date()} 
+                  onChange={(date) => setFormData(prev => ({ ...prev, due_date: date.toISOString().split('T')[0] }))}
+                  allowFuture={true}
                 />
               </div>
             </div>
 
             {/* Labels */}
-            <div className="space-y-4 pt-6 border-t border-black/5">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-navy/40">
+            <div className="space-y-4 pt-6 border-t border-white/5">
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
                 <TagIcon /> Etiquetas
               </label>
               <div className="flex flex-wrap gap-1.5">
@@ -853,7 +1066,7 @@ export function TaskDrawer({
                     {label}
                     <button 
                       onClick={() => setFormData(prev => ({ ...prev, labels: prev.labels.filter((_, i) => i !== idx) }))}
-                      className="hover:text-navy transition-colors"
+                      className="hover:text-white transition-colors"
                     >
                       <XIcon />
                     </button>
@@ -866,7 +1079,7 @@ export function TaskDrawer({
                     onChange={(e) => setNewLabel(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddLabel()}
                     placeholder="Nueva..."
-                    className="w-full text-[10px] font-black uppercase bg-transparent border-none focus:ring-0 p-0 text-navy placeholder:text-navy/20"
+                    className="w-full text-[10px] font-black uppercase bg-transparent border-none focus:ring-0 p-0 text-white placeholder:text-white/20"
                   />
                 </div>
               </div>
@@ -875,10 +1088,10 @@ export function TaskDrawer({
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-5 border-t border-black/5 bg-white flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+        <div className="px-8 py-5 border-t border-white/5 bg-card flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
           <button 
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl border border-black/5 text-[10px] font-black text-navy/40 hover:bg-gray-50 transition-all uppercase tracking-widest"
+            className="px-6 py-2.5 rounded-xl border border-white/5 text-[10px] font-black text-white/40 hover:bg-card transition-all uppercase tracking-widest"
           >
             DESCARTAR
           </button>
@@ -903,7 +1116,8 @@ export function TaskDrawer({
             </button>
           </div>
         </div>
-      </aside>
-    </div>
+      </div>
+    </div>,
+    document.body
   );
 }

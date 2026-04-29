@@ -13,7 +13,7 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
       processing: 'bg-[#dbeafe] text-[#1e40af]',
       processed: 'bg-[#dcfce7] text-[#166534]',
       error: 'bg-[#fee2e2] text-[#991b1b]',
-      default: 'bg-light text-navy',
+      default: 'bg-card/5 text-white',
     };
 
     const hasSpinner = variant === 'processing';

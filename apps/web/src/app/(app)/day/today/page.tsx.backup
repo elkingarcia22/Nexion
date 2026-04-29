@@ -18,7 +18,7 @@ import { supabase } from "@/lib/supabase";
 const focusCards = [
   {
     tag: "OBJETIVO CRÍTICO",
-    tagColor: "bg-red-50 text-red-600",
+    tagColor: "bg-red-500/100/10 text-red-600",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
@@ -29,7 +29,7 @@ const focusCards = [
   },
   {
     tag: "MÉTRICAS",
-    tagColor: "bg-blue-50 text-blue-600",
+    tagColor: "bg-primary/100/10 text-blue-600",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="3" width="20" height="14" rx="2" />
@@ -42,7 +42,7 @@ const focusCards = [
   },
   {
     tag: "ESTRATÉGICO",
-    tagColor: "bg-purple-50 text-purple-600",
+    tagColor: "bg-purple-500/10 text-purple-600",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -56,9 +56,9 @@ const focusCards = [
 ];
 
 const tasks = [
-  { id: 1, title: "Actualizar certificados SSL del cluster de producción", tag: "CERTIFICADOS", tagColor: "bg-blue-50 text-blue-700", date: "16 Oct, 2023", file: "Reporte Seguridad.pdf", priority: "ALTA", priorityColor: "text-red-500" },
-  { id: 2, title: "Definir KPIs para el módulo de fidelización", tag: "MÉTRICAS", tagColor: "bg-blue-50 text-blue-700", date: "20 Oct, 2023", file: "Minuta Reunión.docx", priority: "MEDIA", priorityColor: "text-orange-500" },
-  { id: 3, title: "Revisar propuesta de diseño para el panel móvil", tag: "DISEÑO", tagColor: "bg-purple-50 text-purple-700", date: "15 Oct, 2023", file: "Feedback_Cliente.txt", priority: "BAJA", priorityColor: "text-gray-400" },
+  { id: 1, title: "Actualizar certificados SSL del cluster de producción", tag: "CERTIFICADOS", tagColor: "bg-primary/100/10 text-blue-700", date: "16 Oct, 2023", file: "Reporte Seguridad.pdf", priority: "ALTA", priorityColor: "text-red-500" },
+  { id: 2, title: "Definir KPIs para el módulo de fidelización", tag: "MÉTRICAS", tagColor: "bg-primary/100/10 text-blue-700", date: "20 Oct, 2023", file: "Minuta Reunión.docx", priority: "MEDIA", priorityColor: "text-orange-500" },
+  { id: 3, title: "Revisar propuesta de diseño para el panel móvil", tag: "DISEÑO", tagColor: "bg-purple-500/10 text-purple-700", date: "15 Oct, 2023", file: "Feedback_Cliente.txt", priority: "BAJA", priorityColor: "text-gray-400" },
 ];
 
 type SourceType = "FUENTE EXTERNA" | "NOTAS DE GEMINI" | "DOCUMENTO";
@@ -152,9 +152,9 @@ function CheckIcon() {
 }
 
 const typeStyles: Record<SourceType, string> = {
-  "FUENTE EXTERNA": "bg-orange-50 text-orange-600",
-  "NOTAS DE GEMINI": "bg-purple-50 text-purple-600",
-  "DOCUMENTO": "bg-blue-50 text-blue-600",
+  "FUENTE EXTERNA": "bg-orange-500/100/10 text-orange-600",
+  "NOTAS DE GEMINI": "bg-purple-500/10 text-purple-600",
+  "DOCUMENTO": "bg-primary/100/10 text-blue-600",
 };
 
 /* ─── Components ─────────────────────────────────────────────── */
@@ -163,7 +163,7 @@ function FeedbackTab({ items }: { items: any[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {items.map((item, i) => (
-        <div key={i} className="bg-white rounded-3xl border border-border/20 p-6 shadow-soft hover:shadow-hard transition-all group">
+        <div key={i} className="bg-card rounded-3xl border border-white/20 p-6 shadow-soft hover:shadow-hard transition-all group">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
@@ -172,8 +172,8 @@ function FeedbackTab({ items }: { items: any[] }) {
                 </svg>
               </div>
               <div>
-                <h4 className="text-sm font-bold text-navy">{item.title}</h4>
-                <span className="text-[10px] font-bold text-navy/40 uppercase tracking-widest">{item.type}</span>
+                <h4 className="text-sm font-bold text-white">{item.title}</h4>
+                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{item.type}</span>
               </div>
             </div>
             <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter ${
@@ -183,7 +183,7 @@ function FeedbackTab({ items }: { items: any[] }) {
               {item.priority}
             </span>
           </div>
-          <p className="text-sm text-navy/60 leading-relaxed italic">"{item.content}"</p>
+          <p className="text-sm text-white/60 leading-relaxed italic">"{item.content}"</p>
         </div>
       ))}
     </div>
@@ -194,7 +194,7 @@ function TasksTab({ items }: { items: any[] }) {
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {items.map((item, i) => (
-        <div key={i} className="bg-white rounded-2xl border border-border/20 p-4 flex items-center gap-4 hover:shadow-soft transition-all group">
+        <div key={i} className="bg-card rounded-2xl border border-white/20 p-4 flex items-center gap-4 hover:shadow-soft transition-all group">
           <div className={`w-2 h-10 rounded-full ${
             item.priority === "alta" ? "bg-red-400" : 
             item.priority === "media" ? "bg-orange-400" : "bg-blue-400"
@@ -202,15 +202,15 @@ function TasksTab({ items }: { items: any[] }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">{item.category}</span>
-              <span className="text-navy/10">·</span>
+              <span className="text-white/10">·</span>
               <span className={`text-[10px] font-bold uppercase ${
                 item.priority === "alta" ? "text-red-500" : 
                 item.priority === "media" ? "text-orange-500" : "text-blue-500"
               }`}>{item.priority}</span>
             </div>
-            <h4 className="text-sm font-bold text-navy truncate">{item.title}</h4>
+            <h4 className="text-sm font-bold text-white truncate">{item.title}</h4>
           </div>
-          <button className="w-8 h-8 rounded-full border-2 border-border/20 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-all group-hover:scale-110">
+          <button className="w-8 h-8 rounded-full border-2 border-white/20 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-all group-hover:scale-110">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-transparent group-hover:text-primary transition-colors">
               <polyline points="20 6 9 17 4 12" />
             </svg>
@@ -225,8 +225,8 @@ function InsightsTab({ items }: { items: any[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {items.map((item, i) => (
-        <div key={i} className="bg-white rounded-3xl border border-border/20 p-6 shadow-soft hover:shadow-hard transition-all group">
-          <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm border border-purple-100">
+        <div key={i} className="bg-card rounded-3xl border border-white/20 p-6 shadow-soft hover:shadow-hard transition-all group">
+          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm border border-purple-100">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
               <path d="M2 17l10 5 10-5" />
@@ -234,8 +234,8 @@ function InsightsTab({ items }: { items: any[] }) {
             </svg>
           </div>
           <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-2 block">{item.category}</span>
-          <h4 className="text-base font-bold text-navy mb-3">{item.title}</h4>
-          <p className="text-sm text-navy/50 leading-relaxed">{item.description}</p>
+          <h4 className="text-base font-bold text-white mb-3">{item.title}</h4>
+          <p className="text-sm text-white/50 leading-relaxed">{item.description}</p>
         </div>
       ))}
     </div>
@@ -246,19 +246,19 @@ function MetricsTab({ items }: { items: any[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {items.map((item, i) => (
-        <div key={i} className="bg-white rounded-3xl border border-border/20 p-6 shadow-soft hover:shadow-hard transition-all">
+        <div key={i} className="bg-card rounded-3xl border border-white/20 p-6 shadow-soft hover:shadow-hard transition-all">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-xs font-bold text-navy/40 uppercase tracking-widest truncate max-w-[120px]">{item.title}</h4>
+            <h4 className="text-xs font-bold text-white/40 uppercase tracking-widest truncate max-w-[120px]">{item.title}</h4>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${
-              item.status === "critica" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
+              item.status === "critica" ? "bg-red-500/100/10 text-red-600" : "bg-green-500/10 text-green-600"
             }`}>
               {item.change}
             </span>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-black text-navy">{item.value}</span>
+            <span className="text-3xl font-black text-white">{item.value}</span>
           </div>
-          <div className="mt-4 h-1.5 w-full bg-navy/5 rounded-full overflow-hidden">
+          <div className="mt-4 h-1.5 w-full bg-card/5 rounded-full overflow-hidden">
             <div 
               className={`h-full rounded-full ${item.status === "critica" ? "bg-red-400" : "bg-primary"}`} 
               style={{ width: "65%" }} 
@@ -275,10 +275,10 @@ function AlertsTab({ items }: { items: any[] }) {
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {items.map((item, i) => (
         <div key={i} className={`rounded-3xl border p-6 flex items-start gap-5 transition-all ${
-          item.priority === "critica" ? "bg-red-50 border-red-100" : "bg-amber-50 border-amber-100"
+          item.priority === "critica" ? "bg-red-500/100/10 border-red-100" : "bg-amber-500/10 border-amber-100"
         }`}>
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
-            item.priority === "critica" ? "bg-red-500 text-white" : "bg-amber-500 text-white"
+            item.priority === "critica" ? "bg-red-500/100/100 text-white" : "bg-amber-500/100 text-white"
           }`}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
@@ -292,7 +292,7 @@ function AlertsTab({ items }: { items: any[] }) {
                 item.priority === "critica" ? "text-red-600" : "text-amber-600"
               }`}>ALERTA {item.priority}</span>
             </div>
-            <h4 className="text-lg font-bold text-navy mb-2">{item.title}</h4>
+            <h4 className="text-lg font-bold text-white mb-2">{item.title}</h4>
             <p className={`text-sm leading-relaxed ${
               item.priority === "critica" ? "text-red-700/70" : "text-amber-700/70"
             }`}>{item.description}</p>
@@ -696,12 +696,12 @@ export default function DayTodayPage() {
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-6">
-          <h1 className="text-2xl font-bold text-navy">Día</h1>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-border/20 rounded-lg text-xs text-navy/60">
+          <h1 className="text-2xl font-bold text-white">Día</h1>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-white/20 rounded-lg text-xs text-white/60">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
             </svg>
-            Análisis automático en: <span className="font-semibold text-navy">04h 22m</span>
+            Análisis automático en: <span className="font-semibold text-white">04h 22m</span>
           </div>
         </div>
 
@@ -732,7 +732,7 @@ export default function DayTodayPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-6 border-b border-border/20 mb-8 overflow-x-auto no-scrollbar">
+      <div className="flex gap-6 border-b border-white/20 mb-8 overflow-x-auto no-scrollbar">
         {[
           { id: "hoy", label: "Hoy" },
           // { id: "resumen-del-analisis", label: "Resumen del Análisis", show: summaryData?.summary_text },
@@ -747,13 +747,13 @@ export default function DayTodayPage() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id as TabType)}
             className={`pb-3 text-sm font-medium transition-colors relative flex items-center gap-2 whitespace-nowrap ${
-              activeTab === tab.id ? "text-navy" : "text-navy/40 hover:text-navy/60"
+              activeTab === tab.id ? "text-white" : "text-white/40 hover:text-white/60"
             }`}
           >
             {tab.label}
             {(tab.id === "fuentes" ? sources.length : tab.count) !== undefined && (
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                activeTab === tab.id ? "bg-primary text-white" : "bg-navy/10 text-navy/50"
+                activeTab === tab.id ? "bg-primary text-white" : "bg-card/10 text-white/50"
               }`}>
                 {tab.id === "fuentes" ? sources.length : tab.count}
               </span>
@@ -811,7 +811,7 @@ export default function DayTodayPage() {
                 <button 
                   onClick={() => fetchData(selectedDate)}
                   disabled={isRetrying}
-                  className="px-5 py-2 bg-white text-amber-700 text-[11px] font-black tracking-wider rounded-xl border border-amber-200 hover:bg-amber-50 hover:scale-105 active:scale-95 transition-all shadow-sm uppercase flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
+                  className="px-5 py-2 bg-card text-amber-700 text-[11px] font-black tracking-wider rounded-xl border border-amber-200 hover:bg-amber-500/10 hover:scale-105 active:scale-95 transition-all shadow-sm uppercase flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
                 >
                   {isRetrying && <span className="w-3 h-3 rounded-full border-2 border-amber-600/30 border-t-amber-600 animate-spin" />}
                   {isRetrying ? "REINTENTANDO..." : "REINTENTAR"}
@@ -841,14 +841,14 @@ export default function DayTodayPage() {
         <div className="space-y-6">
           {/* Header & Executive Summary */}
           <div className="flex flex-col gap-1">
-            <h2 className="text-3xl font-black text-navy tracking-tight">¡Hola, {userFullName.split(" ")[0]}!</h2>
-            <p className="text-sm text-navy/40 font-medium italic">
+            <h2 className="text-3xl font-black text-white tracking-tight">¡Hola, {userFullName.split(" ")[0]}!</h2>
+            <p className="text-sm text-white/40 font-medium italic">
               {isToday ? "Este es tu panorama estratégico para hoy." : `Resumen de actividad para el ${selectedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}.`}
             </p>
           </div>
 
           {summaryData?.summary_text && (
-            <div className="bg-white rounded-[2.5rem] border border-border/10 p-8 shadow-soft relative overflow-hidden group">
+            <div className="bg-card rounded-[2.5rem] border border-white/10 p-8 shadow-soft relative overflow-hidden group">
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
@@ -858,7 +858,7 @@ export default function DayTodayPage() {
                   </div>
                   <h3 className="text-xs font-black tracking-[0.2em] text-primary uppercase">Resumen de Inteligencia</h3>
                 </div>
-                <p className="text-lg text-navy/80 leading-relaxed font-medium">
+                <p className="text-lg text-white/80 leading-relaxed font-medium">
                   {summaryData.summary_text}
                 </p>
               </div>
@@ -868,20 +868,20 @@ export default function DayTodayPage() {
           )}
 
           {!summaryData?.summary_text && (
-            <div className="bg-white rounded-3xl border border-dashed border-border/30 p-10 text-center relative overflow-hidden group hover:border-primary/30 transition-all">
+            <div className="bg-card rounded-3xl border border-dashed border-white/30 p-10 text-center relative overflow-hidden group hover:border-primary/30 transition-all">
               <div className="relative z-10 max-w-md mx-auto">
-                <div className="w-16 h-16 rounded-2xl bg-navy/5 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-navy/20">
+                <div className="w-16 h-16 rounded-2xl bg-card/5 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/20">
                     <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z" />
                   </svg>
                 </div>
-                <h4 className="text-lg font-bold text-navy mb-2">Análisis pendiente</h4>
-                <p className="text-sm text-navy/40 leading-relaxed mb-6">
+                <h4 className="text-lg font-bold text-white mb-2">Análisis pendiente</h4>
+                <p className="text-sm text-white/40 leading-relaxed mb-6">
                   Nexión aún no ha procesado tus fuentes. Selecciona los documentos y notas relevantes en la pestaña de fuentes para generar tu resumen inteligente.
                 </p>
                 <button 
                   onClick={() => setActiveTab("fuentes")}
-                  className="px-6 py-2.5 bg-navy/5 text-navy/60 text-[11px] font-black tracking-wider rounded-xl hover:bg-primary hover:text-white transition-all uppercase"
+                  className="px-6 py-2.5 bg-card/5 text-white/60 text-[11px] font-black tracking-wider rounded-xl hover:bg-primary hover:text-white transition-all uppercase"
                 >
                   Ir a Fuentes
                 </button>
@@ -900,7 +900,7 @@ export default function DayTodayPage() {
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                 </div>
-                <h3 className="text-[11px] font-bold tracking-[0.2em] text-navy/40 uppercase">Tu Agenda (Google Calendar)</h3>
+                <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/40 uppercase">Tu Agenda (Google Calendar)</h3>
                 {calendarEvents.length > 0 && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                     {calendarEvents.length}
@@ -917,7 +917,7 @@ export default function DayTodayPage() {
                 <button 
                   onClick={() => fetchData(selectedDate)}
                   disabled={calendarLoading}
-                  className="p-1.5 text-navy/20 hover:text-primary transition-colors bg-white border border-border/10 rounded-lg shadow-sm"
+                  className="p-1.5 text-white/20 hover:text-primary transition-colors bg-card border border-white/10 rounded-lg shadow-sm"
                   title="Sincronizar calendario y archivos"
                 >
                   <svg 
@@ -932,14 +932,14 @@ export default function DayTodayPage() {
             </div>
 
             {calendarEvents.length === 0 ? (
-              <div className="bg-white/40 backdrop-blur-md rounded-3xl border border-dashed border-navy/10 p-10 text-center transition-all hover:bg-white/60">
-                <div className="w-16 h-16 rounded-2xl bg-navy/5 flex items-center justify-center mx-auto mb-4 border border-white shadow-sm">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-navy/20">
+              <div className="bg-card/40 backdrop-blur-md rounded-3xl border border-dashed border-navy/10 p-10 text-center transition-all hover:bg-card/60">
+                <div className="w-16 h-16 rounded-2xl bg-card/5 flex items-center justify-center mx-auto mb-4 border border-white/10 shadow-sm">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/20">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                 </div>
-                <h4 className="text-navy/60 font-bold text-sm mb-1">Agenda despejada</h4>
-                <p className="text-xs text-navy/30">No se encontraron reuniones programadas para este día.</p>
+                <h4 className="text-white/60 font-bold text-sm mb-1">Agenda despejada</h4>
+                <p className="text-xs text-white/30">No se encontraron reuniones programadas para este día.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -955,9 +955,9 @@ export default function DayTodayPage() {
                   const isNow = !isAllDay && now >= startD && now <= endD;
 
                   return (
-                    <div key={event.id} className={`group relative bg-white rounded-3xl border p-5 shadow-soft hover:shadow-hard transition-all duration-500 hover:-translate-y-1.5 ${isNow ? 'border-primary/30 ring-4 ring-primary/5' : 'border-border/20'}`}>
+                    <div key={event.id} className={`group relative bg-card rounded-3xl border p-5 shadow-soft hover:shadow-hard transition-all duration-500 hover:-translate-y-1.5 ${isNow ? 'border-primary/30 ring-4 ring-primary/5' : 'border-white/20'}`}>
                       {isNow && (
-                        <div className="absolute -top-2 -right-2 px-2 py-1 bg-red-500 text-white text-[9px] font-black rounded-lg shadow-lg z-10 animate-bounce">
+                        <div className="absolute -top-2 -right-2 px-2 py-1 bg-red-500/100/100 text-white text-[9px] font-black rounded-lg shadow-lg z-10 animate-bounce">
                           EN VIVO
                         </div>
                       )}
@@ -966,10 +966,10 @@ export default function DayTodayPage() {
                         <div className="flex items-center justify-between gap-2 mb-4">
                           <div className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border ${
                             isAllDay 
-                              ? 'bg-amber-50 text-amber-600 border-amber-100' 
+                              ? 'bg-amber-500/10 text-amber-600 border-amber-100' 
                               : isNow 
                                 ? 'bg-primary text-white border-primary shadow-sm'
-                                : 'bg-navy/5 text-navy/60 border-navy/5'
+                                : 'bg-card/5 text-white/60 border-navy/5'
                           }`}>
                             {isAllDay ? 'TODO EL DÍA' : `${startTime} — ${endTime}`}
                           </div>
@@ -990,20 +990,20 @@ export default function DayTodayPage() {
                           )}
                         </div>
 
-                        <h4 className="text-base font-bold text-navy mb-3 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
+                        <h4 className="text-base font-bold text-white mb-3 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
                           {event.summary || '(Sin título)'}
                         </h4>
                         
                         {(event.location || event.description) && (
                           <div className="mt-auto pt-4 border-t border-navy/5 space-y-2">
                             {event.location && (
-                              <p className="text-[11px] text-navy/40 truncate flex items-center gap-2 font-medium">
+                              <p className="text-[11px] text-white/40 truncate flex items-center gap-2 font-medium">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary/40"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                                 {event.location}
                               </p>
                             )}
                             {event.description && (
-                              <p className="text-[11px] text-navy/30 line-clamp-1 italic font-medium leading-relaxed">
+                              <p className="text-[11px] text-white/30 line-clamp-1 italic font-medium leading-relaxed">
                                 {event.description.replace(/<[^>]*>/g, '')}
                               </p>
                             )}
@@ -1023,27 +1023,27 @@ export default function DayTodayPage() {
           {/* Future Tasks Placeholder */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-navy/5 flex items-center justify-center text-navy/30">
+              <div className="w-6 h-6 rounded-lg bg-card/5 flex items-center justify-center text-white/30">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                 </svg>
               </div>
-              <h3 className="text-[11px] font-bold tracking-[0.2em] text-navy/40 uppercase">Próximas Tareas</h3>
+              <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/40 uppercase">Próximas Tareas</h3>
             </div>
             
             {summaryData?.tasks && summaryData.tasks.length > 0 ? (
               <div className="space-y-3">
                 {summaryData.tasks.slice(0, 3).map((task: any, idx: number) => (
-                  <div key={idx} className="bg-white rounded-2xl border border-border/10 p-4 shadow-sm hover:shadow-soft transition-all flex items-center justify-between group">
+                  <div key={idx} className="bg-card rounded-2xl border border-white/10 p-4 shadow-sm hover:shadow-soft transition-all flex items-center justify-between group">
                     <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-full border-2 border-navy/5 flex items-center justify-center text-navy/20 group-hover:border-primary/20 group-hover:text-primary transition-colors">
+                      <div className="w-8 h-8 rounded-full border-2 border-navy/5 flex items-center justify-center text-white/20 group-hover:border-primary/20 group-hover:text-primary transition-colors">
                         {idx + 1}
                       </div>
-                      <p className="text-sm font-bold text-navy/80">{task.title}</p>
+                      <p className="text-sm font-bold text-white/80">{task.title}</p>
                     </div>
                     <span className={`text-[9px] font-black tracking-widest px-2 py-1 rounded-lg uppercase ${
-                      task.priority === 'alta' ? 'bg-red-50 text-red-500' : 
-                      task.priority === 'media' ? 'bg-amber-50 text-amber-500' : 'bg-green-50 text-green-500'
+                      task.priority === 'alta' ? 'bg-red-500/100/10 text-red-500' : 
+                      task.priority === 'media' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'
                     }`}>
                       {task.priority}
                     </span>
@@ -1052,15 +1052,15 @@ export default function DayTodayPage() {
                 {summaryData.tasks.length > 3 && (
                   <button 
                     onClick={() => setActiveTab("tasks")}
-                    className="w-full py-2 text-[10px] font-bold text-navy/30 hover:text-primary transition-colors uppercase tracking-widest"
+                    className="w-full py-2 text-[10px] font-bold text-white/30 hover:text-primary transition-colors uppercase tracking-widest"
                   >
                     Ver todas las tareas ({summaryData.tasks.length})
                   </button>
                 )}
               </div>
             ) : (
-              <div className="bg-white/40 backdrop-blur-sm rounded-3xl border border-dashed border-navy/5 p-8 text-center">
-                <p className="text-xs text-navy/20 font-medium italic">Sin tareas programadas para este periodo.</p>
+              <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-navy/5 p-8 text-center">
+                <p className="text-xs text-white/20 font-medium italic">Sin tareas programadas para este periodo.</p>
               </div>
             )}
           </div>
@@ -1073,9 +1073,9 @@ export default function DayTodayPage() {
           {/* Section header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-bold tracking-widest text-navy/50 uppercase">Fuentes del día</span>
+              <span className="text-xs font-bold tracking-widest text-white/50 uppercase">Fuentes del día</span>
               {lastSyncTime && !driveSyncing && (
-                <span className="text-[10px] text-navy/30 font-medium">
+                <span className="text-[10px] text-white/30 font-medium">
                   Sincronizado: {lastSyncTime}
                 </span>
               )}
@@ -1093,8 +1093,8 @@ export default function DayTodayPage() {
                 disabled={driveSyncing}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   driveSyncing 
-                    ? "bg-navy/5 text-navy/30 cursor-not-allowed" 
-                    : "bg-white border border-border/20 text-navy/60 hover:text-primary hover:border-primary/50 shadow-sm"
+                    ? "bg-card/5 text-white/30 cursor-not-allowed" 
+                    : "bg-card border border-white/20 text-white/60 hover:text-primary hover:border-primary/50 shadow-sm"
                 }`}
               >
                 <svg 
@@ -1128,13 +1128,13 @@ export default function DayTodayPage() {
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
-                  className="appearance-none bg-white border border-border/30 text-sm text-navy/70 font-medium rounded-lg pl-3 pr-8 py-2 cursor-pointer hover:border-border/60 focus:outline-none focus:border-primary transition-colors"
+                  className="appearance-none bg-card border border-white/30 text-sm text-white/70 font-medium rounded-lg pl-3 pr-8 py-2 cursor-pointer hover:border-white/60 focus:outline-none focus:border-primary transition-colors"
                 >
                   <option value="all">Tipo de recurso</option>
                   <option value="FUENTE EXTERNA">Fuente Externa</option>
                   <option value="NOTAS DE GEMINI">Notas de Gemini</option>
                 </select>
-                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-navy/40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
+                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
               </div>
 
               {/* Format filter */}
@@ -1142,7 +1142,7 @@ export default function DayTodayPage() {
                 <select
                   value={formatFilter}
                   onChange={(e) => setFormatFilter(e.target.value)}
-                  className="appearance-none bg-white border border-border/30 text-sm text-navy/70 font-medium rounded-lg pl-3 pr-8 py-2 cursor-pointer hover:border-border/60 focus:outline-none focus:border-primary transition-colors"
+                  className="appearance-none bg-card border border-white/30 text-sm text-white/70 font-medium rounded-lg pl-3 pr-8 py-2 cursor-pointer hover:border-white/60 focus:outline-none focus:border-primary transition-colors"
                 >
                   <option value="all">Formato</option>
                   <option value="PDF">PDF</option>
@@ -1151,12 +1151,12 @@ export default function DayTodayPage() {
                   <option value="SHEET">SHEET</option>
                   <option value="TXT">TXT</option>
                 </select>
-                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-navy/40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
+                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
               </div>
             </div>
 
             {/* Sort */}
-            <button className="flex items-center gap-2 text-xs font-bold tracking-widest text-navy/50 uppercase hover:text-navy/70 transition-colors">
+            <button className="flex items-center gap-2 text-xs font-bold tracking-widest text-white/50 uppercase hover:text-white/70 transition-colors">
               ORDENAR
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="9" y1="18" x2="15" y2="18" />
@@ -1165,19 +1165,19 @@ export default function DayTodayPage() {
           </div>
 
           {/* Sources list */}
-          <div className="bg-white rounded-xl border border-border/20 shadow-soft divide-y divide-border/10">
+          <div className="bg-card rounded-xl border border-white/20 shadow-soft divide-y divide-border/10">
             {filteredSources.length === 0 && !driveSyncing && (
-              <div className="py-12 text-center text-navy/40 text-sm">
+              <div className="py-12 text-center text-white/40 text-sm">
                 No hay fuentes para hoy todavía.
               </div>
             )}
             {filteredSources.map((source) => (
-              <div key={source.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
+              <div key={source.id} className="flex items-center gap-4 px-5 py-4 hover:bg-card/50 transition-colors">
                 {/* Checkbox */}
                 <button
                   onClick={() => toggleSource(source.id as number)}
                   className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                    source.checked ? "border-primary bg-primary" : "border-border/40 hover:border-primary/50"
+                    source.checked ? "border-primary bg-primary" : "border-white/40 hover:border-primary/50"
                   }`}
                 >
                   {source.checked && <CheckIcon />}
@@ -1190,16 +1190,16 @@ export default function DayTodayPage() {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-navy mb-1 truncate">{source.name}</p>
+                  <p className="text-sm font-semibold text-white mb-1 truncate">{source.name}</p>
                   <div className="flex items-center gap-3">
                     <span className={`text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-md ${typeStyles[source.type]}`}>
                       {source.displayTag || source.type}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-navy/40 font-medium">
+                    <span className="flex items-center gap-1 text-xs text-white/40 font-medium">
                       {source.format}
                     </span>
-                    <span className="text-navy/20">·</span>
-                    <span className="flex items-center gap-1 text-xs text-navy/40">
+                    <span className="text-white/20">·</span>
+                    <span className="flex items-center gap-1 text-xs text-white/40">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                       {source.time}
                     </span>
@@ -1212,7 +1212,7 @@ export default function DayTodayPage() {
                     <>
                       <button
                         onClick={() => handleRenameSource(source.id as string, source.name)}
-                        className="text-navy/20 hover:text-primary transition-colors p-1.5"
+                        className="text-white/20 hover:text-primary transition-colors p-1.5"
                         title="Renombrar"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1223,7 +1223,7 @@ export default function DayTodayPage() {
 
                       <button
                         onClick={() => handleDeleteSource(source.id as string)}
-                        className="text-navy/20 hover:text-red-500 transition-colors p-1.5"
+                        className="text-white/20 hover:text-red-500 transition-colors p-1.5"
                         title="Eliminar"
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1238,7 +1238,7 @@ export default function DayTodayPage() {
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-navy/20 hover:text-primary transition-colors p-1.5"
+                      className="text-white/20 hover:text-primary transition-colors p-1.5"
                       title="Abrir en Drive"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1247,7 +1247,7 @@ export default function DayTodayPage() {
                       </svg>
                     </a>
                   )}
-                  <button className="text-navy/20 hover:text-primary transition-colors p-1.5">
+                  <button className="text-white/20 hover:text-primary transition-colors p-1.5">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
@@ -1257,7 +1257,7 @@ export default function DayTodayPage() {
             ))}
 
             {filteredSources.length === 0 && (
-              <div className="py-12 text-center text-navy/40 text-sm">
+              <div className="py-12 text-center text-white/40 text-sm">
                 No hay fuentes con estos filtros.
               </div>
             )}
@@ -1265,7 +1265,7 @@ export default function DayTodayPage() {
 
           {/* Summary and Analyze Action */}
           <div className="flex items-center justify-between pt-4">
-            <p className="text-xs text-navy/40">
+            <p className="text-xs text-white/40">
               {checkedCount} de {sources.length} fuentes seleccionadas para análisis
             </p>
           </div>
@@ -1277,9 +1277,9 @@ export default function DayTodayPage() {
 
       {activeTab === "feedback" && summaryData?.feedback && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-navy flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
             Feedback de Hoy
-            <span className="text-xs font-medium px-2 py-1 bg-navy/5 rounded-lg text-navy/40">{summaryData.feedback.length} items</span>
+            <span className="text-xs font-medium px-2 py-1 bg-card/5 rounded-lg text-white/40">{summaryData.feedback.length} items</span>
           </h2>
           <FeedbackTab items={summaryData.feedback} />
         </div>
@@ -1287,9 +1287,9 @@ export default function DayTodayPage() {
 
       {activeTab === "tasks" && summaryData?.tasks && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-navy flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
             Tareas Detectadas
-            <span className="text-xs font-medium px-2 py-1 bg-navy/5 rounded-lg text-navy/40">{summaryData.tasks.length} items</span>
+            <span className="text-xs font-medium px-2 py-1 bg-card/5 rounded-lg text-white/40">{summaryData.tasks.length} items</span>
           </h2>
           <TasksTab items={summaryData.tasks} />
         </div>
@@ -1297,9 +1297,9 @@ export default function DayTodayPage() {
 
       {activeTab === "insights" && summaryData?.insights && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-navy flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
             Insights y Hallazgos
-            <span className="text-xs font-medium px-2 py-1 bg-navy/5 rounded-lg text-navy/40">{summaryData.insights.length} items</span>
+            <span className="text-xs font-medium px-2 py-1 bg-card/5 rounded-lg text-white/40">{summaryData.insights.length} items</span>
           </h2>
           <InsightsTab items={summaryData.insights} />
         </div>
@@ -1307,9 +1307,9 @@ export default function DayTodayPage() {
 
       {activeTab === "metrics" && summaryData?.metrics && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-navy flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
             Métricas de Rendimiento
-            <span className="text-xs font-medium px-2 py-1 bg-navy/5 rounded-lg text-navy/40">{summaryData.metrics.length} items</span>
+            <span className="text-xs font-medium px-2 py-1 bg-card/5 rounded-lg text-white/40">{summaryData.metrics.length} items</span>
           </h2>
           <MetricsTab items={summaryData.metrics} />
         </div>
@@ -1317,9 +1317,9 @@ export default function DayTodayPage() {
 
       {activeTab === "alerts" && summaryData?.alerts && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-navy flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
             Alertas y Riesgos
-            <span className="text-xs font-medium px-2 py-1 bg-navy/5 rounded-lg text-navy/40">{summaryData.alerts.length} items</span>
+            <span className="text-xs font-medium px-2 py-1 bg-card/5 rounded-lg text-white/40">{summaryData.alerts.length} items</span>
           </h2>
           <AlertsTab items={summaryData.alerts} />
         </div>

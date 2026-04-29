@@ -4,6 +4,20 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --navy: #0f172a;
+  --primary: #1a6bff;
+  --bright: #2ec6ff;
+  --light: rgba(255, 255, 255, 0.05);
+  --action: #3865f5;
+  --dark-ui: #0a0b14;
+  --accent: #f49e04;
+  --border: rgba(255, 255, 255, 0.08);
+  --bg: #0a0b14;
+  --card: #161927;
+}
+
+/* Base resets */
 * {
   @apply m-0 p-0 box-border;
 }
@@ -13,35 +27,47 @@ html {
 }
 
 body {
-  @apply bg-bg text-navy;
+  @apply bg-bg text-white antialiased transition-colors duration-500;
 }
 
-/* Buttons */
+/* Custom Scrollbar for Dark Mode */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--light);
+}
+
+/* Global utility for glassmorphism in dark mode */
+.glass {
+  background: rgba(22, 25, 39, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 @layer components {
   .btn-primary {
-    @apply px-4 py-2 rounded-lg text-white font-medium hover:brightness-110 transition-all;
+    @apply px-6 py-3 rounded-2xl text-white font-bold tracking-widest uppercase hover:brightness-110 transition-all shadow-xl;
+    --tw-shadow-color: rgba(26, 107, 255, 0.2);
     background: linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%);
   }
 
   .btn-secondary {
-    @apply px-4 py-2 rounded-lg bg-light text-navy font-medium hover:brightness-95 transition-all;
+    @apply px-6 py-3 rounded-2xl bg-card bg-opacity-5 text-white font-bold tracking-widest uppercase hover:brightness-110 transition-all;
   }
 
   .btn-outline {
-    @apply px-4 py-2 rounded-lg border border-border text-navy font-medium hover:bg-light transition-all;
+    @apply px-6 py-3 rounded-2xl border border-white/5 text-white font-bold tracking-widest uppercase hover:bg-card hover:bg-opacity-5 transition-all;
   }
-}
 
-/* Cards */
-@layer components {
   .card {
-    @apply rounded-lg bg-white border border-border shadow-soft;
-  }
-}
-
-/* Text utilities */
-@layer components {
-  .text-mono {
-    @apply font-mono text-action;
+    @apply rounded-[2rem] bg-card border border-white/5 shadow-soft transition-all hover:shadow-hard;
   }
 }

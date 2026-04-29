@@ -135,6 +135,24 @@ export async function getOrCreateWorkspace(
   }
 }
 
+export async function updateWorkspaceJiraConfig(
+  workspaceId: string,
+  config: any
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from("workspaces")
+      .update({ jira_config: config, updated_at: new Date().toISOString() })
+      .eq("id", workspaceId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error updating Jira config:", err);
+    return { success: false, error: err.message };
+  }
+}
+
 export async function getUserWorkspace(
   userId: string
 ): Promise<{ success: boolean; data?: Workspace; error?: string }> {

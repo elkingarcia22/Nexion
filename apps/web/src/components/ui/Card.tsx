@@ -6,11 +6,11 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ variant = 'default', className = '', children, ...props }, ref) => {
-    const baseStyles = 'rounded-lg overflow-hidden border border-border';
+    const baseStyles = 'rounded-lg overflow-hidden border border-white/5';
 
     const variantStyles = {
-      default: 'bg-white shadow-soft',
-      glass: 'bg-white bg-opacity-85 backdrop-filter backdrop-blur-2xl shadow-soft border border-white border-opacity-20',
+      default: 'bg-card shadow-soft',
+      glass: 'bg-card bg-opacity-85 backdrop-filter backdrop-blur-2xl shadow-soft border border-white/10 border-opacity-20',
     };
 
     return (
@@ -30,7 +30,7 @@ Card.displayName = 'Card';
 // CardHeader component
 export const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className = '', ...props }, ref) => (
-    <div ref={ref} className={`px-6 py-4 border-b border-border bg-bg ${className}`} {...props} />
+    <div ref={ref} className={`px-6 py-4 border-b border-white/5 bg-bg ${className}`} {...props} />
   )
 );
 CardHeader.displayName = 'CardHeader';
@@ -40,7 +40,7 @@ export const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttribut
   ({ className = '', ...props }, ref) => (
     <h3
       ref={ref}
-      className={`text-lg font-semibold text-navy ${className}`}
+      className={`text-lg font-semibold text-white ${className}`}
       {...props}
     />
   )
@@ -58,7 +58,7 @@ CardContent.displayName = 'CardContent';
 // CardFooter component
 export const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className = '', ...props }, ref) => (
-    <div ref={ref} className={`px-6 py-4 border-t border-border bg-bg ${className}`} {...props} />
+    <div ref={ref} className={`px-6 py-4 border-t border-white/5 bg-bg ${className}`} {...props} />
   )
 );
 CardFooter.displayName = 'CardFooter';

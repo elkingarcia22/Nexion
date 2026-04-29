@@ -181,8 +181,8 @@ export default function Sources() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-navy">Fuentes</h1>
-            <p className="text-sm text-navy/50 mt-1">
+            <h1 className="text-2xl font-bold text-white">Fuentes</h1>
+            <p className="text-sm text-white/50 mt-1">
               Conecta tus documentos y reuniones de Google para analizarlos con Nexión
             </p>
           </div>
@@ -198,31 +198,31 @@ export default function Sources() {
         </div>
 
         {error && (
-          <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          <div className="mb-6 p-3 bg-red-500/100/10 border border-red-200 text-red-700 rounded-lg text-sm">
             {error}
           </div>
         )}
 
         {/* Drive Import Panel */}
         {showDrivePanel && (
-          <div className="mb-8 bg-white rounded-2xl border border-border/40 shadow-soft overflow-hidden">
+          <div className="mb-8 bg-card rounded-2xl border border-white/40 shadow-soft overflow-hidden">
             {/* Panel header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border/20 bg-[#f8f9fe]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/20 bg-[#f8f9fe]">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-soft">
+                <div className="w-8 h-8 rounded-lg bg-card flex items-center justify-center shadow-soft">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                     <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="#4285F4" strokeWidth="1.5" strokeLinejoin="round"/>
                     <path d="M3 7l9 5m0 0l9-5m-9 5v10" stroke="#4285F4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold text-navy text-sm">Google Drive</p>
-                  <p className="text-xs text-navy/50">Selecciona los archivos a importar como fuentes</p>
+                  <p className="font-semibold text-white text-sm">Google Drive</p>
+                  <p className="text-xs text-white/50">Selecciona los archivos a importar como fuentes</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowDrivePanel(false)}
-                className="text-navy/30 hover:text-navy/60 transition-colors"
+                className="text-white/30 hover:text-white/60 transition-colors"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -231,7 +231,7 @@ export default function Sources() {
             </div>
 
             {/* Filter tabs */}
-            <div className="flex gap-1 px-6 py-3 border-b border-border/10">
+            <div className="flex gap-1 px-6 py-3 border-b border-white/10">
               {FILTER_TABS.map((tab) => (
                 <button
                   key={tab.key}
@@ -239,7 +239,7 @@ export default function Sources() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     driveFilter === tab.key
                       ? "bg-primary text-white"
-                      : "text-navy/50 hover:bg-bg hover:text-navy"
+                      : "text-white/50 hover:bg-bg hover:text-white"
                   }`}
                 >
                   <span>{tab.icon}</span>
@@ -248,7 +248,7 @@ export default function Sources() {
               ))}
               <button
                 onClick={() => loadDriveFiles(driveFilter)}
-                className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-navy/40 hover:text-navy hover:bg-bg transition-all"
+                className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-white/40 hover:text-white hover:bg-bg transition-all"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.1"/>
@@ -262,7 +262,7 @@ export default function Sources() {
               {driveLoading && (
                 <div className="flex items-center justify-center py-10">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  <span className="ml-3 text-sm text-navy/60">Buscando en tu Drive...</span>
+                  <span className="ml-3 text-sm text-white/60">Buscando en tu Drive...</span>
                 </div>
               )}
 
@@ -270,7 +270,7 @@ export default function Sources() {
                 <div className="py-8 text-center">
                   <p className="text-red-600 text-sm mb-3">{driveError}</p>
                   {driveError.includes("token") && (
-                    <p className="text-xs text-navy/50">
+                    <p className="text-xs text-white/50">
                       Cierra sesión y vuelve a entrar con Google para actualizar los permisos.
                     </p>
                   )}
@@ -278,7 +278,7 @@ export default function Sources() {
               )}
 
               {!driveLoading && !driveError && driveFiles.length === 0 && (
-                <div className="py-10 text-center text-navy/40 text-sm">
+                <div className="py-10 text-center text-white/40 text-sm">
                   No se encontraron archivos con este filtro.
                   <br />
                   <span className="text-xs">
@@ -297,14 +297,14 @@ export default function Sources() {
                         key={file.id}
                         className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
                           isImported
-                            ? "bg-green-50 border-green-200"
-                            : "bg-white border-border/20 hover:border-border/50"
+                            ? "bg-green-500/10 border-green-200"
+                            : "bg-card border-white/20 hover:border-white/50"
                         }`}
                       >
                         <span className="text-xl flex-shrink-0">{getMimeTypeIcon(file.mimeType)}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-navy truncate">{file.name}</p>
-                          <p className="text-xs text-navy/40">
+                          <p className="text-sm font-medium text-white truncate">{file.name}</p>
+                          <p className="text-xs text-white/40">
                             {getMimeTypeLabel(file.mimeType)} ·{" "}
                             {new Date(file.modifiedTime).toLocaleDateString("es-ES", {
                               day: "numeric", month: "short", year: "numeric"
@@ -316,7 +316,7 @@ export default function Sources() {
                             href={file.webViewLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-navy/30 hover:text-primary transition-colors"
+                            className="text-xs text-white/30 hover:text-primary transition-colors"
                             title="Abrir en Google Drive"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -350,7 +350,7 @@ export default function Sources() {
         {/* Fuentes existentes */}
         <div className="grid grid-cols-1 gap-4">
           {sources.length === 0 && !showDrivePanel && (
-            <div className="bg-white rounded-2xl border border-dashed border-border/40 p-12 text-center">
+            <div className="bg-card rounded-2xl border border-dashed border-white/40 p-12 text-center">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-primary">
                   <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
@@ -358,8 +358,8 @@ export default function Sources() {
                   <line x1="9" y1="15" x2="15" y2="15"/>
                 </svg>
               </div>
-              <p className="font-semibold text-navy mb-1">Aún no tienes fuentes</p>
-              <p className="text-sm text-navy/50 mb-5">
+              <p className="font-semibold text-white mb-1">Aún no tienes fuentes</p>
+              <p className="text-sm text-white/50 mb-5">
                 Importa transcripciones de Google Meet, notas de Gemini o cualquier documento de Drive
               </p>
               <button
@@ -374,14 +374,14 @@ export default function Sources() {
           {sources.map((source) => (
             <div
               key={source.id}
-              className="bg-white rounded-xl border border-border/30 px-5 py-4 flex items-start justify-between gap-4 hover:border-border/60 transition-all"
+              className="bg-card rounded-xl border border-white/30 px-5 py-4 flex items-start justify-between gap-4 hover:border-white/60 transition-all"
             >
               <div className="flex items-start gap-3 flex-1 min-w-0">
                 <span className="text-xl mt-0.5 flex-shrink-0">
                   {source.source_type === "meeting" ? "🎙️" : source.source_type === "document" ? "📄" : "📁"}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-navy text-sm truncate">{source.title}</h3>
+                  <h3 className="font-semibold text-white text-sm truncate">{source.title}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -389,7 +389,7 @@ export default function Sources() {
                           ? "bg-green-100 text-green-700"
                           : source.current_status === "error"
                           ? "bg-red-100 text-red-700"
-                          : "bg-navy/5 text-navy/50"
+                          : "bg-card/5 text-white/50"
                       }`}
                     >
                       {source.current_status === "processed"
@@ -400,7 +400,7 @@ export default function Sources() {
                         ? "⏳ Procesando"
                         : "Pendiente"}
                     </span>
-                    <span className="text-xs text-navy/30">
+                    <span className="text-xs text-white/30">
                       {new Date(source.created_at).toLocaleDateString("es-ES", {
                         day: "numeric", month: "short"
                       })}
@@ -420,7 +420,7 @@ export default function Sources() {
               </div>
               <button
                 onClick={() => handleDeleteSource(source.id)}
-                className="flex-shrink-0 p-1.5 text-navy/20 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all"
+                className="flex-shrink-0 p-1.5 text-white/20 hover:text-red-400 hover:bg-red-500/100/10 rounded-lg transition-all"
                 title="Eliminar fuente"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -434,13 +434,13 @@ export default function Sources() {
 
         {/* Manual add form - collapsible */}
         <details className="mt-6 group">
-          <summary className="cursor-pointer text-xs text-navy/40 hover:text-navy/70 transition-colors flex items-center gap-1 select-none">
+          <summary className="cursor-pointer text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1 select-none">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="group-open:rotate-90 transition-transform">
               <polyline points="9 18 15 12 9 6"/>
             </svg>
             Añadir fuente manualmente
           </summary>
-          <div className="mt-4 bg-white rounded-xl border border-border/30 p-5">
+          <div className="mt-4 bg-card rounded-xl border border-white/30 p-5">
             <form onSubmit={handleAddSource} className="space-y-3">
               <input
                 type="text"
@@ -448,7 +448,7 @@ export default function Sources() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={submitting}
-                className="w-full px-3 py-2 text-sm border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full px-3 py-2 text-sm border border-white/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               <input
                 type="url"
@@ -456,13 +456,13 @@ export default function Sources() {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={submitting}
-                className="w-full px-3 py-2 text-sm border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full px-3 py-2 text-sm border border-white/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
                 disabled={submitting}
-                className="w-full px-3 py-2 text-sm border border-border/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full px-3 py-2 text-sm border border-white/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
                 <option value="">Tipo de fuente</option>
                 <option value="document">Documento</option>
@@ -474,7 +474,7 @@ export default function Sources() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full px-4 py-2 bg-navy text-white text-sm rounded-lg font-semibold hover:bg-navy/90 transition-all disabled:opacity-50"
+                className="w-full px-4 py-2 bg-card text-white text-sm rounded-lg font-semibold hover:bg-card/90 transition-all disabled:opacity-50"
               >
                 {submitting ? "Añadiendo..." : "Añadir fuente"}
               </button>

@@ -6,15 +6,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        navy: "#04101f",
-        primary: "#1a6bff",
-        bright: "#2ec6ff",
-        light: "#cadeff",
-        action: "#3865f5",
-        "dark-ui": "#2a303f",
-        accent: "#f49e04",
-        border: "#d0d2d5",
-        bg: "#f8faff",
+        navy: "#0f172a",
+        primary: "var(--primary)",
+        bright: "var(--bright)",
+        light: "var(--light)",
+        action: "var(--action)",
+        "dark-ui": "var(--dark-ui)",
+        accent: "var(--accent)",
+        border: "var(--border)",
+        bg: "var(--bg)",
+        card: "#161927",
       },
       fontFamily: {
         inter: ["Inter", "sans-serif"],

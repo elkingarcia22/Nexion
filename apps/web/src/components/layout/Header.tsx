@@ -18,17 +18,17 @@ export function Header() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-border/20 px-8 py-4">
+    <header className="sticky top-0 z-40 bg-card/60 backdrop-blur-xl border-b border-white/5 px-8 py-4">
       <div className="flex items-center justify-between gap-8">
         {/* Search */}
         <div className="flex-1 max-w-md">
           <div className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all ${
             searchFocus
-              ? "border-primary bg-light/10"
-              : "border-border/20 bg-bg hover:border-border/40"
+              ? "border-primary bg-card/10"
+              : "border-white/20 bg-bg hover:border-white/40"
           }`}>
             <svg
-              className="w-5 h-5 text-navy/40 flex-shrink-0"
+              className="w-5 h-5 text-white/40 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -43,7 +43,7 @@ export function Header() {
             <input
               type="text"
               placeholder="Buscar en Nexión..."
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-navy/30"
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-white/30"
               onFocus={() => setSearchFocus(true)}
               onBlur={() => setSearchFocus(false)}
             />
@@ -53,7 +53,7 @@ export function Header() {
         {/* Right Section - Notifications & User */}
         <div className="flex items-center gap-6">
           {/* Notifications */}
-          <button className="relative p-2 text-navy/60 hover:text-navy transition-colors group">
+          <button className="relative p-2 text-white/60 hover:text-white transition-colors group">
             <svg
               className="w-5 h-5"
               fill="none"
@@ -77,10 +77,10 @@ export function Header() {
           {!loading && user ? (
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-sm font-medium text-navy">
+                <p className="text-sm font-medium text-white">
                   {user.user_metadata?.full_name || "Usuario"}
                 </p>
-                <p className="text-xs text-navy/60">
+                <p className="text-xs text-white/60">
                   {user.user_metadata?.role || "Admin"}
                 </p>
               </div>
@@ -103,7 +103,7 @@ export function Header() {
               </div>
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-full bg-light animate-pulse" />
+            <div className="w-10 h-10 rounded-full bg-card/5 animate-pulse" />
           )}
         </div>
       </div>

@@ -82,25 +82,25 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen flex flex-col z-50 border-r border-[#e2e6f3] transition-all duration-300 ease-in-out"
+      className="fixed left-0 top-0 h-screen flex flex-col z-50 border-r border-white/5 transition-all duration-300 ease-in-out"
       style={{
         width: expanded ? "224px" : "64px",
-        background: "#eef1fb",
+        background: "var(--sidebar-bg)",
       }}
     >
       {/* Header: logo + name + toggle */}
       <div className="flex items-center h-16 px-3 gap-3 flex-shrink-0">
-        <div className="w-9 h-9 bg-navy rounded-lg flex items-center justify-center flex-shrink-0">
+        <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20">
           <span className="text-white font-bold text-sm">N</span>
         </div>
         {expanded && (
-          <span className="text-navy font-bold text-base tracking-tight whitespace-nowrap overflow-hidden">
+          <span className="text-white font-bold text-base tracking-tight whitespace-nowrap overflow-hidden">
             Nexión
           </span>
         )}
         <button
           onClick={onToggle}
-          className="ml-auto w-6 h-6 rounded-md flex items-center justify-center text-navy/30 hover:text-navy/60 hover:bg-white/60 transition-all flex-shrink-0"
+          className="ml-auto w-6 h-6 rounded-md flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-card/60 transition-all flex-shrink-0"
         >
           <svg
             width="14"
@@ -130,8 +130,8 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
                 href={item.href}
                 className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 transition-all duration-150 ${
                   isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-navy/40 hover:bg-white/60 hover:text-navy/70"
+                    ? "bg-primary text-white shadow-lg shadow-primary/20"
+                    : "text-white/40 hover:bg-card/5 hover:text-white"
                 }`}
               >
                 <span className="flex-shrink-0">{item.icon}</span>
@@ -145,10 +145,10 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
               {/* Tooltip when collapsed */}
               {!expanded && (
                 <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  <div className="bg-navy text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-hard">
+                  <div className="bg-[#1f212e] text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-hard">
                     {item.label}
                   </div>
-                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-navy" />
+                  <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[#1f212e]" />
                 </div>
               )}
             </div>
@@ -161,7 +161,7 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
         <div className="relative group">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full rounded-xl px-2.5 py-2.5 text-navy/40 hover:bg-white/60 hover:text-navy/70 transition-all duration-150"
+            className="flex items-center gap-3 w-full rounded-xl px-2.5 py-2.5 text-white/40 hover:bg-card/60 hover:text-white/70 transition-all duration-150"
           >
             <span className="flex-shrink-0">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -180,10 +180,10 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
           {/* Tooltip when collapsed */}
           {!expanded && (
             <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-              <div className="bg-navy text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-hard">
+              <div className="bg-card text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-hard">
                 Cerrar sesión
               </div>
-              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-navy" />
+              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[#1f212e]" />
             </div>
           )}
         </div>

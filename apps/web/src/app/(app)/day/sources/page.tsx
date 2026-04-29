@@ -138,13 +138,13 @@ export default function DaySourcesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-navy mb-2">Fuentes</h1>
-        <p className="text-navy/60">Manage and monitor your information sources</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Fuentes</h1>
+        <p className="text-white/60">Manage and monitor your information sources</p>
       </div>
 
       {/* Add Source Card */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-navy mb-4">Añadir Nueva Fuente</h2>
+      <div className="bg-card rounded-xl shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Añadir Nueva Fuente</h2>
         {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg text-sm">
             {error}
@@ -192,10 +192,10 @@ export default function DaySourcesPage() {
       </div>
 
       {/* Sources List */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-navy mb-4">Tus Fuentes</h2>
+      <div className="bg-card rounded-xl shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Tus Fuentes</h2>
         {sources.length === 0 ? (
-          <p className="text-navy/60 text-sm">
+          <p className="text-white/60 text-sm">
             No hay fuentes aún. Empieza por añadir una.
           </p>
         ) : (
@@ -203,16 +203,16 @@ export default function DaySourcesPage() {
             {sources.map((source) => (
               <div
                 key={source.id}
-                className="flex items-start justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                className="flex items-start justify-between p-4 rounded-lg bg-card hover:bg-white/10 transition-colors"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-navy">{source.title}</h3>
+                    <h3 className="font-semibold text-white">{source.title}</h3>
                     <Badge variant={getStatusVariant(source.current_status)}>
                       {source.current_status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-navy/60 mt-1">{source.source_type}</p>
+                  <p className="text-sm text-white/60 mt-1">{source.source_type}</p>
                   {source.original_url && (
                     <a
                       href={source.original_url}
@@ -223,7 +223,7 @@ export default function DaySourcesPage() {
                       {source.original_url}
                     </a>
                   )}
-                  <p className="text-xs text-navy/40 mt-2">
+                  <p className="text-xs text-white/40 mt-2">
                     {new Date(source.created_at).toLocaleDateString("es-ES")}
                   </p>
                 </div>

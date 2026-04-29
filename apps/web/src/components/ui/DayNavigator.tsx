@@ -102,11 +102,11 @@ export function DayNavigator({ value, onChange }: DayNavigatorProps) {
   return (
     <div className="relative" ref={ref}>
       {/* Day Navigator Bar — White background with arrow controls */}
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-border/20 rounded-xl shadow-soft">
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-card border border-white/20 rounded-xl shadow-soft">
         {/* Prev day button */}
         <button
           onClick={() => navigateDay(-1)}
-          className="flex items-center justify-center w-8 h-8 rounded-lg text-navy/40 hover:text-primary hover:bg-primary/8 transition-all"
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-white/40 hover:text-primary hover:bg-primary/8 transition-all"
           title="Día anterior"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -117,7 +117,7 @@ export function DayNavigator({ value, onChange }: DayNavigatorProps) {
         {/* Date display — clickable to open picker */}
         <button
           onClick={() => setOpenPicker((o) => !o)}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-navy hover:text-primary transition-colors hover:bg-primary/5 rounded-lg"
+          className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-white hover:text-primary transition-colors hover:bg-primary/5 rounded-lg"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -131,7 +131,7 @@ export function DayNavigator({ value, onChange }: DayNavigatorProps) {
         {/* Next day button */}
         <button
           onClick={() => navigateDay(1)}
-          className="flex items-center justify-center w-8 h-8 rounded-lg text-navy/40 hover:text-primary hover:bg-primary/8 transition-all"
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-white/40 hover:text-primary hover:bg-primary/8 transition-all"
           title="Día siguiente"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -150,8 +150,8 @@ export function DayNavigator({ value, onChange }: DayNavigatorProps) {
       {/* Dropdown calendar picker */}
       {openPicker && (
         <div
-          className="absolute left-0 top-[calc(100%+8px)] z-50 w-72 rounded-2xl border border-border/20 shadow-2xl overflow-hidden"
-          style={{ background: "white" }}
+          className="absolute left-0 top-[calc(100%+8px)] z-50 w-72 rounded-2xl border border-white/20 shadow-2xl overflow-hidden"
+          style={{ background: "var(--card)" }}
         >
           {/* Header */}
           <div
@@ -160,7 +160,7 @@ export function DayNavigator({ value, onChange }: DayNavigatorProps) {
           >
             <button
               onClick={prevMonth}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/15 transition-all"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-card/15 transition-all"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <polyline points="15 18 9 12 15 6" />
@@ -171,7 +171,7 @@ export function DayNavigator({ value, onChange }: DayNavigatorProps) {
             </span>
             <button
               onClick={nextMonth}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/15 transition-all"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-card/15 transition-all"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <polyline points="9 18 15 12 9 6" />
@@ -182,7 +182,7 @@ export function DayNavigator({ value, onChange }: DayNavigatorProps) {
           {/* Days of week */}
           <div className="grid grid-cols-7 px-3 pt-3 pb-1">
             {DAYS_ES.map((d) => (
-              <div key={d} className="text-center text-[10px] font-bold text-navy/30 tracking-widest pb-1">
+              <div key={d} className="text-center text-[10px] font-bold text-white/30 tracking-widest pb-1">
                 {d}
               </div>
             ))}
@@ -211,8 +211,8 @@ export function DayNavigator({ value, onChange }: DayNavigatorProps) {
                         : today
                         ? "text-primary font-bold border border-primary/30 bg-primary/5"
                         : future
-                        ? "text-navy/20 cursor-not-allowed"
-                        : "text-navy/70 hover:bg-primary/8 hover:text-primary"
+                        ? "text-white/20 cursor-not-allowed"
+                        : "text-white/70 hover:bg-primary/8 hover:text-primary"
                     }
                   `}
                   style={selected ? { background: "linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%)" } : {}}
@@ -224,14 +224,14 @@ export function DayNavigator({ value, onChange }: DayNavigatorProps) {
           </div>
 
           {/* Footer */}
-          <div className="border-t border-border/10 px-3 py-2.5 flex justify-between items-center">
+          <div className="border-t border-white/10 px-3 py-2.5 flex justify-between items-center">
             <button
               onClick={() => handleSelectDay(new Date())}
               className="text-xs font-semibold text-primary hover:underline transition-all"
             >
               Ir a hoy
             </button>
-            <span className="text-[10px] text-navy/30 font-medium">
+            <span className="text-[10px] text-white/30 font-medium">
               {value.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })}
             </span>
           </div>

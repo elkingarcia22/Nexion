@@ -55,7 +55,7 @@ export default function Login() {
 
 
   return (
-    <div className="h-screen flex flex-col md:grid md:grid-cols-2 bg-white overflow-hidden">
+    <div className="h-screen flex flex-col md:grid md:grid-cols-2 bg-card overflow-hidden">
       {/* Left Column - Context & Value Prop */}
       <section className="hidden md:flex flex-col justify-center items-center p-12 bg-gradient-to-br from-bg to-light/20 relative overflow-hidden">
         {/* Decorative blurred circles */}
@@ -65,10 +65,10 @@ export default function Login() {
         <div className="max-w-xl relative z-10">
           <div className="mb-12">
             <p className="text-primary font-bold text-xs uppercase tracking-widest mb-4">Nexión Intelligence</p>
-            <h1 className="text-5xl font-bold text-navy leading-tight mb-6">
+            <h1 className="text-5xl font-bold text-white leading-tight mb-6">
               Entra a Nexión. Conecta tus fuentes de trabajo y convierte información en seguimiento operativo.
             </h1>
-            <p className="text-base text-navy/70 leading-relaxed">
+            <p className="text-base text-white/70 leading-relaxed">
               Inicia sesión con tu cuenta de Google de trabajo para acceder a tus fuentes, análisis y visibilidad diaria.
             </p>
           </div>
@@ -76,37 +76,37 @@ export default function Login() {
           {/* Benefits */}
           <div className="space-y-6">
             <div className="flex gap-4 items-start">
-              <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-primary flex-shrink-0 shadow-soft">
+              <div className="w-10 h-10 rounded-lg bg-card flex items-center justify-center text-primary flex-shrink-0 shadow-soft">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
                 </svg>
               </div>
-              <p className="font-semibold text-navy">Centralización de datos operativos</p>
+              <p className="font-semibold text-white">Centralización de datos operativos</p>
             </div>
             <div className="flex gap-4 items-start">
-              <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-primary flex-shrink-0 shadow-soft">
+              <div className="w-10 h-10 rounded-lg bg-card flex items-center justify-center text-primary flex-shrink-0 shadow-soft">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <p className="font-semibold text-navy">Automatización de flujos</p>
+              <p className="font-semibold text-white">Automatización de flujos</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Right Column - Login Form */}
-      <section className="flex flex-col justify-center items-center p-8 md:p-12 bg-white">
+      <section className="flex flex-col justify-center items-center p-8 md:p-12 bg-card">
         <div className="w-full max-w-md">
           {/* Mobile Header */}
           <div className="md:hidden mb-8">
-            <h1 className="text-2xl font-bold text-navy">Nexión</h1>
+            <h1 className="text-2xl font-bold text-white">Nexión</h1>
           </div>
 
           {/* Login Header */}
           <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold text-navy mb-2">Comienza ahora</h2>
-            <p className="text-sm text-navy/60">Accede a tu entorno seguro de Nexión</p>
+            <h2 className="text-3xl font-bold text-white mb-2">Comienza ahora</h2>
+            <p className="text-sm text-white/60">Accede a tu entorno seguro de Nexión</p>
           </div>
 
           {/* Google Login Button */}
@@ -114,7 +114,7 @@ export default function Login() {
             <button
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border border-border/40 hover:border-border/70 hover:bg-bg text-navy font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 shadow-soft hover:shadow-hard"
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-card border border-white/40 hover:border-white/10/70 hover:bg-bg text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 shadow-soft hover:shadow-hard"
             >
               {loading ? (
                 <>
@@ -138,28 +138,28 @@ export default function Login() {
           </div>
 
           {/* Permissions Card */}
-          <div className="bg-bg rounded-lg p-6 border border-border/30">
+          <div className="bg-bg rounded-lg p-6 border border-white/30">
             <div className="flex items-center gap-2 mb-6">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-primary">
                 <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
               </svg>
-              <h3 className="font-bold text-xs uppercase tracking-wider text-navy">Permisos y acceso</h3>
+              <h3 className="font-bold text-xs uppercase tracking-wider text-white">Permisos y acceso</h3>
             </div>
 
             <ul className="space-y-4 mb-6">
-              <li className="flex items-start gap-3 text-xs text-navy/70">
+              <li className="flex items-start gap-3 text-xs text-white/70">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary/60 mt-0.5 flex-shrink-0">
                   <circle cx="12" cy="12" r="2" />
                 </svg>
                 <span>Verificar tu identidad de trabajo</span>
               </li>
-              <li className="flex items-start gap-3 text-xs text-navy/70">
+              <li className="flex items-start gap-3 text-xs text-white/70">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary/60 mt-0.5 flex-shrink-0">
                   <circle cx="12" cy="12" r="2" />
                 </svg>
                 <span>Acceder a fuentes necesarias en Google Drive, Docs y Sheets</span>
               </li>
-              <li className="flex items-start gap-3 text-xs text-navy/70">
+              <li className="flex items-start gap-3 text-xs text-white/70">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary/60 mt-0.5 flex-shrink-0">
                   <circle cx="12" cy="12" r="2" />
                 </svg>
@@ -167,16 +167,16 @@ export default function Login() {
               </li>
             </ul>
 
-            <div className="pt-4 border-t border-border/30 text-center">
-              <p className="text-xs text-navy/50 italic">Los permisos se solicitarán durante el acceso con Google.</p>
+            <div className="pt-4 border-t border-white/30 text-center">
+              <p className="text-xs text-white/50 italic">Los permisos se solicitarán durante el acceso con Google.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="md:col-span-2 border-t border-border/10 py-6 text-center">
-        <p className="text-xs text-navy/40 uppercase tracking-wide">© 2024 Nexión Technologies</p>
+      <footer className="md:col-span-2 border-t border-white/10 py-6 text-center">
+        <p className="text-xs text-white/40 uppercase tracking-wide">© 2024 Nexión Technologies</p>
       </footer>
     </div>
   );

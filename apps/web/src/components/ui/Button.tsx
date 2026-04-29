@@ -23,8 +23,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantStyles = {
       primary: 'text-white focus:ring-light',
-      secondary: 'bg-light text-navy hover:brightness-95 focus:ring-primary',
-      ghost: 'bg-transparent text-primary hover:bg-light hover:bg-opacity-10 focus:ring-primary',
+      secondary: 'bg-card/5 text-white hover:brightness-95 focus:ring-primary',
+      ghost: 'bg-transparent text-primary hover:bg-card/5 hover:bg-opacity-10 focus:ring-primary',
       destructive: 'text-[#991b1b] focus:ring-red-300',
     };
 

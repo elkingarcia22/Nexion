@@ -123,7 +123,7 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-navy/20 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-[#161927]/20 backdrop-blur-sm z-40 transition-opacity duration-300 ${
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
@@ -131,21 +131,21 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
 
       {/* Drawer */}
       <aside
-        className={`fixed top-0 right-0 h-screen w-[420px] bg-white z-50 flex flex-col shadow-hard transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-screen w-[420px] bg-[#161927] z-50 flex flex-col shadow-hard transition-transform duration-300 ease-in-out ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border/20">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/20">
           <div>
-            <h2 className="text-base font-bold text-navy">Añadir fuente</h2>
-            <p className="text-xs text-navy/50 mt-0.5">
+            <h2 className="text-base font-bold text-white">Añadir fuente</h2>
+            <p className="text-xs text-white/50 mt-0.5">
               Pega la URL del recurso que quieres analizar
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-navy/40 hover:bg-gray-100 hover:text-navy transition-all"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:bg-[#161927]/10 hover:text-white transition-all"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -171,7 +171,7 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
 
           {/* URL field */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-navy/70 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
               URL del recurso <span className="text-red-500">*</span>
             </label>
             <input
@@ -182,8 +182,8 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
               placeholder="https://docs.google.com/document/d/..."
               className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
                 urlError
-                  ? "border-red-300 bg-red-50 focus:border-red-400"
-                  : "border-border/30 bg-gray-50 focus:border-primary focus:bg-white"
+                  ? "border-red-300 bg-red-500/100/10 focus:border-red-400"
+                  : "border-white/10 bg-[#161927] focus:border-primary focus:bg-[#161927]"
               }`}
             />
             {urlError && (
@@ -196,7 +196,7 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
 
           {/* Type field */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-navy/70 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
               Tipo de recurso <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -208,7 +208,7 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
                   className={`px-3 py-2.5 rounded-xl border text-xs font-medium text-left transition-all ${
                     type === t.value
                       ? "border-primary bg-primary/8 text-primary"
-                      : "border-border/20 bg-gray-50 text-navy/60 hover:border-border/50 hover:text-navy"
+                      : "border-white/20 bg-[#161927] text-white/60 hover:border-white/50 hover:text-white"
                   }`}
                 >
                   {t.label}
@@ -216,32 +216,32 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
               ))}
             </div>
             {!type && (
-              <p className="text-xs text-navy/40">Selecciona el tipo de recurso</p>
+              <p className="text-xs text-white/40">Selecciona el tipo de recurso</p>
             )}
           </div>
 
           {/* Name field (optional) */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-navy/70 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
               Nombre{" "}
-              <span className="text-navy/30 normal-case tracking-normal font-normal">(opcional)</span>
+              <span className="text-white/30 normal-case tracking-normal font-normal">(opcional)</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ej: Minuta reunión SteelCore 24 Oct"
-              className="w-full px-4 py-3 rounded-xl border border-border/30 bg-gray-50 text-sm outline-none focus:border-primary focus:bg-white transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-[#161927] text-sm outline-none focus:border-primary focus:bg-[#161927] transition-all"
             />
-            <p className="text-xs text-navy/40">
+            <p className="text-xs text-white/40">
               Si no lo completás, se usará la URL como identificador.
             </p>
           </div>
 
           {/* Preview */}
           {(url || type) && (
-            <div className="p-4 rounded-xl bg-bg border border-border/20 space-y-2">
-              <p className="text-xs font-semibold text-navy/50 uppercase tracking-wider">Vista previa</p>
+            <div className="p-4 rounded-xl bg-bg border border-white/20 space-y-2">
+              <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Vista previa</p>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -250,14 +250,14 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-navy truncate">{name || url || "Sin nombre"}</p>
+                  <p className="text-sm font-semibold text-white truncate">{name || url || "Sin nombre"}</p>
                   {selectedTypeLabel && (
-                    <span className="text-[10px] font-bold tracking-widest text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md">
+                    <span className="text-[10px] font-bold tracking-widest text-orange-600 bg-orange-500/100/10 px-2 py-0.5 rounded-md">
                       {selectedTypeLabel.toUpperCase()}
                     </span>
                   )}
                 </div>
-                <span className="ml-auto text-[10px] font-bold tracking-widest px-2 py-1 rounded-md bg-yellow-50 text-yellow-600 flex-shrink-0">
+                <span className="ml-auto text-[10px] font-bold tracking-widest px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-600 flex-shrink-0">
                   PENDIENTE
                 </span>
               </div>
@@ -268,7 +268,7 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
         {/* General Error */}
         {generalError && (
           <div className="px-6 mb-2">
-            <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-xs text-red-600 flex items-center gap-2">
+            <div className="p-3 rounded-lg bg-red-500/100/10 border border-red-100 text-xs text-red-600 flex items-center gap-2">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
               </svg>
@@ -278,11 +278,11 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
         )}
 
         {/* Footer actions */}
-        <div className="px-6 py-4 border-t border-border/20 flex gap-3">
+        <div className="px-6 py-4 border-t border-white/20 flex gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-3 rounded-xl border border-border/30 text-sm font-semibold text-navy/60 hover:bg-gray-50 transition-all"
+            className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-sm font-semibold text-white/60 hover:bg-[#161927] transition-all"
           >
             Cancelar
           </button>

@@ -23,7 +23,7 @@ export const KPICard = React.forwardRef<HTMLDivElement, KPICardProps>(
             </p>
 
             {/* Value — ROBOTO MONO (CRITICAL), 32px, navy */}
-            <div className="font-mono text-3xl font-bold text-navy">
+            <div className="font-mono text-3xl font-bold text-white">
               {value}
             </div>
 

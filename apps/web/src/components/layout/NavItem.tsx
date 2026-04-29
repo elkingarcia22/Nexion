@@ -24,7 +24,7 @@ export function NavItem({ item }: NavItemProps) {
         className={`flex items-center justify-between px-4 py-3 rounded-lg transition-all ${
           isActive
             ? "border-l-4 border-primary text-white"
-            : "text-light/60 hover:bg-white hover:bg-opacity-5"
+            : "text-light/60 hover:bg-card hover:bg-opacity-5"
         }`}
         style={isActive ? { backgroundColor: 'rgba(26, 107, 255, 0.15)' } : {}}
       >
@@ -57,7 +57,7 @@ export function NavItem({ item }: NavItemProps) {
       </div>
 
       {hasChildren && isOpen && (
-        <div className="ml-4 mt-2 space-y-2 border-l border-white border-opacity-10 pl-4">
+        <div className="ml-4 mt-2 space-y-2 border-l border-white/10 border-opacity-10 pl-4">
           {item.children!.map((child) => {
             const childIsActive = pathname === child.href;
             return (
@@ -67,7 +67,7 @@ export function NavItem({ item }: NavItemProps) {
                 className={`block px-3 py-2 rounded text-sm transition-all ${
                   childIsActive
                     ? "text-white font-medium"
-                    : "text-light/60 hover:bg-white hover:bg-opacity-5"
+                    : "text-light/60 hover:bg-card hover:bg-opacity-5"
                 }`}
                 style={childIsActive ? { backgroundColor: 'rgba(26, 107, 255, 0.15)' } : {}}
               >

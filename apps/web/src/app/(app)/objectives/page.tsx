@@ -12,6 +12,7 @@ export default function ObjectivesPage() {
   const [initiatives, setInitiatives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [jiraTasks, setJiraTasks] = useState<any[]>([]);
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
@@ -38,14 +39,29 @@ export default function ObjectivesPage() {
     setLoading(true);
     setIsSyncing(true);
     try {
-      // Auto-sync on load
+      // 1. Sync and fetch Objectives
       await syncObjectives(wsId);
-      
       const { data: objs } = await getObjectives(wsId);
       const { data: inis } = await getInitiatives(wsId);
       
       setObjectives(objs || []);
       setInitiatives(inis || []);
+
+      // 2. Fetch Jira Tasks if config exists
+      const { data: wsData } = await supabase.from('workspaces').select('jira_config').eq('id', wsId).single();
+      if (wsData?.jira_config) {
+        console.log("[ObjectivesPage] Fetching Jira issues...");
+        const { fetchJiraIssues } = await import("@/lib/services/jira-service");
+        const jql = "updated >= -365d order by updated DESC";
+        console.log("[ObjectivesPage] JQL Query:", jql);
+        const jiraResult = await fetchJiraIssues(wsData.jira_config, jql);
+        if (jiraResult.success) {
+          console.log(`[ObjectivesPage] Successfully fetched ${jiraResult.issues.length} Jira issues`);
+          setJiraTasks(jiraResult.issues);
+        } else {
+          console.error("[ObjectivesPage] Error fetching Jira issues:", jiraResult.error);
+        }
+      }
     } catch (error) {
       console.error("[ObjectivesPage] Error loading data:", error);
     } finally {
@@ -57,11 +73,11 @@ export default function ObjectivesPage() {
   const userFullName = user?.user_metadata?.full_name || "Usuario";
 
   return (
-    <div className="min-h-full space-y-8 animate-in fade-in duration-500">
+    <div className="min-h-full space-y-8 pb-20">
       {/* Page header - Matching Day module style exactly */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-black text-navy uppercase tracking-tight">Estrategia</h1>
+          <h1 className="text-3xl font-black text-white uppercase tracking-tight">Estrategia</h1>
         </div>
 
         <div className="flex items-center gap-4">
@@ -102,13 +118,14 @@ export default function ObjectivesPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-40 gap-4">
           <div className="w-12 h-12 border-4 border-primary/20 border-t-primary animate-spin rounded-full" />
-          <p className="text-sm font-black text-navy/20 uppercase tracking-widest">Cargando visión estratégica...</p>
+          <p className="text-sm font-black text-white/20 uppercase tracking-widest">Cargando visión estratégica...</p>
         </div>
       ) : (
         <ObjectivesTab 
           objectives={objectives} 
           initiatives={initiatives} 
           isSyncing={isSyncing} 
+          jiraTasks={jiraTasks}
         />
       )}
 

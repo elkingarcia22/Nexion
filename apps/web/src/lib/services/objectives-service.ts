@@ -7,7 +7,7 @@ export interface Objective {
   team: string;
   owner: string;
   quarter: string;
-  objective_title: string;
+  title: string;
   narrative: string;
   type: string;
   key_result: string;
@@ -264,7 +264,7 @@ export async function syncObjectives(workspaceId: string) {
           team: lastTeam || "General",
           owner: lastOwner || "NEXIÓN TEAM",
           quarter: sheetName,
-          objective_title: lastObjective || "Objetivo Estratégico",
+          title: lastObjective || "Objetivo Estratégico",
           narrative: lastNarrative,
           type: lastType || "ESTRATÉGICO",
           key_result: krTitle,
@@ -276,7 +276,7 @@ export async function syncObjectives(workspaceId: string) {
           external_row_index: index,
           last_synced_at: new Date().toISOString(),
         };
-      }).filter(obj => obj && obj.objective_title && obj.key_result);
+      }).filter(obj => obj && obj.title && obj.key_result);
     };
 
     const allObjectives = [];
@@ -296,7 +296,7 @@ export async function syncObjectives(workspaceId: string) {
 
     if (allObjectives.length > 0) {
       const uniqueObjectives = Array.from(new Map(
-        allObjectives.map(o => [`${o.workspace_id}-${o.quarter}-${o.objective_title}-${o.key_result}-${o.owner}`, o])
+        allObjectives.map(o => [`${o.workspace_id}-${o.quarter}-${o.title}-${o.key_result}-${o.owner}`, o])
       ).values());
 
       // Clean up previous data for these quarters to avoid mixing (e.g. Q1 with Q2)
@@ -309,7 +309,7 @@ export async function syncObjectives(workspaceId: string) {
 
       const { error } = await supabase
         .from("workspace_objectives")
-        .upsert(uniqueObjectives, { onConflict: 'workspace_id,quarter,objective_title,key_result,owner' });
+        .upsert(uniqueObjectives, { onConflict: 'workspace_id,quarter,title,key_result,owner' });
       
       if (error) throw error;
     }
