@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const { date, meetings, sources } = await request.json();
+    const { date, meetings, sources, userName, objectives, jiraContext } = await request.json();
     const apiKey = process.env.GOOGLE_AI_API_KEY;
 
     if (!apiKey) {
@@ -12,33 +12,94 @@ export async function POST(request: Request) {
       );
     }
 
-    // Prepare the prompt for Gemini
+    // Calculate next day for prompt context
+    const currentAnalysisDate = new Date(date);
+    const nextDayDate = new Date(currentAnalysisDate);
+    nextDayDate.setDate(currentAnalysisDate.getDate() + 1);
+    const nextDay = nextDayDate.toISOString().split('T')[0];
+
     const prompt = `
-      Eres un Asistente de Inteligencia Operativa llamado Nexión.
-      Tu tarea es analizar la actividad de un usuario para el día ${date} y generar un resumen ejecutivo, una lista de tareas pendientes y hallazgos clave.
+      Eres un Asistente de Inteligencia Operativa llamado Nexión. 
+      Tu misión es realizar un análisis jerárquico y profundo de la actividad del usuario para el día ${date}.
 
-      REUNIONES DEL DÍA:
-      ${JSON.stringify(meetings, null, 2)}
-
-      FUENTES Y DOCUMENTOS TRABAJADOS:
-      ${JSON.stringify(sources, null, 2)}
-
-      INSTRUCCIONES:
-      1. Genera un "summary" (máximo 3 párrafos) que resuma lo más importante del día.
-      2. Extrae "tasks": Tareas detectadas. Cada tarea debe tener: title, priority (alta, media, baja), category.
-      3. Extrae "insights": Hallazgos u observaciones. Cada uno con: title, description, category.
-      4. Extrae "metrics": Señales de métricas o KPIs mencionados. Cada uno con: title, value, change (ej: "+15%"), status (critica, alta, media, baja).
-      5. Extrae "alerts": Riesgos o alertas detectadas. Cada uno con: title, description, priority (critica, alta, media).
-      6. Extrae "feedback": Comentarios de clientes o equipo. Cada uno con: title, content, type (producto, laboral, personal), priority (critica, alta, media).
+      DATOS DEL USUARIO:
+      - NOMBRE: ${userName || "Usuario"}
       
-      Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
+      CONTEXTO ESTRATÉGICO (Objetivos y KRs):
+      ${JSON.stringify(objectives, null, 2)}
+
+      CONTEXTO OPERATIVO (Jira User Stories y Subtasks):
+      ${JSON.stringify(jiraContext, null, 2)}
+
+      FUENTES A ANALIZAR (Contenido completo):
+      ${sources.map((s: any) => `
+      --- INICIO FUENTE ---
+      ID: ${s.id}
+      NOMBRE: ${s.name}
+      CONTENIDO: ${s.content || "Sin contenido"}
+      --- FIN FUENTE ---
+      `).join('\n')}
+
+      LOGICA DE ANÁLISIS (PASO A PASO POR CADA FUENTE):
+      1. CONTEXTO: ¿De qué trata este documento/reunión?
+      2. VINCULACIÓN: 
+         - ¿A qué OBJETIVO (goal_id) de la lista estratégica le pega?
+         - ¿A qué HISTORIA DE USUARIO (linked_jira_key) de Jira está asociado?
+         - ¿A qué SUBTAREA (linked_jira_subtask_id) específica de esa HU se refiere?
+      3. EXTRACCIÓN DE ELEMENTOS:
+         - TAREAS: Extrae todas las acciones (especialmente las de ${userName}).
+         - FECHAS Y VENCIMIENTO (due_date): 
+            * REGLA 1: Si en la fuente se menciona explícitamente "mañana" o compromisos para el día siguiente (ej: "mañana entrego esto", "mañana lo ajusto"), el vencimiento (due_date) DEBE ser el día actual: ${date}.
+            * REGLA 2: Si NO hay ninguna detección de fecha específica o mención de "mañana", el vencimiento por defecto DEBE ser el día siguiente: ${nextDay}.
+         - OTROS: Extrae métricas, insights, alertas y feedback.
+
+      REGLAS CRÍTICAS:
+      - Si detectas una tarea para ${userName}, asígnale prioridad ALTA.
+      - Si una tarea es para otra persona, incluye su nombre en el título.
+      - Vincula SIEMPRE que sea posible a los IDs de Objetivos y Jira proporcionados.
+
+      ESTRUCTURA DE RESPUESTA (Responde ÚNICAMENTE en JSON):
       {
-        "summary": "texto",
-        "tasks": [{ "title": "...", "priority": "...", "category": "..." }],
-        "insights": [{ "title": "...", "description": "...", "category": "..." }],
-        "metrics": [{ "title": "...", "value": "...", "change": "...", "status": "..." }],
-        "alerts": [{ "title": "...", "description": "...", "priority": "..." }],
-        "feedback": [{ "title": "...", "content": "...", "type": "...", "priority": "..." }]
+        "summary": "Resumen ejecutivo del día.",
+        "tasks": [{ 
+          "title": "...", 
+          "priority": "alta/media/baja", 
+          "category": "Talent/Hiring/UX/Other",
+          "goal_id": "ID del objetivo vinculado o null",
+          "linked_jira_key": "Key de Jira vinculada o null",
+          "linked_jira_subtask_id": "ID de la subtarea vinculada o null",
+          "due_date": "YYYY-MM-DD o null"
+        }],
+        "insights": [{
+          "title": "...",
+          "description": "...",
+          "category": "Talent/Hiring/UX/Other",
+          "goal_id": "...",
+          "linked_jira_key": "..."
+        }],
+        "metrics": [{
+          "title": "...",
+          "value": "...",
+          "change": "...",
+          "status": "alta/media/baja",
+          "category": "Talent/Hiring/UX/Other",
+          "goal_id": "..."
+        }],
+        "alerts": [{
+          "title": "...",
+          "description": "...",
+          "priority": "critica/alta/media",
+          "category": "Talent/Hiring/UX/Other",
+          "goal_id": "...",
+          "linked_jira_key": "..."
+        }],
+        "feedback": [{
+          "title": "...",
+          "content": "...",
+          "type": "producto/laboral/personal",
+          "category": "Talent/Hiring/UX/Other",
+          "goal_id": "..."
+        }]
       }
     `;
 

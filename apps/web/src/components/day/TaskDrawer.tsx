@@ -228,6 +228,7 @@ interface TaskDrawerProps {
   profiles?: any[];
   objectives?: any[];
   currentUserProfileId?: string;
+  jiraTasks?: any[];
 }
 
 const PRIORITIES = [
@@ -306,7 +307,8 @@ export function TaskDrawer({
   workspaceId,
   profiles: propsProfiles = [],
   objectives: propsObjectives = [],
-  currentUserProfileId
+  currentUserProfileId,
+  jiraTasks = []
 }: TaskDrawerProps) {
   const [formData, setFormData] = useState({
     title: "",
@@ -321,6 +323,8 @@ export function TaskDrawer({
     subtasks: [] as any[],
     activity: [] as any[],
     goal_id: "",
+    linked_jira_key: "",
+    linked_jira_subtask_id: "",
   });
 
   const [activeTab, setActiveTab] = useState<"comentarios" | "historial">("comentarios");
@@ -379,6 +383,8 @@ export function TaskDrawer({
         }),
         activity: combinedActivity,
         goal_id: task.goal_id || "",
+        linked_jira_key: task.linked_jira_key || "",
+        linked_jira_subtask_id: task.linked_jira_subtask_id || "",
       });
     } else {
       setFormData({
@@ -394,6 +400,8 @@ export function TaskDrawer({
         subtasks: [],
         activity: [],
         goal_id: "",
+        linked_jira_key: "",
+        linked_jira_subtask_id: "",
       });
     }
   }, [task, open]);
@@ -1083,6 +1091,49 @@ export function TaskDrawer({
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Jira Linking Section */}
+            <div className="space-y-6 pt-6 border-t border-white/5">
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-400">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z"/></svg>
+                Vínculo con Jira
+              </label>
+              
+              <div className="space-y-3">
+                <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Historia de Usuario (HU)</label>
+                <CustomSelect
+                  value={formData.linked_jira_key}
+                  onChange={(val) => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      linked_jira_key: val,
+                      linked_jira_subtask_id: "" // Reset subtask when story changes
+                    }));
+                  }}
+                  options={[
+                    { value: "", label: "Sin vincular" },
+                    ...jiraTasks.map(jt => ({ value: jt.external_key, label: `${jt.external_key}: ${jt.title}` }))
+                  ]}
+                />
+              </div>
+
+              {formData.linked_jira_key && (
+                <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Le pega a la subtarea:</label>
+                  <CustomSelect
+                    value={formData.linked_jira_subtask_id}
+                    onChange={(val) => setFormData(prev => ({ ...prev, linked_jira_subtask_id: val }))}
+                    options={[
+                      { value: "", label: "General (Toda la HU)" },
+                      ...(jiraTasks.find(jt => jt.external_key === formData.linked_jira_key)?.subtasks || []).map((st: any) => ({ 
+                        value: st.id, 
+                        label: st.title 
+                      }))
+                    ]}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

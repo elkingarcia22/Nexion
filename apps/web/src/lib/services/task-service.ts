@@ -17,6 +17,8 @@ export interface Task {
   proposal_status?: string;
   goal_id?: string;
   parent_id?: string;
+  linked_jira_key?: string;
+  linked_jira_subtask_id?: string;
   updated_at?: string;
   created_at?: string;
 }

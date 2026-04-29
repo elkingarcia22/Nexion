@@ -2,6 +2,9 @@ export interface AnalysisRequest {
   date: string;
   meetings: any[];
   sources: any[];
+  userName?: string;
+  objectives?: any[];
+  jiraContext?: any[];
 }
 
 export interface AnalysisResult {
