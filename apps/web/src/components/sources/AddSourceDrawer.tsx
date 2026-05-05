@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { createSource } from "@/lib/services/source-service";
+import { createSource, updateSource } from "@/lib/services/source-service";
 import { getUserWorkspace } from "@/lib/services/workspace-service";
 
 const SOURCE_TYPES = [
@@ -21,28 +21,66 @@ interface AddSourceDrawerProps {
   onClose: () => void;
   onAdd: (source?: { name: string; url: string; type: string }) => void;
   sourceDate?: Date;
+  editMode?: boolean;
+  onEditData?: {
+    id: string;
+    title: string;
+    url: string | null;
+    sourceType: string;
+    sourceOrigin: string;
+    metadata: any;
+  } | null;
 }
 
-export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceDrawerProps) {
+export function AddSourceDrawer(props: AddSourceDrawerProps) {
+  const { open, onClose, onAdd, sourceDate, editMode, onEditData } = props;
+  const [sourceMode, setSourceMode] = useState<"url" | "manual">("url");
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [type, setType] = useState("");
+  const [manualContent, setManualContent] = useState("");
+  const [manualFiles, setManualFiles] = useState<File[]>([]);
   const [urlError, setUrlError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [generalError, setGeneralError] = useState("");
 
-  // Reset form when drawer opens
+useEffect(() => {
+    if (editMode && onEditData) {
+      setName(onEditData.title || "");
+      setUrl(onEditData.url || "");
+      const slackMessages = onEditData.metadata?.messages;
+      const slackPreview = onEditData.metadata?.preview;
+      if (slackMessages || slackPreview) {
+        setManualContent(slackPreview || JSON.stringify(slackMessages, null, 2));
+      } else {
+        setManualContent(onEditData.metadata?.content || "");
+      }
+      if (!onEditData.url) {
+        setSourceMode("manual");
+      } else {
+        setSourceMode("url");
+      }
+      if (onEditData.sourceType) {
+        const found = SOURCE_TYPES.find(t => t.serviceType === onEditData.sourceType || t.value === onEditData.sourceType);
+        if (found) setType(found.value);
+        else setType(onEditData.sourceType as any);
+      }
+    }
+  }, [editMode, onEditData]);
+
   useEffect(() => {
-    if (open) {
+    if (open && !editMode) {
       setName("");
       setUrl("");
       setType("");
+      setManualContent("");
+      setManualFiles([]);
       setUrlError("");
       setGeneralError("");
+      setSourceMode("url");
     }
-  }, [open]);
+  }, [open, editMode]);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -57,256 +95,228 @@ export function AddSourceDrawer({ open, onClose, onAdd, sourceDate }: AddSourceD
       new URL(val);
       return "";
     } catch {
-      return "Ingresa una URL válida (ej: https://docs.google.com/…)";
+      return "Ingresa una URL válida";
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError("");
-    const err = validateUrl(url);
-    if (err) { setUrlError(err); return; }
+
+    if (sourceMode === "manual") {
+      if (!name.trim()) {
+        setGeneralError("Añade un nombre para la fuente.");
+        return;
+      }
+    } else {
+      const err = validateUrl(url);
+      if (err) { setUrlError(err); return; }
+    }
+
     if (!type) return;
 
     setSubmitting(true);
 
     try {
-      // 1. Get current user
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        setGeneralError("Debes iniciar sesión para añadir fuentes.");
-        setSubmitting(false);
-        return;
-      }
-
-      // 2. Get workspace
-      const { data: workspace, error: wsError } = await getUserWorkspace(session.user.id);
-      if (wsError || !workspace) {
-        setGeneralError("No se pudo encontrar tu workspace.");
-        setSubmitting(false);
-        return;
-      }
-
-      // 3. Map type and call service
       const selectedType = SOURCE_TYPES.find(t => t.value === type);
       const serviceType = (selectedType?.serviceType || "manual") as any;
 
-      const result = await createSource({
-        title: name || url,
-        url: url,
-        type: serviceType,
-        workspaceId: workspace.id,
-        createdBy: session.user.id,
-        sourceDate: sourceDate?.toISOString()
-      });
-
-      if (!result.success) {
-        setGeneralError(result.error || "Error al registrar la fuente.");
-        setSubmitting(false);
-        return;
+      let metadata: any = {};
+      
+      if (editMode && onEditData?.metadata) {
+        metadata = { ...onEditData.metadata };
+      }
+      
+      if (sourceMode === "manual") {
+        if (manualContent) metadata.content = manualContent;
+        if (manualFiles.length > 0) metadata.fileNames = manualFiles.map(f => f.name);
+        metadata.isManual = true;
       }
 
-      // 4. Success callback
-      onAdd({ name: name || url, url, type });
+      if (editMode && onEditData?.id) {
+        const result = await updateSource({
+          id: onEditData.id,
+          title: name,
+          url: sourceMode === "url" ? url : undefined,
+          type: serviceType,
+          origin: sourceMode === "manual" ? "manual" : "google",
+          metadata
+        });
+
+        if (!result.success) {
+          setGeneralError(result.error || "Error al actualizar.");
+          setSubmitting(false);
+          return;
+        }
+
+        onAdd({ name: name, url: sourceMode === "url" ? url : "", type });
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          setGeneralError("Debes iniciar sesión.");
+          setSubmitting(false);
+          return;
+        }
+
+        const { data: workspace, error: wsError } = await getUserWorkspace(session.user.id);
+        if (wsError || !workspace) {
+          setGeneralError("No se pudo encontrar workspace.");
+          setSubmitting(false);
+          return;
+        }
+
+        const result = await createSource({
+          title: name || (sourceMode === "url" ? url : "Fuente manual"),
+          url: sourceMode === "url" ? url : undefined,
+          type: serviceType,
+          origin: sourceMode === "manual" ? "manual" : "google",
+          workspaceId: workspace.id,
+          createdBy: session.user.id,
+          sourceDate: sourceDate?.toISOString(),
+          metadata
+        });
+
+        if (!result.success) {
+          setGeneralError(result.error || "Error al registrar.");
+          setSubmitting(false);
+          return;
+        }
+
+        onAdd({ 
+          name: name || (sourceMode === "url" ? url : "Fuente manual"), 
+          url: sourceMode === "url" ? url : "", 
+          type 
+        });
+      }
+
       setSubmitting(false);
       onClose();
     } catch (err) {
-      console.error("Submission error:", err);
-      setGeneralError("Error inesperado. Intenta de nuevo.");
+      console.error("Error:", err);
+      setGeneralError("Error inesperado.");
       setSubmitting(false);
     }
   };
 
-  const selectedTypeLabel = SOURCE_TYPES.find((t) => t.value === type)?.label ?? "";
-
   return (
     <>
-      {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-[#161927]/20 backdrop-blur-sm z-40 transition-opacity duration-300 ${
-          open ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+        className={`fixed inset-0 bg-black/50 z-40 transition-opacity ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={onClose}
       />
-
-      {/* Drawer */}
       <aside
-        className={`fixed top-0 right-0 h-screen w-[420px] bg-[#161927] z-50 flex flex-col shadow-hard transition-transform duration-300 ease-in-out ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed top-0 right-0 h-screen w-[420px] bg-[#161927] z-50 flex flex-col shadow-hard transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/20">
           <div>
-            <h2 className="text-base font-bold text-white">Añadir fuente</h2>
+            <h2 className="text-base font-bold text-white">
+              {editMode ? "Editar fuente" : "Añadir fuente"}
+            </h2>
             <p className="text-xs text-white/50 mt-0.5">
-              Pega la URL del recurso que quieres analizar
+              {sourceMode === "url" ? "Pega la URL del recurso" : "Crea una fuente manual"}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:bg-[#161927]/10 hover:text-white transition-all"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:bg-white/10">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
-
-          {/* Info box */}
-          <div className="flex gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10">
-            <svg className="text-primary flex-shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <p className="text-xs text-primary/80 leading-relaxed">
-              Nexión detecta automáticamente recursos desde tu cuenta de Google. Usa este formulario para añadir fuentes externas o URLs específicas que quieras analizar manualmente.
-            </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setSourceMode("url")}
+              className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium ${sourceMode === "url" ? "bg-primary border-primary text-white" : "bg-white/5 border-white/10 text-white/60"}`}
+            >
+              Enlace
+            </button>
+            <button
+              type="button"
+              onClick={() => setSourceMode("manual")}
+              className={`flex-1 px-4 py-3 rounded-xl border text-sm font-medium ${sourceMode === "manual" ? "bg-primary border-primary text-white" : "bg-white/5 border-white/10 text-white/60"}`}
+            >
+              Manual
+            </button>
           </div>
 
-          {/* URL field */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
-              URL del recurso <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={url}
-              onChange={(e) => { setUrl(e.target.value); setUrlError(""); }}
-              onBlur={() => setUrlError(validateUrl(url))}
-              placeholder="https://docs.google.com/document/d/..."
-              className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
-                urlError
-                  ? "border-red-300 bg-red-500/100/10 focus:border-red-400"
-                  : "border-white/10 bg-[#161927] focus:border-primary focus:bg-[#161927]"
-              }`}
-            />
-            {urlError && (
-              <p className="text-xs text-red-500 flex items-center gap-1">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                {urlError}
-              </p>
-            )}
-          </div>
+          {sourceMode === "url" ? (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-white/70">URL <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={url}
+                onChange={(e) => { setUrl(e.target.value); setUrlError(""); }}
+                onBlur={() => setUrlError(validateUrl(url))}
+                placeholder="https://..."
+                className={`w-full px-4 py-3 rounded-xl border text-sm outline-none ${urlError ? "border-red-500" : "border-white/10 bg-[#161927] focus:border-primary"}`}
+              />
+              {urlError && <p className="text-xs text-red-500">{urlError}</p>}
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-white/70">Nombre <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Minuta reunión"
+                className="w-full px-4 py-3 rounded-xl border border-white/10 bg-[#161927] text-sm outline-none focus:border-primary"
+              />
+            </div>
+          )}
 
-          {/* Type field */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
-              Tipo de recurso <span className="text-red-500">*</span>
-            </label>
+            <label className="block text-xs font-semibold text-white/70">Tipo <span className="text-red-500">*</span></label>
             <div className="grid grid-cols-2 gap-2">
               {SOURCE_TYPES.map((t) => (
                 <button
                   key={t.value}
                   type="button"
                   onClick={() => setType(t.value)}
-                  className={`px-3 py-2.5 rounded-xl border text-xs font-medium text-left transition-all ${
-                    type === t.value
-                      ? "border-primary bg-primary/8 text-primary"
-                      : "border-white/20 bg-[#161927] text-white/60 hover:border-white/50 hover:text-white"
-                  }`}
+                  className={`px-3 py-2.5 rounded-xl border text-xs font-medium ${type === t.value ? "border-primary bg-primary/10 text-primary" : "border-white/20 bg-[#161927] text-white/60"}`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
-            {!type && (
-              <p className="text-xs text-white/40">Selecciona el tipo de recurso</p>
-            )}
           </div>
 
-          {/* Name field (optional) */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
-              Nombre{" "}
-              <span className="text-white/30 normal-case tracking-normal font-normal">(opcional)</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej: Minuta reunión SteelCore 24 Oct"
-              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-[#161927] text-sm outline-none focus:border-primary focus:bg-[#161927] transition-all"
-            />
-            <p className="text-xs text-white/40">
-              Si no lo completás, se usará la URL como identificador.
-            </p>
-          </div>
-
-          {/* Preview */}
-          {(url || type) && (
-            <div className="p-4 rounded-xl bg-bg border border-white/20 space-y-2">
-              <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Vista previa</p>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{name || url || "Sin nombre"}</p>
-                  {selectedTypeLabel && (
-                    <span className="text-[10px] font-bold tracking-widest text-orange-600 bg-orange-500/100/10 px-2 py-0.5 rounded-md">
-                      {selectedTypeLabel.toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                <span className="ml-auto text-[10px] font-bold tracking-widest px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-600 flex-shrink-0">
-                  PENDIENTE
-                </span>
-              </div>
+          {sourceMode === "manual" && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-white/70">Contenido (opcional)</label>
+              <textarea
+                value={manualContent}
+                onChange={(e) => setManualContent(e.target.value)}
+                placeholder="Pega el contenido..."
+                rows={4}
+                className="w-full px-4 py-3 rounded-xl border border-white/10 bg-[#161927] text-sm outline-none focus:border-primary resize-none"
+              />
             </div>
           )}
-        </form>
 
-        {/* General Error */}
-        {generalError && (
-          <div className="px-6 mb-2">
-            <div className="p-3 rounded-lg bg-red-500/100/10 border border-red-100 text-xs text-red-600 flex items-center gap-2">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-              </svg>
-              {generalError}
-            </div>
+          {generalError && <p className="text-xs text-red-500">{generalError}</p>}
+
+          <div className="flex gap-2 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-sm font-semibold text-white/60"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={(sourceMode === "url" ? !url : !name) || !type || submitting}
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40"
+              style={{ background: "linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%)" }}
+            >
+              {submitting ? "Guardando..." : editMode ? "Guardar cambios" : "Añadir fuente"}
+            </button>
           </div>
-        )}
-
-        {/* Footer actions */}
-        <div className="px-6 py-4 border-t border-white/20 flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-sm font-semibold text-white/60 hover:bg-[#161927] transition-all"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!url || !type || submitting}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%)" }}
-          >
-            {submitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                Registrando...
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z" />
-                </svg>
-                Añadir fuente
-              </>
-            )}
-          </button>
-        </div>
+        </form>
       </aside>
     </>
   );

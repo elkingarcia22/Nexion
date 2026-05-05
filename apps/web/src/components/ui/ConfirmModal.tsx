@@ -53,7 +53,7 @@ export function ConfirmModal({
             onClick={onConfirm}
             className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all shadow-md active:scale-95 ${
               variant === "danger" 
-                ? "bg-red-500/100/100 hover:bg-red-600 shadow-red-500/20" 
+                ? "bg-red-500 hover:bg-red-600 shadow-red-500/20" 
                 : "bg-primary hover:bg-primary/90 shadow-primary/20"
             }`}
           >

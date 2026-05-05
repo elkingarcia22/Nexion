@@ -32,6 +32,7 @@ export interface DaySummaryAnalysis {
     description?: string;
     category?: string;
     priority: "alta" | "media" | "baja";
+    responsible?: string;
     source_file?: string;
   }>;
 
@@ -41,6 +42,7 @@ export interface DaySummaryAnalysis {
     title: string;
     description: string;
     category: "RETENCIÓN DE CLIENTES" | "OPTIMIZACIÓN UX" | "SATISFACCIÓN CLIENTE" | "EXPANSIÓN MERCADO" | "EFICIENCIA OPERATIVA" | string;
+    responsible?: string;
     source_file?: string;
     action?: string; // Botón "Convertir a tarea"
   }>;
@@ -54,6 +56,7 @@ export interface DaySummaryAnalysis {
     status: "critica" | "normal";
     trend?: "up" | "down" | "stable";
     details?: string;
+    responsible?: string;
     action_label?: string;
     action_value?: string;
   }>;
@@ -65,6 +68,7 @@ export interface DaySummaryAnalysis {
     description: string;
     priority: "critica" | "media";
     date: string;
+    responsible?: string;
     action_date?: string;
     action_label?: string;
     source_file?: string;
@@ -77,6 +81,7 @@ export interface DaySummaryAnalysis {
     type: string; // e.g., "PRODUCTO", "LABORAL", "PERSONAL"
     content: string;
     priority: "critica" | "alta" | "media";
+    responsible?: string;
     source_file?: string;
   }>;
 

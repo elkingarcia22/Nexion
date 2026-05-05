@@ -1,0 +1,103 @@
+{
+  "name": "Slack Events - Nexión (FUNCIONAL)",
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Slack Events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "slack-events"
+      },
+      "webhookId": "slack-events"
+    },
+    {
+      "id": "verify",
+      "name": "Verify Challenge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 200],
+      "parameters": {
+        "jsCode": "// Handle Slack URL verification\nconst body = $input.first().json;\nif (body.type === 'url_verification') {\n  return [{\n    json: { challenge: body.challenge }\n  }];\n}\nreturn [];"
+      }
+    },
+    {
+      "id": "process",
+      "name": "Process Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 400],
+      "parameters": {
+        "jsCode": "// Process only message events\nconst body = $input.first().json;\nif (body.type !== 'event_callback' || !body.event) return [];\nconst e = body.event;\nif (e.type !== 'message' || e.bot_id || e.subtype === 'bot_message') return [];\nreturn [{\n  json: {\n    channel: e.channel,\n    user: e.user,\n    text: e.text || '',\n    ts: e.ts,\n    thread_ts: e.thread_ts || null\n  }\n}];"
+      }
+    },
+    {
+      "id": "respond",
+      "name": "Respond to Slack",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 200],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "save",
+      "name": "Save to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [650, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/sources",
+        "authentication": "predefined",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "workspace_id", "value": "={{ $env.WORKSPACE_ID }}" },
+            { "name": "title", "value": "Slack: {{ $json.channel }}" },
+            { "name": "source_type", "value": "meeting" },
+            { "name": "source_origin", "value": "slack" },
+            { "name": "ingest_mode", "value": "slack" },
+            { "name": "current_status", "value": "pending" },
+            { "name": "source_date", "value": "={{ new Date().toISOString().split('T')[0] }}" },
+            { "name": "external_source_id", "value": "{{ $json.channel }}" },
+            { "name": "metadata", "value": "={{ JSON.stringify($json) }}" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Slack Events": {
+      "main": [
+        [{ "node": "Verify Challenge", "type": "main", "index": 0 }],
+        [{ "node": "Process Event", "type": "main", "index": 0 }]
+      ]
+    },
+    "Verify Challenge": {
+      "main": [
+        [{ "node": "Respond to Slack", "type": "main", "index": 0 }]
+      ]
+    },
+    "Process Event": {
+      "main": [
+        [{ "node": "Save to Supabase", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false
+}

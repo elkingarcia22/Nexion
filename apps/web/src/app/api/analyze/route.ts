@@ -46,8 +46,9 @@ export async function POST(request: Request) {
          - ¿A qué OBJETIVO (goal_id) de la lista estratégica le pega?
          - ¿A qué HISTORIA DE USUARIO (linked_jira_key) de Jira está asociado?
          - ¿A qué SUBTAREA (linked_jira_subtask_id) específica de esa HU se refiere?
-      3. EXTRACCIÓN DE ELEMENTOS:
-         - TAREAS: Extrae todas las acciones (especialmente las de ${userName}).
+3. EXTRACCIÓN DE ELEMENTOS:
+          - RESPONSABLE: ¿Para quién es esta tarea? Si es para ti (${userName}), usa "${userName}". Si es para otra persona (ej: "Juan va a hacer esto", "María necesita entregar"), extrae el nombre.
+          - TAREAS: Extrae todas las acciones (especialmente las de ${userName}).
          - FECHAS Y VENCIMIENTO (due_date): 
             * REGLA 1: Si en la fuente se menciona explícitamente "mañana" o compromisos para el día siguiente (ej: "mañana entrego esto", "mañana lo ajusto"), el vencimiento (due_date) DEBE ser el día actual: ${date}.
             * REGLA 2: Si NO hay ninguna detección de fecha específica o mención de "mañana", el vencimiento por defecto DEBE ser el día siguiente: ${nextDay}.
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
           "title": "...", 
           "priority": "alta/media/baja", 
           "category": "Talent/Hiring/UX/Other",
+          "responsible": "Nombre de la persona responsable (${userName} si es para ti)",
           "goal_id": "ID del objetivo vinculado o null",
           "linked_jira_key": "Key de Jira vinculada o null",
           "linked_jira_subtask_id": "ID de la subtarea vinculada o null",
@@ -74,6 +76,7 @@ export async function POST(request: Request) {
           "title": "...",
           "description": "...",
           "category": "Talent/Hiring/UX/Other",
+          "responsible": "Nombre del responsable o null",
           "goal_id": "...",
           "linked_jira_key": "..."
         }],
@@ -83,6 +86,7 @@ export async function POST(request: Request) {
           "change": "...",
           "status": "alta/media/baja",
           "category": "Talent/Hiring/UX/Other",
+          "responsible": "Nombre del responsable o null",
           "goal_id": "..."
         }],
         "alerts": [{
@@ -90,6 +94,7 @@ export async function POST(request: Request) {
           "description": "...",
           "priority": "critica/alta/media",
           "category": "Talent/Hiring/UX/Other",
+          "responsible": "Nombre del responsable o null",
           "goal_id": "...",
           "linked_jira_key": "..."
         }],
@@ -98,6 +103,7 @@ export async function POST(request: Request) {
           "content": "...",
           "type": "producto/laboral/personal",
           "category": "Talent/Hiring/UX/Other",
+          "responsible": "Nombre del responsable o null",
           "goal_id": "..."
         }]
       }

@@ -1,0 +1,207 @@
+{
+  "name": "Slack Events - Nexión Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "slack-events",
+        "options": {}
+      },
+      "id": "slack-events-webhook",
+      "name": "Slack Events Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "slack-events"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process Slack event\nconst body = $input.first().json;\n\n// Slack URL verification\nif (body.type === 'url_verification') {\n  return [{\n    json: {\n      challenge: body.challenge\n    }\n  }];\n}\n\n// Only process message events\nif (body.type === 'event_callback' && body.event) {\n  const event = body.event;\n  \n  // Skip bot messages\n  if (event.bot_id || event.subtype === 'bot_message') {\n    return [{\n      json: {\n        skipped: true,\n        reason: 'Bot message'\n      }\n    }];\n  }\n  \n  return [{\n    json: {\n      event_type: event.type,\n      channel: event.channel,\n      user: event.user,\n      text: event.text,\n      ts: event.ts,\n      thread_ts: event.thread_ts,\n      team_id: body.team_id,\n      event_id: body.event_id,\n      event_time: body.event_time\n    }\n  }];\n}"
+      },
+      "id": "process-slack-event",
+      "name": "Process Slack Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.event_type }}",
+              "operation": "equals",
+              "value2": "message"
+            }
+          ]
+        }
+      },
+      "id": "filter-messages",
+      "name": "Filter Messages Only",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enrich message with channel info\nconst message = $input.first().json;\n\n// You could fetch channel info here if needed\n// For now, just pass through\nreturn [{\n  json: {\n    ...message,\n    source_origin: 'slack',\n    source_type: 'meeting',\n    ingest_mode: 'slack',\n    processed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "enrich-message",
+      "name": "Enrich Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NEXT_PUBLIC_SUPABASE_URL }}/rest/v1/sources",
+        "authentication": "predefined",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workspace_id",
+              "value": "={{ $env.WORKSPACE_ID }}"
+            },
+            {
+              "name": "title",
+              "value": "Slack: {{ $json.channel }}"
+            },
+            {
+              "name": "source_type",
+              "value": "={{ $json.source_type }}"
+            },
+            {
+              "name": "source_origin",
+              "value": "={{ $json.source_origin }}"
+            },
+            {
+              "name": "ingest_mode",
+              "value": "={{ $json.ingest_mode }}"
+            },
+            {
+              "name": "current_status",
+              "value": "pending"
+            },
+            {
+              "name": "source_date",
+              "value": "={{ new Date().toISOString().split('T')[0] }}"
+            },
+            {
+              "name": "external_source_id",
+              "value": "={{ $json.channel }}"
+            },
+            {
+              "name": "metadata",
+              "value": "={{ JSON.stringify({\n  channel: $json.channel,\n  user: $json.user,\n  text: $json.text,\n  ts: $json.ts,\n  thread_ts: $json.thread_ts\n}) }}"
+            }
+          ]
+        }
+      },
+      "id": "save-to-supabase",
+      "name": "Save to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare response for Slack\n// Return success to Slack\nreturn [{\n  json: {\n    success: true,\n    message: 'Processed successfully'\n  }\n}];"
+      },
+      "id": "prepare-response",
+      "name": "Prepare Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Slack Events Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Slack Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Slack Event": {
+      "main": [
+        [
+          {
+            "node": "Filter Messages Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Messages Only": {
+      "main": [
+        [
+          {
+            "node": "Enrich Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Enrich Message": {
+      "main": [
+        [
+          {
+            "node": "Save to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Prepare Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    "slack",
+    "nexion",
+    "events-api"
+  ]
+}

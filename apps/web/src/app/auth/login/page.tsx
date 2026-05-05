@@ -134,6 +134,23 @@ export default function Login() {
               )}
             </button>
 
+            {/* Demo Mode Button */}
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('NEXION_DEMO_MODE', 'true');
+                  window.location.href = '/';
+                }
+              }}
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-primary/10 border border-primary/30 hover:border-primary/50 text-primary font-semibold rounded-lg transition-all duration-200"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Entrar en modo demo</span>
+            </button>
+
 
           </div>
 

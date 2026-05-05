@@ -10,6 +10,7 @@ import {
 } from "@/lib/services/source-service";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { AddSourceDrawer } from "@/components/sources/AddSourceDrawer";
 
 // Using any for source to match service return type
 type Source = any;
@@ -24,6 +25,8 @@ export default function DaySourcesPage() {
   const [type, setType] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingSource, setEditingSource] = useState<any>(null);
 
   useEffect(() => {
     const initializeWorkspace = async () => {
@@ -110,6 +113,33 @@ export default function DaySourcesPage() {
     } else {
       setError(result.error || "Error deleting source");
     }
+  };
+
+  const handleEditSource = (source: Source) => {
+    console.log("handleEditSource called for:", source.title, source.id);
+    setDrawerOpen(true);
+  };
+
+  const getEditData = () => {
+    console.log("getEditData called, editingSource:", editingSource, "drawerOpen:", drawerOpen);
+    if (!drawerOpen || !editingSource) return null;
+    const data = {
+      id: editingSource.id,
+      title: editingSource.title,
+      url: editingSource.original_url,
+      sourceType: editingSource.source_type,
+      sourceOrigin: editingSource.source_origin,
+      metadata: editingSource.metadata,
+    };
+    console.log("getEditData returning:", data);
+    return data;
+  };
+
+  const handleAddSourceCallback = () => {
+    setDrawerOpen(false);
+    setEditingSource(null);
+    // Reload sources
+    window.location.reload();
   };
 
   const getStatusVariant = (status: string) => {
@@ -228,10 +258,21 @@ export default function DaySourcesPage() {
                   </p>
                 </div>
                 <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => console.log("BUTTON CLICKED") || handleEditSource(source)}
+                  className="ml-2 flex-shrink-0 text-white/60 hover:text-primary"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </Button>
+                <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => handleDeleteSource(source.id)}
-                  className="ml-4 flex-shrink-0"
+                  className="ml-2 flex-shrink-0"
                 >
                   Eliminar
                 </Button>
@@ -240,6 +281,16 @@ export default function DaySourcesPage() {
           </div>
         )}
       </div>
+
+      <AddSourceDrawer
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); }}
+        onAdd={() => {
+          setDrawerOpen(false);
+        }}
+        editMode={drawerOpen && !!editingSource}
+        onEditData={getEditData()}
+      />
     </div>
   );
 }

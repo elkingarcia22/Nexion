@@ -1,34 +1,14 @@
 import { supabase } from "@/lib/supabase";
+import type { Source, CreateSourceInput } from "@/types/source";
 
-interface CreateSourceInput {
-  title: string;
-  url?: string;
-  type: "document" | "meeting" | "email" | "feedback" | "manual";
-  workspaceId: string;
-  createdBy: string;
-  origin?: "manual" | "google";
-  sourceDate?: string;
-  externalSourceId?: string;
-  metadata?: any;
-}
-
-export interface Source {
-  id: string;
-  workspace_id: string;
-  title: string;
-  original_url: string | null;
-  source_type: string;
-  source_origin: string;
-  ingest_mode: string;
-  current_status: string;
-  created_at: string;
-}
-
+/**
+ * Creates a new source record in Supabase.
+ * Mimics the structure of an actual Supabase insert.
+ */
 export async function createSource(
   input: CreateSourceInput
 ): Promise<{ success: boolean; data?: Source; error?: string }> {
   if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
-    console.log("DEMO_MODE: Using mock createSource");
     return {
       success: true,
       data: {
@@ -45,8 +25,9 @@ export async function createSource(
   }
 
   try {
-    const { data, error } = await supabase.from("sources").insert([
-      {
+    const { data, error } = await supabase
+      .from("sources")
+      .insert([{
         workspace_id: input.workspaceId,
         title: input.title,
         original_url: input.url || null,
@@ -57,38 +38,15 @@ export async function createSource(
         created_by_profile_id: input.createdBy,
         source_date: input.sourceDate || new Date().toISOString(),
         external_source_id: input.externalSourceId || null,
-        metadata: input.metadata || {},
-      },
-    ]).select();
+        metadata: input.metadata || {}
+      }])
+      .select();
 
     if (error) {
       return { success: false, error: error.message };
     }
 
     return { success: true, data: data?.[0] as any };
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Unknown error",
-    };
-  }
-}
-
-export async function getSourcesByWorkspace(
-  workspaceId: string
-): Promise<{ success: boolean; data?: Source[]; error?: string }> {
-  try {
-    const { data, error } = await supabase
-      .from("sources")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
-
-    return { success: true, data: data as Source[] };
   } catch (err) {
     return {
       success: false,
@@ -105,68 +63,21 @@ export async function getSourcesByDate(
   workspaceId: string,
   localDate: Date
 ): Promise<{ success: boolean; data?: Source[]; error?: string }> {
-  if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
-    console.log("DEMO_MODE: Returning mock sources");
-    return {
-      success: true,
-      data: [
-        {
-          id: "64611954-2dbd-49dd-9f41-c79f9b10efaf",
-          workspace_id: workspaceId,
-          title: "Test Source",
-          original_url: "https://example.com/test",
-          source_type: "document",
-          source_origin: "manual",
-          current_status: "processed",
-          created_at: new Date().toISOString()
-        }
-      ] as any
-    };
-  }
   try {
-    // Build UTC range covering the full local day
+    // Build simple date string for the local day
     const y = localDate.getFullYear();
     const m = String(localDate.getMonth() + 1).padStart(2, "0");
     const d = String(localDate.getDate()).padStart(2, "0");
     const dateStr = `${y}-${m}-${d}`;
 
-    // new Date("YYYY-MM-DDT00:00:00") without Z is interpreted as local time by JS,
-    // so .toISOString() already converts correctly to UTC — no manual offset needed.
-    const startUtc = new Date(`${dateStr}T00:00:00`).toISOString();
-    const endUtc   = new Date(`${dateStr}T23:59:59`).toISOString();
-
     const { data, error } = await supabase
       .from("sources")
       .select("*")
       .eq("workspace_id", workspaceId)
-      .or(`source_date.gte.${startUtc},and(source_date.is.null,created_at.gte.${startUtc})`)
-      .or(`source_date.lte.${endUtc},and(source_date.is.null,created_at.lte.${endUtc})`)
+      .eq("source_date", dateStr)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
-        // Return existing mock sources from the DB (the ones I found earlier) or just mock ones
-        console.warn("Using mock sources for Demo Mode");
-        return {
-          success: true,
-          data: [
-            {
-              id: "64611954-2dbd-49dd-9f41-c79f9b10efaf",
-              workspace_id: workspaceId,
-              title: "Test Source",
-              original_url: "https://example.com/test",
-              source_type: "document",
-              source_origin: "manual",
-              current_status: "processed",
-              created_at: new Date().toISOString()
-            }
-          ] as any
-        };
-      }
-      return { success: false, error: error.message };
-    }
-
-    return { success: true, data: data as Source[] };
+    return { success: !error, data: (data || []) as Source[], error: error?.message };
   } catch (err) {
     return {
       success: false,
@@ -175,24 +86,24 @@ export async function getSourcesByDate(
   }
 }
 
+export async function getSourcesByWorkspace(
+  workspaceId: string,
+): Promise<{ success: boolean; data?: Source[]; error?: string }> {
+  if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
+    return {
+      success: true,
+      data: []
+    };
+  }
 
-export async function deleteSource(
-  sourceId: string
-): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("sources")
-      .delete()
-      .eq("id", sourceId);
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: false });
 
-    if (error) {
-      if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
-        return { success: true };
-      }
-      return { success: false, error: error.message };
-    }
-
-    return { success: true };
+    return { success: !error, data: (data || []) as Source[], error: error?.message };
   } catch (err) {
     return {
       success: false,
@@ -202,24 +113,58 @@ export async function deleteSource(
 }
 
 export async function updateSource(
-  sourceId: string,
-  updates: Partial<Source>
-): Promise<{ success: boolean; data?: Source; error?: string }> {
+  input: { id: string; title?: string; url?: string; type?: string; metadata?: any }
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
+    return { success: true, data: {} as any };
+  }
+
   try {
-    const { data, error } = await supabase
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (input.title !== undefined) updateData.title = input.title;
+    if (input.url !== undefined) updateData.original_url = input.url;
+    if (input.type !== undefined) updateData.source_type = input.type;
+    if (input.metadata !== undefined) updateData.metadata = input.metadata;
+
+    const { error } = await supabase
       .from("sources")
-      .update(updates)
-      .eq("id", sourceId)
-      .select();
+      .update(updateData)
+      .eq("id", input.id);
 
     if (error) {
-      if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
-        return { success: true, data: { id: sourceId, ...updates } as any };
-      }
       return { success: false, error: error.message };
     }
 
-    return { success: true, data: data?.[0] as any };
+    return { success: true, data: updateData as any };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+}
+
+export async function deleteSource(
+  sourceId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true') {
+    return { success: true };
+  }
+
+  try {
+    const { error } = await supabase
+      .from("sources")
+      .delete()
+      .eq("id", sourceId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
   } catch (err) {
     return {
       success: false,

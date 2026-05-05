@@ -81,6 +81,7 @@ interface Source {
   mimeType?: string | null;
   origin?: string;
   description?: string;
+  metadata?: any;
 }
 
 const initialSources: Source[] = [
@@ -732,7 +733,6 @@ export default function DayTodayPage() {
 
     // Jira sync if config exists
     if (wsData?.jira_config) {
-      console.log("Jira config found, syncing hierarchical issues...");
       const jql = 'assignee = "60cd00d4dae5670068abf978" AND statusCategory = "In Progress" AND (project in ("HIRING", "TALENT", "UTU") OR customfield_10001 ~ "Hiring" OR customfield_10001 ~ "Talent")';
       const jiraResult = await fetchJiraIssues(wsData.jira_config, jql);
       
@@ -748,7 +748,6 @@ export default function DayTodayPage() {
         // Step 2: Fetch full details for all subtasks in one batch
         let fullSubtasksMap: Record<string, any> = {};
         if (subtaskKeys.length > 0) {
-          console.log(`Fetching full details for ${subtaskKeys.length} subtasks...`);
           const subtasksJql = `key in (${subtaskKeys.join(',')})`;
           const subtasksResult = await fetchJiraIssues(wsData.jira_config, subtasksJql);
           if (subtasksResult.success) {
@@ -895,32 +894,33 @@ export default function DayTodayPage() {
   const [editingTask, setEditingTask] = useState<any>(null);
 
   // Map a raw DB row to the UI Source shape
-  const mapDbSource = (s: any): Source => {
+const mapDbSource = (s: any): Source => {
     const isGoogle = s.source_origin === "google";
-
+const isSlack = s.source_origin === "slack";
+    
     const url: string = s.original_url || "";
     let fmt = "DOC";
-    if (url.includes("spreadsheets")) fmt = "SHEET";
+    if (isSlack) fmt = "SLACK";
+    else if (url.includes("spreadsheets")) fmt = "SHEET";
     else if (url.includes(".pdf")) fmt = "PDF";
     else if (url.includes("docs.google")) fmt = "DOC";
     else if (url.includes("presentation")) fmt = "SLIDE";
     else if (url.includes(".docx")) fmt = "DOCX";
 
     let label: SourceType = "FUENTE EXTERNA";
-    if (isGoogle) {
+    const isGemini = s.title?.toLowerCase().includes("gemini");
+    if (isSlack) {
+      label = "SLACK" as SourceType;
+    } else if (isGoogle) {
       if (fmt === "SHEET") label = "DOCUMENTO" as SourceType;
-      else if (fmt === "DOC" || fmt === "DOCX") label = "NOTAS DE GEMINI" as SourceType;
-      else label = "DOCUMENTO" as SourceType;
+      else if (fmt === "DOC" || fmt === "DOCX") {
+        label = isGemini ? "NOTAS DE GEMINI" as SourceType : "DOCUMENTO" as SourceType;
+      } else label = "DOCUMENTO" as SourceType;
+    } else if (isGemini) {
+      label = "NOTAS DE GEMINI" as SourceType;
     }
 
-    // Enhancement: specific display label for the tag
-    const displayTag = isGoogle ? (
-      fmt === "SHEET" ? "GOOGLE SHEET" :
-      fmt === "PDF" ? "PDF" :
-      fmt === "SLIDE" ? "GOOGLE SLIDE" :
-      fmt === "DOC" || fmt === "DOCX" ? "GOOGLE DOC" :
-      "DOCUMENTO"
-    ) : label;
+    const displayTag = isSlack ? "SLACK" : label;
 
     return {
       id: s.id,
@@ -935,8 +935,13 @@ export default function DayTodayPage() {
       externalSourceId: s.external_source_id,
       mimeType: s.metadata?.mimeType || null,
       origin: s.source_origin,
-      description: s.metadata?.description || "",
-      icon: (
+      description: s.metadata?.preview || s.metadata?.description || (s.metadata?.messages ? `${s.metadata.messages.length} mensajes` : ""),
+      metadata: s.metadata || {},
+      icon: isSlack ? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#E01E5A">
+          <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.522 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.166 0a2.528 2.528 0 0 1 2.522 2.522v6.312zM15.166 18.956a2.528 2.528 0 0 1 2.522 2.522A2.528 2.528 0 0 1 15.166 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.166 17.688a2.527 2.527 0 0 1-2.52-2.52 2.526 2.526 0 0 1 2.52-2.522h6.312A2.527 2.527 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.522h-6.312z"/>
+        </svg>
+      ) : (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2-2h12a2 2 0 0 0 2-2V8z" />
           <polyline points="14 2 14 8 20 8" />
@@ -1230,9 +1235,7 @@ export default function DayTodayPage() {
 
       // 3. Refresh summary data from DB to show in UI
       const summaryResult = await getDaySummary(workspaceId, dateStr);
-      console.log("Summary result after analysis:", summaryResult);
       if (summaryResult.success) {
-        console.log("Setting summaryData:", summaryResult.data);
         setSummaryData(summaryResult.data);
       }
       
@@ -1302,12 +1305,13 @@ export default function DayTodayPage() {
   };
 
   const filteredSources = sources.filter((s) => {
-    const typeOk = typeFilter === "all" || s.type === typeFilter;
-    const fmtOk = formatFilter === "all" || s.format === formatFilter;
-    return typeOk && fmtOk;
+    const isSlack = s.origin === "slack";
+    const isGeminiNote = s.type === "NOTAS DE GEMINI";
+    const isGeminiTitle = s.name?.toLowerCase().includes("gemini");
+    return isSlack || isGeminiNote || isGeminiTitle;
   });
 
-  const checkedCount = sources.filter((s) => s.checked).length;
+  const checkedCount = filteredSources.filter((s) => s.checked).length;
 
   if (loading) {
     return (
@@ -1438,7 +1442,6 @@ export default function DayTodayPage() {
              syncError.toLowerCase().includes("unauthorized") ? (
                <button 
                 onClick={() => {
-                  console.log("Redirecting to login with force=true");
                   window.location.href = "/auth/login?force=true&reconnect=true";
                 }}
                 className="px-6 py-2.5 bg-amber-600 text-white text-[11px] font-black tracking-wider rounded-xl hover:bg-amber-700 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-600/30 uppercase whitespace-nowrap flex items-center gap-2"
