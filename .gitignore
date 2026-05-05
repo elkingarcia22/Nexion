@@ -31,6 +31,10 @@ Thumbs.db
 supabase/.env
 supabase/.branches/
 
+# Claude Code
+.claude/settings.json
+.claude/worktrees/
+
 # Logs
 *.log
 npm-debug.log*
