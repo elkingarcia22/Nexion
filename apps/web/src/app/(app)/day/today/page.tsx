@@ -2102,13 +2102,22 @@ const mapDbSource = (s: any): Source => {
               today.setHours(0,0,0,0);
 
               console.log('[TAREAS HOY] structuredTasks total:', structuredTasks.length);
-              console.log('[TAREAS HOY] structuredTasks:', structuredTasks.map((t: any) => ({ id: t.id, title: t.title, status: t.status, type: t.type })));
+              console.log('[TAREAS HOY] structuredTasks details:', structuredTasks.map((t: any) => ({
+                id: t.id,
+                title: t.title,
+                status: t.status,
+                origin: t.origin,
+                goal_id: t.goal_id,
+                type: t.type,
+                startsWithObjetivo: t.title?.toLowerCase().startsWith('objetivo:')
+              })));
 
               const pendingTasksByStatus = structuredTasks.filter((task: any) => {
                 // EXCLUDE OBJECTIVES - they should not appear in "Tareas Pendientes"
-                const isObjective = task.title?.toLowerCase().startsWith('objetivo:');
+                // Objectives either start with "Objetivo:" or have a goal_id set
+                const isObjective = task.title?.toLowerCase().startsWith('objetivo:') || task.goal_id;
                 if (isObjective) {
-                  console.log(`[TAREAS HOY] EXCLUDED (is objective):`, task.title);
+                  console.log(`[TAREAS HOY] EXCLUDED (is objective or linked to goal):`, task.title, 'goal_id:', task.goal_id);
                   return false;
                 }
 
