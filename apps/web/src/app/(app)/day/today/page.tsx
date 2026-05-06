@@ -984,35 +984,77 @@ export default function DayTodayPage() {
     const WORKDAY_START = 8; // 8am
     const WORKDAY_END = 18; // 6pm
     const TOTAL_WORKDAY_HOURS = WORKDAY_END - WORKDAY_START; // 10 hours
-    
+
+    console.log("[calculateTimeMetrics] 📊 INICIANDO CÁLCULO DE MÉTRICAS");
+    console.log("[calculateTimeMetrics] Total events recibidos:", events?.length || 0);
+
     let totalMeetingMinutes = 0;
-    
-    events.forEach(event => {
+
+    events?.forEach((event, idx) => {
+      console.log(`[calculateTimeMetrics] [${idx}] Event:`, {
+        summary: event.summary,
+        start: event.start,
+        end: event.end,
+        hasDatetime: !!event.start?.dateTime && !!event.end?.dateTime,
+        hasDate: !!event.start?.date && !!event.end?.date,
+      });
+
       if (event.start?.dateTime && event.end?.dateTime) {
         const start = new Date(event.start.dateTime);
         const end = new Date(event.end.dateTime);
-        
+
         // Only count meetings that overlap with workday
         const eventStartHour = start.getHours() + start.getMinutes() / 60;
         const eventEndHour = end.getHours() + end.getMinutes() / 60;
-        
+
+        console.log(`[calculateTimeMetrics] [${idx}] ${event.summary}:`, {
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+          eventStartHour,
+          eventEndHour,
+          startTimezone: start.getTimezoneOffset(),
+        });
+
         // Skip all-day events for time calculation
-        if (eventStartHour === 0 && eventEndHour === 24) return;
-        
+        if (eventStartHour === 0 && eventEndHour === 24) {
+          console.log(`[calculateTimeMetrics] [${idx}] ⏭️  SKIPPED (all-day event)`);
+          return;
+        }
+
         const meetingStart = Math.max(eventStartHour, WORKDAY_START);
         const meetingEnd = Math.min(eventEndHour, WORKDAY_END);
-        
+
+        console.log(`[calculateTimeMetrics] [${idx}] Workday overlap:`, {
+          meetingStart,
+          meetingEnd,
+          overlapExists: meetingEnd > meetingStart,
+        });
+
         if (meetingEnd > meetingStart) {
-          totalMeetingMinutes += (meetingEnd - meetingStart) * 60;
+          const eventMinutes = (meetingEnd - meetingStart) * 60;
+          totalMeetingMinutes += eventMinutes;
+          console.log(`[calculateTimeMetrics] [${idx}] ✅ ADDED ${eventMinutes} minutes`);
+        } else {
+          console.log(`[calculateTimeMetrics] [${idx}] ❌ NO OVERLAP (${meetingStart} to ${meetingEnd})`);
         }
+      } else {
+        console.log(`[calculateTimeMetrics] [${idx}] ❌ SKIPPED (no dateTime, has date: ${!!event.start?.date})`);
       }
     });
-    
+
     const meetingHours = Math.round(totalMeetingMinutes / 60 * 10) / 10;
     const availableHours = Math.round((TOTAL_WORKDAY_HOURS - meetingHours) * 10) / 10;
     const meetingPercentage = Math.round((meetingHours / TOTAL_WORKDAY_HOURS) * 100);
     const availablePercentage = 100 - meetingPercentage;
-    
+
+    console.log("[calculateTimeMetrics] 🎯 RESULTADO FINAL:", {
+      totalMeetingMinutes,
+      meetingHours,
+      availableHours,
+      meetingPercentage,
+      availablePercentage,
+    });
+
     return {
       totalWorkdayHours: TOTAL_WORKDAY_HOURS,
       meetingHours,
@@ -1235,17 +1277,30 @@ const mapDbSource = (s: any): Source => {
       console.log("[fetchData] Sources state updated, new count:", cleanDbSources.length);
 
       // 4. Fetch Calendar Events
+      console.log("[fetchData] 📅 Starting calendar fetch for:", dateStr);
       setCalendarLoading(true);
       const calendarResult = await fetchGoogleCalendarEvents(dateStr);
-      
+
+      console.log("[fetchData] 📅 Calendar fetch result:", {
+        success: calendarResult.success,
+        eventsCount: calendarResult.events?.length || 0,
+        error: calendarResult.error,
+        eventsSummary: calendarResult.events?.map((e: any) => ({
+          summary: e.summary,
+          start: e.start,
+          end: e.end,
+        })) || [],
+      });
+
       if (fetchId !== currentFetchIdRef.current) return;
       setCalendarLoading(false);
-      
+
       if (calendarResult.success && calendarResult.events) {
         setCalendarEvents(calendarResult.events);
         // Calculate time metrics based on meetings
         const metrics = calculateTimeMetrics(calendarResult.events);
         setTimeMetrics(metrics);
+        console.log("[fetchData] ✅ Time metrics calculated:", metrics);
       } else if (!calendarResult.success && calendarResult.error) {
         // If it's a 401/403 or token error, we want the global banner to show
         setSyncError(calendarResult.error);
