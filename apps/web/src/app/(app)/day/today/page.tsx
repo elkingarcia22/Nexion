@@ -189,14 +189,49 @@ const categorizeItem = (item: any, objectives: any[] = [], jiraTasks: any[] = []
   
   if (fullContext.includes("ux") || fullContext.includes("design") || fullContext.includes("diseño") || fullContext.includes("triada") ||
       fullContext.includes("ux_team")) return 'ux';
-  
+
   return 'otras';
+};
+
+const getResponsable = (item: any): string => {
+  return item.responsible || item.assignee_name || item.assignee || "Sin asignar";
+};
+
+const ResponsablePills = ({ items, filter, setFilter }: {
+  items: any[];
+  filter: string;
+  setFilter: (v: string) => void;
+}) => {
+  const responsables = ["todos", ...Array.from(new Set(items.map(getResponsable).filter(Boolean)))];
+  if (responsables.length <= 2) return null; // Only "todos" + 1 person = don't show
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap mt-3">
+      <span className="text-[9px] font-black tracking-widest text-white/30 uppercase">Responsable:</span>
+      <div className="flex items-center gap-1 flex-wrap">
+        {responsables.map((r) => (
+          <button
+            key={r}
+            onClick={() => setFilter(r)}
+            className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+              filter === r ? 'bg-primary text-white shadow-lg' : 'bg-white/5 text-white/40 hover:text-white/60 border border-white/5'
+            }`}
+          >
+            {r === "todos" ? "TODOS" : r} {r !== "todos" && `(${items.filter(it => getResponsable(it) === r).length})`}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 /* ─── Components ─────────────────────────────────────────────── */
 
-function FeedbackTab({ items, objectives = [], jiraTasks = [], team, setTeam }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void }) {
-  const filteredItems = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
+function FeedbackTab({ items, objectives = [], jiraTasks = [], team, setTeam, responsableFilter, setResponsableFilter }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void, responsableFilter: string, setResponsableFilter: (r: string) => void }) {
+  const itemsByTeam = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
+  const filteredItems = responsableFilter === "todos"
+    ? itemsByTeam
+    : itemsByTeam.filter(it => getResponsable(it) === responsableFilter);
 
   return (
     <div className="space-y-6">
@@ -216,6 +251,8 @@ function FeedbackTab({ items, objectives = [], jiraTasks = [], team, setTeam }: 
           ))}
         </div>
       </div>
+
+      <ResponsablePills items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredItems.map((item, i) => {
@@ -264,24 +301,28 @@ function FeedbackTab({ items, objectives = [], jiraTasks = [], team, setTeam }: 
   );
 }
 
-function TasksTab({ 
-  items, 
-  objectives = [], 
-  onTaskClick, 
+function TasksTab({
+  items,
+  objectives = [],
+  onTaskClick,
   onAddTask,
   onReorder,
   onDelete,
   jiraSubTab,
-  setJiraSubTab
-}: { 
-  items: any[], 
-  objectives: any[], 
-  onTaskClick: (task: any) => void, 
+  setJiraSubTab,
+  responsableFilter,
+  setResponsableFilter
+}: {
+  items: any[],
+  objectives: any[],
+  onTaskClick: (task: any) => void,
   onAddTask: () => void,
   onReorder: (newItems: any[]) => void,
   onDelete: (id: string) => void,
   jiraSubTab: 'talent' | 'hiring' | 'ux' | 'otras',
-  setJiraSubTab: (tab: 'talent' | 'hiring' | 'ux' | 'otras') => void
+  setJiraSubTab: (tab: 'talent' | 'hiring' | 'ux' | 'otras') => void,
+  responsableFilter: string,
+  setResponsableFilter: (r: string) => void
 }) {
 
 
@@ -296,7 +337,10 @@ function TasksTab({
   // Use a safer unique key for deduplication (id or title+origin)
   const aiTasks = Array.from(new Map(allAiTasks.map(t => [t.id || `${t.origin}-${t.title}`, t])).values());
 
-  const currentAiTasks = aiTasks.filter(task => categorizeItem(task, objectives, jiraTasks) === jiraSubTab);
+  const tasksByTeam = aiTasks.filter(task => categorizeItem(task, objectives, jiraTasks) === jiraSubTab);
+  const currentAiTasks = responsableFilter === "todos"
+    ? tasksByTeam
+    : tasksByTeam.filter(task => getResponsable(task) === responsableFilter);
   
   const talentCount = aiTasks.filter(t => categorizeItem(t, objectives, jiraTasks) === 'talent').length;
   const hiringCount = aiTasks.filter(t => categorizeItem(t, objectives, jiraTasks) === 'hiring').length;
@@ -339,32 +383,32 @@ function TasksTab({
             </div>
           </div>
           <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-            <button 
-              onClick={() => setJiraSubTab('talent')}
+            <button
+              onClick={() => { setJiraSubTab('talent'); setResponsableFilter("todos"); }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 jiraSubTab === 'talent' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
             >
               TALENT ({talentCount})
             </button>
-            <button 
-              onClick={() => setJiraSubTab('hiring')}
+            <button
+              onClick={() => { setJiraSubTab('hiring'); setResponsableFilter("todos"); }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 jiraSubTab === 'hiring' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
             >
               HIRING ({hiringCount})
             </button>
-            <button 
-              onClick={() => setJiraSubTab('ux')}
+            <button
+              onClick={() => { setJiraSubTab('ux'); setResponsableFilter("todos"); }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 jiraSubTab === 'ux' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
             >
               UX TEAM ({uxCount})
             </button>
-            <button 
-              onClick={() => setJiraSubTab('otras')}
+            <button
+              onClick={() => { setJiraSubTab('otras'); setResponsableFilter("todos"); }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 jiraSubTab === 'otras' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
@@ -373,6 +417,8 @@ function TasksTab({
             </button>
           </div>
         </div>
+
+        <ResponsablePills items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentAiTasks.map((task, i) => {
@@ -506,8 +552,11 @@ function getSourceIcon(type: string) {
 }
 
 
-function InsightsTab({ items, objectives = [], jiraTasks = [], team, setTeam }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void }) {
-  const filteredItems = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
+function InsightsTab({ items, objectives = [], jiraTasks = [], team, setTeam, responsableFilter, setResponsableFilter }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void, responsableFilter: string, setResponsableFilter: (r: string) => void }) {
+  const itemsByTeam = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
+  const filteredItems = responsableFilter === "todos"
+    ? itemsByTeam
+    : itemsByTeam.filter(it => getResponsable(it) === responsableFilter);
 
   return (
     <div className="space-y-6">
@@ -527,6 +576,8 @@ function InsightsTab({ items, objectives = [], jiraTasks = [], team, setTeam }: 
           ))}
         </div>
       </div>
+
+      <ResponsablePills items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item, i) => {
@@ -620,8 +671,11 @@ function MetricsTab({ items, objectives = [], team, setTeam }: { items: any[], o
   );
 }
 
-function AlertsTab({ items, objectives = [], jiraTasks = [], team, setTeam }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void }) {
-  const filteredItems = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
+function AlertsTab({ items, objectives = [], jiraTasks = [], team, setTeam, responsableFilter, setResponsableFilter }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void, responsableFilter: string, setResponsableFilter: (r: string) => void }) {
+  const itemsByTeam = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
+  const filteredItems = responsableFilter === "todos"
+    ? itemsByTeam
+    : itemsByTeam.filter(it => getResponsable(it) === responsableFilter);
 
   return (
     <div className="space-y-6">
@@ -641,6 +695,8 @@ function AlertsTab({ items, objectives = [], jiraTasks = [], team, setTeam }: { 
           ))}
         </div>
       </div>
+
+      <ResponsablePills items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item, i) => {
@@ -714,6 +770,7 @@ export default function DayTodayPage() {
   const [structuredTasks, setStructuredTasks] = useState<any[]>([]);
   const [objectives, setObjectives] = useState<any[]>([]);
   const [jiraSubTab, setJiraSubTab] = useState<'talent' | 'hiring' | 'ux' | 'otras'>('talent');
+  const [responsableFilter, setResponsableFilter] = useState<string>("todos");
   
   // User full name
   const userFullName = user?.user_metadata?.full_name || "Usuario";
@@ -2334,38 +2391,44 @@ const mapDbSource = (s: any): Source => {
         </div>
       )}
       {activeTab === "feedback" && summaryData?.feedback && (
-        <FeedbackTab 
-          items={summaryData.feedback} 
+        <FeedbackTab
+          items={summaryData.feedback}
           objectives={objectives}
           jiraTasks={structuredTasks.filter((it: any) => it.origin === 'jira')}
           team={jiraSubTab}
-          setTeam={setJiraSubTab}
+          setTeam={(t) => { setJiraSubTab(t); setResponsableFilter("todos"); }}
+          responsableFilter={responsableFilter}
+          setResponsableFilter={setResponsableFilter}
         />
       )}
 
       {activeTab === "tasks" && (
-        <TasksTab 
+        <TasksTab
           items={[
             ...(structuredTasks || []),
             ...(summaryData?.tasks || [])
-          ]} 
+          ]}
           objectives={objectives}
           onTaskClick={handleEditTask}
           onAddTask={handleAddTask}
           onReorder={handleReorderTasks}
           onDelete={handleDeleteTaskAction}
           jiraSubTab={jiraSubTab}
-          setJiraSubTab={setJiraSubTab}
+          setJiraSubTab={(t) => { setJiraSubTab(t); setResponsableFilter("todos"); }}
+          responsableFilter={responsableFilter}
+          setResponsableFilter={setResponsableFilter}
         />
       )}
 
       {activeTab === "insights" && summaryData?.insights && (
-        <InsightsTab 
-          items={summaryData.insights} 
+        <InsightsTab
+          items={summaryData.insights}
           objectives={objectives}
           jiraTasks={structuredTasks.filter((it: any) => it.origin === 'jira')}
           team={jiraSubTab}
-          setTeam={setJiraSubTab}
+          setTeam={(t) => { setJiraSubTab(t); setResponsableFilter("todos"); }}
+          responsableFilter={responsableFilter}
+          setResponsableFilter={setResponsableFilter}
         />
       )}
 
@@ -2379,12 +2442,14 @@ const mapDbSource = (s: any): Source => {
       )}
 
       {activeTab === "alerts" && summaryData?.alerts && (
-        <AlertsTab 
-          items={summaryData.alerts} 
+        <AlertsTab
+          items={summaryData.alerts}
           objectives={objectives}
           jiraTasks={structuredTasks.filter((it: any) => it.origin === 'jira')}
           team={jiraSubTab}
-          setTeam={setJiraSubTab}
+          setTeam={(t) => { setJiraSubTab(t); setResponsableFilter("todos"); }}
+          responsableFilter={responsableFilter}
+          setResponsableFilter={setResponsableFilter}
         />
       )}
 
