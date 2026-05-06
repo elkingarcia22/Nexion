@@ -127,9 +127,9 @@ export async function getSourcesByDate(
 
     console.log("[getSourcesByDate] Query result - count:", data?.length || 0, "error:", error?.message);
     if (data && data.length > 0) {
-      console.log("[getSourcesByDate] Sources returned:");
+      console.log("[getSourcesByDate] All", data.length, "sources returned for date:", dateStr);
       data.forEach((s: any, i: number) => {
-        console.log(`  [${i}] ${s.title} | source_date: "${s.source_date}" | origin: "${s.source_origin}"`);
+        console.log(`  [${i}] title: "${s.title}" | source_date: "${s.source_date}" | origin: "${s.source_origin}" | source_type: "${s.source_type}"`);
       });
     } else {
       console.log("[getSourcesByDate] No sources returned for date:", dateStr);

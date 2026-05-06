@@ -1165,75 +1165,19 @@ const isSlack = s.source_origin === "slack";
         await fetchAlerts(wsId, dateStr);
       }
 
-      // 5. Auto-sync Drive files for the selected date
-      const existingUrls = new Set(dbRows.map((s: any) => s.original_url).filter(Boolean));
+      // 5. DISABLED: Auto-sync Drive files - only show manually added sources and Gemini notes
+      // Google Drive sync was creating 10+ automatic sources per day, cluttering the view.
+      // Re-enable this section if we want automatic Google Drive sync in the future.
 
+      /*
+      const existingUrls = new Set(dbRows.map((s: any) => s.original_url).filter(Boolean));
       if (fetchId !== currentFetchIdRef.current) return;
       setDriveSyncing(true);
       const driveResult = await fetchGoogleDriveFiles("all", dateStr);
-      
-      if (fetchId !== currentFetchIdRef.current) return;
+      ... (Google Drive sync code disabled)
+      */
+
       setDriveSyncing(false);
-
-      if (driveResult.success && driveResult.files && driveResult.files.length > 0) {        
-        const normalizeUrl = (url: string) => url ? url.split("?")[0].replace(/\/$/, "") : "";
-        
-        const autoAdded: Source[] = [];
-        for (const file of driveResult.files) {
-          const fileUrl = normalizeUrl(file.webViewLink);
-          const existing = dbRows.find((r: any) => normalizeUrl(r.original_url) === fileUrl);
-          
-            if (existing) {
-              if (existing.source_origin === "manual") {
-                await updateSource({ id: existing.id, source_origin: "google" } as any);
-                setSources(prev => prev.map(s => 
-                  s.id === existing.id ? { ...s, isManual: false, type: "NOTAS DE GEMINI" } : s
-                ));
-              }
-            continue;
-          }
-
-          const result = await createSource({
-            title: file.name,
-            url: file.webViewLink,
-            type: file.mimeType.includes("spreadsheet") ? "document" : "meeting",
-            workspaceId: wsId,
-            createdBy: sessionUser.id,
-            origin: "google",
-            sourceDate: forDate.toISOString(),
-            externalSourceId: file.id,
-            metadata: { mimeType: file.mimeType },
-          });
-          if (result.success && result.data) {
-            autoAdded.push(mapDbSource(result.data as any));
-          }
-        }
-        
-        if (fetchId !== currentFetchIdRef.current) return;
-        
-        if (autoAdded.length > 0) {
-          setSources((prev) => {
-            const combined = [...autoAdded, ...prev];
-            const seenIds = new Set();
-            const seenUrls = new Set();
-            const normalize = (u: string) => u ? u.split("?")[0].replace(/\/$/, "") : "";
-
-            return combined.filter(s => {
-              if (seenIds.has(s.id)) return false;
-              seenIds.add(s.id);
-              if (s.url) {
-                const norm = normalize(s.url);
-                if (seenUrls.has(norm)) return false;
-                seenUrls.add(norm);
-              }
-              return !noiseWords.some(w => s.name.toLowerCase().includes(w.toLowerCase()));
-            });
-          });
-        }
-        setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      } else if (!driveResult.success) {
-        setSyncError(driveResult.error || "Error al sincronizar con Google Drive");
-      }
     } catch (err) {
       console.error("Error fetching data:", err);
       setSyncError("Error inesperado al cargar datos.");
@@ -1493,20 +1437,8 @@ const isSlack = s.source_origin === "slack";
   };
 
   const filteredSources = sources.filter((s) => {
-    // Debug: Log all sources being evaluated
-    console.log("[filteredSources] Evaluating source:", {
-      name: s.name,
-      type: s.type,
-      origin: s.origin,
-      source_origin: s.source_origin,
-      source_date: s.source_date,
-      typeFilter: typeFilter,
-      formatFilter: formatFilter
-    });
-
     // If user selected specific filters, apply them
     if (typeFilter !== "all" || formatFilter !== "all") {
-      console.log("[filteredSources] Custom filters active - typeFilter:", typeFilter, "formatFilter:", formatFilter);
       // Apply type filter
       if (typeFilter !== "all") {
         if (typeFilter === "FUENTE EXTERNA" && (s.origin !== "google" && s.origin !== "slack")) return false;
@@ -1522,24 +1454,28 @@ const isSlack = s.source_origin === "slack";
       return true;
     }
 
-    // Default behavior: Show only Gemini notes + manually added External sources
+    // Default behavior: Show only Gemini notes + manually added External sources (EXCLUDE Google Drive docs)
     const isGeminiNote = s.type === "NOTAS DE GEMINI";
     const isGeminiTitle = s.name?.toLowerCase().includes("gemini");
     const isManualExternal = s.origin === "manual";
 
     const shouldShow = isGeminiNote || isGeminiTitle || isManualExternal;
-    console.log("[filteredSources] DEFAULT FILTER for:", s.name,
-      "| type:", s.type,
-      "| origin:", s.origin,
-      "| isGeminiNote:", isGeminiNote,
-      "| isGeminiTitle:", isGeminiTitle,
-      "| isManualExternal:", isManualExternal,
-      "| SHOW:", shouldShow);
+
+    if (!shouldShow) {
+      console.log("[filteredSources] EXCLUDED:", s.name, "| type:", s.type, "| origin:", s.origin);
+    }
 
     return shouldShow;
   });
 
-  console.log("[filteredSources] Total sources in state:", sources.length, "Filtered sources shown:", filteredSources.length, "Sources:", filteredSources.map(s => ({ name: s.name, date: s.source_date, origin: s.origin })));
+  console.log("[filteredSources] SUMMARY - Total in state:", sources.length, "| Shown after filtering:", filteredSources.length,
+    "| By origin:", {
+      gemini: sources.filter(s => s.type === "NOTAS DE GEMINI" || s.name?.toLowerCase().includes("gemini")).length,
+      manual: sources.filter(s => s.origin === "manual").length,
+      google: sources.filter(s => s.origin === "google").length,
+      other: sources.filter(s => s.origin !== "google" && s.origin !== "manual" && s.type !== "NOTAS DE GEMINI" && !s.name?.toLowerCase().includes("gemini")).length
+    }
+  );
 
   const checkedCount = filteredSources.filter((s) => s.checked).length;
 
