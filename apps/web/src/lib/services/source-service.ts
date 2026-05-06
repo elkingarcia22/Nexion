@@ -154,18 +154,17 @@ export async function getSourcesByDate(
       });
     }
 
-    // SEGUNDO: Aplicar FILTRO - solo manual y notas de Gemini (por título)
+    // SEGUNDO: Aplicar FILTRO - solo manual y notas de Gemini (solo si source_origin = "manual")
     console.log("[getSourcesByDate] ===== APLICANDO FILTRO =====");
-    console.log("[getSourcesByDate] Buscando: source_origin='manual' OR título contiene 'Notas de Gemini'");
+    console.log("[getSourcesByDate] Buscando: source_origin='manual'");
 
     const filteredData = allData?.filter((s: any) => {
+      // Only include manual sources (exclude Google Drive and other automated syncs)
       const isManual = s.source_origin === "manual";
-      const isGemini = s.title?.includes("Notas de Gemini") || false;
-      const matches = isManual || isGemini;
 
-      console.log(`[getSourcesByDate] "${s.title}" -> manual:${isManual}, gemini:${isGemini}, INCLUDE:${matches}`);
+      console.log(`[getSourcesByDate] "${s.title}" -> origin:${s.source_origin}, INCLUDE:${isManual}`);
 
-      return matches;
+      return isManual;
     }) || [];
 
     console.log("[getSourcesByDate] Fuentes después del filtro:", filteredData.length);
@@ -231,18 +230,16 @@ export async function getSourcesByWorkspace(
       });
     }
 
-    // SEGUNDO: Aplicar FILTRO - solo manual y notas de Gemini (por título)
+    // SEGUNDO: Aplicar FILTRO - solo manual (exclude Google Drive and other automated syncs)
     console.log("[getSourcesByWorkspace] ===== APLICANDO FILTRO =====");
-    console.log("[getSourcesByWorkspace] Buscando: source_origin='manual' OR título contiene 'Notas de Gemini'");
+    console.log("[getSourcesByWorkspace] Buscando: source_origin='manual'");
 
     const filteredData = allData?.filter((s: any) => {
       const isManual = s.source_origin === "manual";
-      const isGemini = s.title?.includes("Notas de Gemini") || false;
-      const matches = isManual || isGemini;
 
-      console.log(`[getSourcesByWorkspace] "${s.title}" -> manual:${isManual}, gemini:${isGemini}, INCLUDE:${matches}`);
+      console.log(`[getSourcesByWorkspace] "${s.title}" -> origin:${s.source_origin}, INCLUDE:${isManual}`);
 
-      return matches;
+      return isManual;
     }) || [];
 
     console.log("[getSourcesByWorkspace] ===== RESULTADO FINAL =====");
