@@ -154,20 +154,28 @@ export async function getSourcesByDate(
       });
     }
 
-    // SEGUNDO: Aplicar FILTRO - solo manual y notas de Gemini (solo si source_origin = "manual")
+    // SEGUNDO: Aplicar FILTRO - solo manual y notas de Gemini (de cualquier origen)
     console.log("[getSourcesByDate] ===== APLICANDO FILTRO =====");
-    console.log("[getSourcesByDate] Buscando: source_origin='manual'");
+    console.log("[getSourcesByDate] Criterios: 1) source_origin='manual' OR 2) title contiene 'Notas de Gemini'");
 
     const filteredData = allData?.filter((s: any) => {
       // Include manual sources and Gemini analysis notes (from any origin)
       const isManual = s.source_origin === "manual";
-      const isGemini = s.title?.includes("Notas de Gemini");
+      const titleIncludes = s.title?.includes("Notas de Gemini") ?? false;
+      const isGemini = titleIncludes;
       const include = isManual || isGemini;
 
-      console.log(`[getSourcesByDate] "${s.title}" -> origin:${s.source_origin}, manual:${isManual}, gemini:${isGemini}, INCLUDE:${include}`);
+      if (!include) {
+        console.log(`[getSourcesByDate] ❌ EXCLUIDA: "${s.title}" -> origin:"${s.source_origin}", has_gemini_title:${titleIncludes}, isManual:${isManual}`);
+      } else {
+        console.log(`[getSourcesByDate] ✅ INCLUIDA: "${s.title}" -> origin:"${s.source_origin}", has_gemini_title:${titleIncludes}, isManual:${isManual}, reason:${isManual ? 'manual' : 'gemini'}`);
+      }
 
       return include;
     }) || [];
+
+    console.log("[getSourcesByDate] ===== RESUMEN DESPUÉS DEL FILTRO =====");
+    console.log("[getSourcesByDate] Total incluidas:", filteredData.length, "de", allData?.length);
 
     console.log("[getSourcesByDate] Fuentes después del filtro:", filteredData.length);
 

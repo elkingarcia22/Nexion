@@ -1042,6 +1042,17 @@ export default function DayTodayPage() {
 
   // Map a raw DB row to the UI Source shape
 const mapDbSource = (s: any): Source => {
+    console.log("[mapDbSource] RAW DB ROW:", {
+      id: s.id,
+      title: s.title,
+      source_origin: s.source_origin,
+      original_url: s.original_url,
+      source_date: s.source_date,
+      created_at: s.created_at,
+      titleLowercase: s.title?.toLowerCase(),
+      hasGeminiInTitle: s.title?.toLowerCase().includes("notas de gemini")
+    });
+
     const isSlack = s.source_origin === "slack";
     const url: string = s.original_url || "";
 
@@ -1056,6 +1067,7 @@ const mapDbSource = (s: any): Source => {
     else if (url.includes("docs.google.com/document") || url.includes(".docx") || url.includes(".md")) fmt = "DOC";
 
     const isGemini = s.title?.toLowerCase().includes("notas de gemini") || s.title?.toLowerCase().includes("gemini");
+    console.log("[mapDbSource] Detection:", { isSlack, isDriveUrl, isGemini, fmt });
 
     let label: SourceType = "FUENTE EXTERNA";
     if (isSlack) {
@@ -1169,13 +1181,10 @@ const mapDbSource = (s: any): Source => {
       });
 
       const dbRows = sourcesResult.success && sourcesResult.data ? sourcesResult.data : [];
-      console.log("[fetchData] 📋 ALL DB rows returned:", dbRows.map(r => ({
-        id: r.id,
-        title: r.title,
-        source_origin: r.source_origin,
-        source_date: r.source_date,
-        created_at: r.created_at
-      })));
+      console.log("[fetchData] 📋 ALL DB rows returned:", dbRows.length);
+      dbRows.forEach((r: any, i: number) => {
+        console.log(`[fetchData] [${i}] ID:${r.id} | Title:"${r.title}" | Origin:"${r.source_origin}" | Date:"${r.source_date}"`);
+      });
 
       // DETAILED LOG: Check for Gemini notes specifically
       const geminiNotes = dbRows.filter(r => r.title?.includes("Notas de Gemini"));
@@ -1186,11 +1195,16 @@ const mapDbSource = (s: any): Source => {
         geminiNotes: geminiNotes.length,
         manual: manualSources.length,
         google: googleSources.length,
-        geminiDetails: geminiNotes.map(g => ({ title: g.title, origin: g.source_origin }))
+        geminiDetails: geminiNotes.map(g => ({ title: g.title, origin: g.source_origin, hasGeminiString: g.title.includes("Notas de Gemini") }))
       });
 
-      const dbSources: Source[] = dbRows.map(mapDbSource);
-      console.log("[fetchData] Mapped sources count:", dbSources.length, "sample:", dbSources.slice(0, 2));
+      console.log("[fetchData] MAPPING sources to UI format...");
+      const dbSources: Source[] = dbRows.map((r: any, idx: number) => {
+        const mapped = mapDbSource(r);
+        console.log(`[fetchData] [${idx}] Mapped: "${r.title}" -> type:"${mapped.type}", isManual:${mapped.isManual}`);
+        return mapped;
+      });
+      console.log("[fetchData] ✅ All sources mapped, total:", dbSources.length);
       
       // Filter out noise AND duplicates that might already be in DB
       const noiseWords = ["Comprobante", "Transferencia", "Factura", "Payment"];
