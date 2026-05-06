@@ -159,9 +159,9 @@ export async function getSourcesByDate(
     console.log("[getSourcesByDate] Buscando: source_origin='manual'");
 
     const filteredData = allData?.filter((s: any) => {
-      // Include manual sources and Gemini analysis notes (exclude Google Drive synced files)
+      // Include manual sources and Gemini analysis notes (from any origin)
       const isManual = s.source_origin === "manual";
-      const isGemini = s.title?.includes("Notas de Gemini") && s.source_origin !== "google";
+      const isGemini = s.title?.includes("Notas de Gemini");
       const include = isManual || isGemini;
 
       console.log(`[getSourcesByDate] "${s.title}" -> origin:${s.source_origin}, manual:${isManual}, gemini:${isGemini}, INCLUDE:${include}`);
@@ -237,9 +237,9 @@ export async function getSourcesByWorkspace(
     console.log("[getSourcesByWorkspace] Buscando: source_origin='manual'");
 
     const filteredData = allData?.filter((s: any) => {
-      // Include manual sources and Gemini analysis notes (exclude Google Drive synced files)
+      // Include manual sources and Gemini analysis notes (from any origin)
       const isManual = s.source_origin === "manual";
-      const isGemini = s.title?.includes("Notas de Gemini") && s.source_origin !== "google";
+      const isGemini = s.title?.includes("Notas de Gemini");
       const include = isManual || isGemini;
 
       console.log(`[getSourcesByWorkspace] "${s.title}" -> origin:${s.source_origin}, manual:${isManual}, gemini:${isGemini}, INCLUDE:${include}`);
