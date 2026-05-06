@@ -1415,7 +1415,9 @@ const mapDbSource = (s: any): Source => {
       // 1. Run the analysis with full content and user context
       // Compute userName directly from user state to avoid initialization issues
       const currentUserName = user?.user_metadata?.full_name || summaryData?.profiles?.full_name || "Usuario";
-      
+
+      console.log("[ANALYZE DAY] Sources to analyze:", sourcesWithContent.length, sourcesWithContent.map(s => ({ name: s.name, type: s.type, hasContent: !!s.content })));
+
       const result = await analyzeDay({
         date: dateStr,
         meetings: calendarEvents,
@@ -1429,11 +1431,17 @@ const mapDbSource = (s: any): Source => {
         }))
       });
 
+      console.log("[ANALYZE DAY] Gemini response:", { success: result.success, tasksCount: result.tasks?.length, insightsCount: result.insights?.length });
+      if (result.tasks?.length > 0) {
+        console.log("[ANALYZE DAY] First task sample:", result.tasks[0]);
+      }
+
       if (!result.success) {
         throw new Error(result.error);
       }
 
       // 2. Save result to DB
+      console.log("[ANALYZE DAY] Saving to DB - tasks:", result.tasks?.length);
       await saveDayAnalysis(workspaceId, dateStr, {
         summary: result.summary || "",
         tasks: result.tasks,
@@ -1444,12 +1452,15 @@ const mapDbSource = (s: any): Source => {
         source_count: checkedSources.length,
       });
 
+      console.log("[ANALYZE DAY] Saved to DB successfully");
+
       // 3. Refresh summary data from DB to show in UI
       const summaryResult = await getDaySummary(workspaceId, dateStr);
+      console.log("[ANALYZE DAY] Retrieved from DB:", { tasksCount: summaryResult.data?.tasks?.length });
       if (summaryResult.success) {
         setSummaryData(summaryResult.data);
       }
-      
+
       // Navigate to Hoy to see the result
       setActiveTab("hoy");
       
@@ -2097,6 +2108,17 @@ const mapDbSource = (s: any): Source => {
               const today = new Date();
               today.setHours(0,0,0,0);
 
+              console.log("[TAREAS HOY] structuredTasks loaded:", structuredTasks.length, "tasks");
+              if (structuredTasks.length > 0) {
+                console.log("[TAREAS HOY] Sample task:", {
+                  title: structuredTasks[0].title,
+                  status: structuredTasks[0].status,
+                  goal_id: structuredTasks[0].goal_id,
+                  metadata: structuredTasks[0].metadata,
+                  origin: structuredTasks[0].origin
+                });
+              }
+
               const pendingTasksByStatus = structuredTasks.filter((task: any) => {
                 // EXCLUDE OBJECTIVES - they should not appear in "Tareas Pendientes"
                 // Objectives either start with "Objetivo:" or have a goal_id set
@@ -2114,17 +2136,29 @@ const mapDbSource = (s: any): Source => {
                 const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
                 const isOverdue = task.due_date && new Date(task.due_date) < today && !isDone;
 
-                return isPending || isInProgress || isDueToday || isOverdue;
+                const passes = isPending || isInProgress || isDueToday || isOverdue;
+                if (passes) {
+                  console.log("[TAREAS HOY] Task passed status filter:", task.title, { isPending, isInProgress, isDueToday, isOverdue });
+                }
+                return passes;
               });
+
+              console.log("[TAREAS HOY] After status filter:", pendingTasksByStatus.length, "tasks");
 
               const tasksByTeam = pendingTasksByStatus.filter((task: any) => {
                 const category = categorizeItem(task, objectives, structuredTasks.filter((t: any) => t.origin === 'jira'));
-                return category === jiraSubTab;
+                const matches = category === jiraSubTab;
+                console.log("[TAREAS HOY] Task team filter:", task.title, { category, jiraSubTab, matches });
+                return matches;
               });
+
+              console.log("[TAREAS HOY] After team filter:", tasksByTeam.length, "tasks, looking for team:", jiraSubTab);
 
               const pendingTasks = responsableFilter === "todos"
                 ? tasksByTeam
                 : tasksByTeam.filter((task: any) => getResponsable(task) === responsableFilter);
+
+              console.log("[TAREAS HOY] Final tasks:", pendingTasks.length, "with responsable filter:", responsableFilter);
 
               if (pendingTasks.length === 0) {
                 return (
