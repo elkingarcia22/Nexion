@@ -103,7 +103,7 @@ export async function createSource(
 
 /**
  * Returns sources for a workspace created on a specific local day.
- * Converts the local date to UTC boundaries to handle timezone offsets correctly.
+ * Filters to show only manual sources and gemini notes.
  */
 export async function getSourcesByDate(
   workspaceId: string,
@@ -116,27 +116,60 @@ export async function getSourcesByDate(
     const d = String(localDate.getDate()).padStart(2, "0");
     const dateStr = `${y}-${m}-${d}`;
 
-    console.log("[getSourcesByDate] Fetching sources for date:", dateStr);
+    console.log("[getSourcesByDate] ===== INICIANDO CARGA DE FUENTES POR FECHA =====");
+    console.log("[getSourcesByDate] workspace_id:", workspaceId);
+    console.log("[getSourcesByDate] Fecha buscada:", dateStr);
 
-    const { data, error } = await supabase
+    // Compute next day for range query (source_date is timestamptz, so .eq won't match partial dates)
+    const nextDate = new Date(localDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+    const ny = nextDate.getFullYear();
+    const nm = String(nextDate.getMonth() + 1).padStart(2, "0");
+    const nd = String(nextDate.getDate()).padStart(2, "0");
+    const nextDateStr = `${ny}-${nm}-${nd}`;
+
+    // PRIMERO: Traer TODAS las fuentes SIN FILTRO para esa fecha
+    const { data: allData, error } = await supabase
       .from("sources")
       .select("*")
       .eq("workspace_id", workspaceId)
-      .eq("source_date", dateStr)
+      .gte("source_date", `${dateStr}T00:00:00.000Z`)
+      .lt("source_date", `${nextDateStr}T00:00:00.000Z`)
       .order("created_at", { ascending: false });
 
-    console.log("[getSourcesByDate] Query result - count:", data?.length || 0, "error:", error?.message);
-    if (data && data.length > 0) {
-      console.log("[getSourcesByDate] All", data.length, "sources returned for date:", dateStr);
-      data.forEach((s: any, i: number) => {
-        console.log(`  [${i}] title: "${s.title}" | source_date: "${s.source_date}" | origin: "${s.source_origin}" | source_type: "${s.source_type}"`);
+    console.log("[getSourcesByDate] ===== TODAS LAS FUENTES DEL DÍA (SIN FILTRO) =====");
+    console.log("[getSourcesByDate] Total sin filtro:", allData?.length || 0);
+    console.log("[getSourcesByDate] Error (si hay):", error?.message);
+
+    if (allData && allData.length > 0) {
+      console.log("[getSourcesByDate] Detalles de CADA fuente del día:");
+      allData.forEach((s: any, i: number) => {
+        console.log(`[${i}] ID: ${s.id}`);
+        console.log(`    Título: ${s.title}`);
+        console.log(`    Fecha: ${s.source_date}`);
+        console.log(`    source_origin: "${s.source_origin}" (tipo: ${typeof s.source_origin})`);
+        console.log(`    source_type: "${s.source_type}" (tipo: ${typeof s.source_type})`);
+        console.log(`    ingest_mode: ${s.ingest_mode}`);
+        console.log(`    ---`);
       });
-    } else {
-      console.log("[getSourcesByDate] No sources returned for date:", dateStr);
     }
 
-    return { success: !error, data: (data || []) as Source[], error: error?.message };
+    // SEGUNDO: Deduplicar por URL normalizada (n8n puede crear duplicados masivos del mismo archivo)
+    const seenKeys = new Set<string>();
+    const normalizeUrl = (u: string) => u ? u.split("?")[0].replace(/\/$/, "") : "";
+
+    const dedupedData = (allData || []).filter((s: any) => {
+      const key = s.original_url ? normalizeUrl(s.original_url) : `title:${s.title}`;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    });
+
+    console.log("[getSourcesByDate] Después de dedup:", dedupedData.length, "(de", allData?.length || 0, "total)");
+
+    return { success: !error, data: dedupedData as Source[], error: error?.message };
   } catch (err) {
+    console.error("[getSourcesByDate] ERROR CRÍTICO:", err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -155,14 +188,56 @@ export async function getSourcesByWorkspace(
   }
 
   try {
-    const { data, error } = await supabase
+    console.log("[getSourcesByWorkspace] ===== INICIANDO CARGA DE FUENTES =====");
+    console.log("[getSourcesByWorkspace] workspace_id:", workspaceId);
+
+    // PRIMERO: Traer TODAS las fuentes SIN FILTRO para ver qué hay
+    const { data: allData, error: allError } = await supabase
       .from("sources")
       .select("*")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false });
 
-    return { success: !error, data: (data || []) as Source[], error: error?.message };
+    console.log("[getSourcesByWorkspace] ===== TODAS LAS FUENTES (SIN FILTRO) =====");
+    console.log("[getSourcesByWorkspace] Total sin filtro:", allData?.length || 0);
+    console.log("[getSourcesByWorkspace] Error (si hay):", allError?.message);
+
+    if (allData && allData.length > 0) {
+      console.log("[getSourcesByWorkspace] Detalles completos de CADA fuente:");
+      allData.forEach((s: any, i: number) => {
+        console.log(`[${i}] ID: ${s.id}`);
+        console.log(`    Título: ${s.title}`);
+        console.log(`    source_origin: ${s.source_origin} (tipo: ${typeof s.source_origin})`);
+        console.log(`    source_type: ${s.source_type} (tipo: ${typeof s.source_type})`);
+        console.log(`    ingest_mode: ${s.ingest_mode}`);
+        console.log(`    created_at: ${s.created_at}`);
+        console.log(`    ---`);
+      });
+    }
+
+    // SEGUNDO: Aplicar FILTRO - solo manual y notas de Gemini (por título)
+    console.log("[getSourcesByWorkspace] ===== APLICANDO FILTRO =====");
+    console.log("[getSourcesByWorkspace] Buscando: source_origin='manual' OR título contiene 'Notas de Gemini'");
+
+    const filteredData = allData?.filter((s: any) => {
+      const isManual = s.source_origin === "manual";
+      const isGemini = s.title?.includes("Notas de Gemini") || false;
+      const matches = isManual || isGemini;
+
+      console.log(`[getSourcesByWorkspace] "${s.title}" -> manual:${isManual}, gemini:${isGemini}, INCLUDE:${matches}`);
+
+      return matches;
+    }) || [];
+
+    console.log("[getSourcesByWorkspace] ===== RESULTADO FINAL =====");
+    console.log("[getSourcesByWorkspace] Fuentes después del filtro:", filteredData.length);
+    filteredData.forEach((s: any, i: number) => {
+      console.log(`[${i}] "${s.title}" (origin: ${s.source_origin}, type: ${s.source_type})`);
+    });
+
+    return { success: !allError, data: filteredData as Source[], error: allError?.message };
   } catch (err) {
+    console.error("[getSourcesByWorkspace] ERROR CRÍTICO:", err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -217,6 +292,36 @@ export async function deleteSource(
       .from("sources")
       .delete()
       .eq("id", sourceId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Deletes all source records with the same URL in a workspace.
+ * Used to eliminate duplicates created by n8n re-runs.
+ */
+export async function deleteSourcesByUrl(
+  workspaceId: string,
+  url: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const normalizedUrl = url.split("?")[0].replace(/\/$/, "");
+    // Delete any URL that starts with the normalized base (strips query params)
+    const { error } = await supabase
+      .from("sources")
+      .delete()
+      .eq("workspace_id", workspaceId)
+      .like("original_url", `${normalizedUrl}%`);
 
     if (error) {
       return { success: false, error: error.message };

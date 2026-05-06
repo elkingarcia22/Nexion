@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AddSourceDrawer } from "@/components/sources/AddSourceDrawer";
 import { getDaySummary, saveDayAnalysis } from "@/lib/services/summary-service";
-import { getSourcesByDate, createSource, deleteSource, updateSource } from "@/lib/services/source-service";
+import { getSourcesByDate, createSource, deleteSource, deleteSourcesByUrl, updateSource } from "@/lib/services/source-service";
 import { getOrCreateWorkspace } from "@/lib/services/workspace-service";
 import { fetchGoogleDriveFiles, fetchGoogleFileContent, DriveFile } from "@/lib/services/google-drive-service";
 import { fetchGoogleCalendarEvents, CalendarEvent } from "@/lib/services/google-calendar-service";
@@ -985,30 +985,32 @@ export default function DayTodayPage() {
 
   // Map a raw DB row to the UI Source shape
 const mapDbSource = (s: any): Source => {
-    const isGoogle = s.source_origin === "google";
-const isSlack = s.source_origin === "slack";
-    
+    const isSlack = s.source_origin === "slack";
     const url: string = s.original_url || "";
+
+    // Detect Google Drive URLs regardless of source_origin (all manual sources have origin="manual")
+    const isDriveUrl = url.includes("docs.google.com") || url.includes("drive.google.com");
+
     let fmt = "DOC";
     if (isSlack) fmt = "SLACK";
     else if (url.includes("spreadsheets")) fmt = "SHEET";
-    else if (url.includes(".pdf")) fmt = "PDF";
-    else if (url.includes("docs.google")) fmt = "DOC";
     else if (url.includes("presentation")) fmt = "SLIDE";
-    else if (url.includes(".docx")) fmt = "DOCX";
+    else if (url.includes(".pdf") || (url.includes("drive.google.com/file") && s.title?.endsWith(".pdf"))) fmt = "PDF";
+    else if (url.includes("docs.google.com/document") || url.includes(".docx") || url.includes(".md")) fmt = "DOC";
+
+    const isGemini = s.title?.toLowerCase().includes("notas de gemini") || s.title?.toLowerCase().includes("gemini");
 
     let label: SourceType = "FUENTE EXTERNA";
-    const isGemini = s.title?.toLowerCase().includes("gemini");
     if (isSlack) {
       label = "SLACK" as SourceType;
-    } else if (isGoogle) {
-      if (fmt === "SHEET") label = "DOCUMENTO" as SourceType;
-      else if (fmt === "DOC" || fmt === "DOCX") {
-        label = isGemini ? "NOTAS DE GEMINI" as SourceType : "DOCUMENTO" as SourceType;
-      } else label = "DOCUMENTO" as SourceType;
     } else if (isGemini) {
       label = "NOTAS DE GEMINI" as SourceType;
+    } else if (isDriveUrl) {
+      if (fmt === "SHEET") label = "SHEET" as SourceType;
+      else if (fmt === "SLIDE") label = "SLIDE" as SourceType;
+      else label = "DOCUMENTO" as SourceType;
     }
+    // No Drive URL + no Gemini → "FUENTE EXTERNA" (truly manually typed/linked source)
 
     const displayTag = isSlack ? "SLACK" : label;
 
@@ -1399,9 +1401,24 @@ const isSlack = s.source_origin === "slack";
 
   const confirmDelete = async () => {
     if (!confirmDeleteId) return;
-    const result = await deleteSource(confirmDeleteId);
+    const sourceToDelete = sources.find((s) => s.id === confirmDeleteId);
+    let result: { success: boolean; error?: string };
+
+    if (sourceToDelete?.url && workspaceId) {
+      // Delete all duplicates with the same URL (n8n creates many copies)
+      result = await deleteSourcesByUrl(workspaceId, sourceToDelete.url);
+      if (result.success) {
+        const normalizedUrl = sourceToDelete.url.split("?")[0].replace(/\/$/, "");
+        setSources((prev) => prev.filter((s) => !s.url?.startsWith(normalizedUrl)));
+      }
+    } else {
+      result = await deleteSource(confirmDeleteId);
+      if (result.success) {
+        setSources((prev) => prev.filter((s) => s.id !== confirmDeleteId));
+      }
+    }
+
     if (result.success) {
-      setSources((prev) => prev.filter((s) => s.id !== confirmDeleteId));
       setConfirmDeleteId(null);
     } else {
       alert("Error al eliminar la fuente: " + result.error);
@@ -1437,8 +1454,18 @@ const isSlack = s.source_origin === "slack";
   };
 
   const filteredSources = sources.filter((s) => {
+    console.log("[FILTER] Processing source:", {
+      name: s.name,
+      type: s.type,
+      origin: s.origin,
+      url: s.url?.substring(0, 50),
+      typeFilter,
+      formatFilter
+    });
+
     // If user selected specific filters, apply them
     if (typeFilter !== "all" || formatFilter !== "all") {
+      console.log("[FILTER] Custom filters applied: typeFilter=" + typeFilter + ", formatFilter=" + formatFilter);
       // Apply type filter
       if (typeFilter !== "all") {
         if (typeFilter === "FUENTE EXTERNA" && (s.origin !== "google" && s.origin !== "slack")) return false;
@@ -1454,28 +1481,47 @@ const isSlack = s.source_origin === "slack";
       return true;
     }
 
-    // Default behavior: Show only Gemini notes + manually added External sources (EXCLUDE Google Drive docs)
+    // Default: show only Gemini notes + truly manual sources (no Drive URL)
+    const isDriveFile = s.url?.includes("docs.google.com") || s.url?.includes("drive.google.com");
     const isGeminiNote = s.type === "NOTAS DE GEMINI";
-    const isGeminiTitle = s.name?.toLowerCase().includes("gemini");
-    const isManualExternal = s.origin === "manual";
+    const isSimpleManual = s.origin === "manual" && !isDriveFile;
 
-    const shouldShow = isGeminiNote || isGeminiTitle || isManualExternal;
+    console.log("[FILTER] Default filter check:", {
+      name: s.name,
+      isDriveFile,
+      isGeminiNote,
+      isSimpleManual,
+      willInclude: isGeminiNote || isSimpleManual
+    });
+
+    // Gemini notes: always show if returned by the date query
+    if (isGeminiNote) {
+      console.log("[FILTER] ✅ INCLUDING (Gemini note):", s.name);
+      return true;
+    }
+
+    const shouldShow = isSimpleManual;
 
     if (!shouldShow) {
-      console.log("[filteredSources] EXCLUDED:", s.name, "| type:", s.type, "| origin:", s.origin);
+      console.log("[FILTER] ❌ EXCLUDING:", s.name, "| type:", s.type, "| origin:", s.origin, "| isDriveFile:", isDriveFile);
+    } else {
+      console.log("[FILTER] ✅ INCLUDING (Simple manual):", s.name);
     }
 
     return shouldShow;
   });
 
-  console.log("[filteredSources] SUMMARY - Total in state:", sources.length, "| Shown after filtering:", filteredSources.length,
-    "| By origin:", {
-      gemini: sources.filter(s => s.type === "NOTAS DE GEMINI" || s.name?.toLowerCase().includes("gemini")).length,
-      manual: sources.filter(s => s.origin === "manual").length,
-      google: sources.filter(s => s.origin === "google").length,
-      other: sources.filter(s => s.origin !== "google" && s.origin !== "manual" && s.type !== "NOTAS DE GEMINI" && !s.name?.toLowerCase().includes("gemini")).length
+  console.log("[FILTEREDSOURCES FINAL]", {
+    totalInState: sources.length,
+    shownAfterFiltering: filteredSources.length,
+    filterSettings: { typeFilter, formatFilter },
+    byType: {
+      gemini: filteredSources.filter(s => s.type === "NOTAS DE GEMINI").length,
+      manual: filteredSources.filter(s => s.origin === "manual").length,
+      google: filteredSources.filter(s => s.origin === "google").length,
+      other: filteredSources.filter(s => s.origin !== "google" && s.origin !== "manual").length
     }
-  );
+  });
 
   const checkedCount = filteredSources.filter((s) => s.checked).length;
 
@@ -1559,11 +1605,11 @@ const isSlack = s.source_origin === "slack";
             }`}
           >
             {tab.label}
-            {(tab.id === "fuentes" ? sources.length : tab.count) !== undefined && (
+            {(tab.id === "fuentes" ? filteredSources.length : tab.count) !== undefined && (
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
                 activeTab === tab.id ? "bg-primary text-white" : "bg-card/10 text-white/50"
               }`}>
-                {tab.id === "fuentes" ? sources.length : tab.count}
+                {tab.id === "fuentes" ? filteredSources.length : tab.count}
               </span>
             )}
             {activeTab === tab.id && (
@@ -2274,7 +2320,7 @@ const isSlack = s.source_origin === "slack";
           {/* Summary and Analyze Action */}
           <div className="flex items-center justify-between pt-4">
             <p className="text-xs text-white/40">
-              {checkedCount} de {sources.length} fuentes seleccionadas para análisis
+              {checkedCount} de {filteredSources.length} fuentes seleccionadas para análisis
             </p>
           </div>
         </div>
