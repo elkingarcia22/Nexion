@@ -1161,15 +1161,34 @@ const mapDbSource = (s: any): Source => {
 
       // 3. Load DB sources for the selected date only
       const sourcesResult = await getSourcesByDate(wsId, forDate);
-      console.log("[fetchData] Sources query result:", { 
-        success: sourcesResult.success, 
+      console.log("[fetchData] 🔍 Sources query result:", {
+        success: sourcesResult.success,
         count: sourcesResult.data?.length || 0,
-        error: sourcesResult.error 
+        error: sourcesResult.error,
+        dateQueried: forDate.toISOString()
       });
-      
+
       const dbRows = sourcesResult.success && sourcesResult.data ? sourcesResult.data : [];
-      console.log("[fetchData] DB rows sample:", dbRows.slice(0, 2).map(r => ({ id: r.id, title: r.title, source_date: r.source_date })));
-      
+      console.log("[fetchData] 📋 ALL DB rows returned:", dbRows.map(r => ({
+        id: r.id,
+        title: r.title,
+        source_origin: r.source_origin,
+        source_date: r.source_date,
+        created_at: r.created_at
+      })));
+
+      // DETAILED LOG: Check for Gemini notes specifically
+      const geminiNotes = dbRows.filter(r => r.title?.includes("Notas de Gemini"));
+      const manualSources = dbRows.filter(r => r.source_origin === "manual");
+      const googleSources = dbRows.filter(r => r.source_origin === "google");
+      console.log("[fetchData] 🧩 Source breakdown:", {
+        totalReturned: dbRows.length,
+        geminiNotes: geminiNotes.length,
+        manual: manualSources.length,
+        google: googleSources.length,
+        geminiDetails: geminiNotes.map(g => ({ title: g.title, origin: g.source_origin }))
+      });
+
       const dbSources: Source[] = dbRows.map(mapDbSource);
       console.log("[fetchData] Mapped sources count:", dbSources.length, "sample:", dbSources.slice(0, 2));
       
