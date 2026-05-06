@@ -154,18 +154,34 @@ export async function getSourcesByDate(
       });
     }
 
-    // SEGUNDO: Deduplicar por URL normalizada (n8n puede crear duplicados masivos del mismo archivo)
+    // SEGUNDO: Aplicar FILTRO - solo manual y notas de Gemini (por título)
+    console.log("[getSourcesByDate] ===== APLICANDO FILTRO =====");
+    console.log("[getSourcesByDate] Buscando: source_origin='manual' OR título contiene 'Notas de Gemini'");
+
+    const filteredData = allData?.filter((s: any) => {
+      const isManual = s.source_origin === "manual";
+      const isGemini = s.title?.includes("Notas de Gemini") || false;
+      const matches = isManual || isGemini;
+
+      console.log(`[getSourcesByDate] "${s.title}" -> manual:${isManual}, gemini:${isGemini}, INCLUDE:${matches}`);
+
+      return matches;
+    }) || [];
+
+    console.log("[getSourcesByDate] Fuentes después del filtro:", filteredData.length);
+
+    // TERCERO: Deduplicar por URL normalizada (n8n puede crear duplicados masivos del mismo archivo)
     const seenKeys = new Set<string>();
     const normalizeUrl = (u: string) => u ? u.split("?")[0].replace(/\/$/, "") : "";
 
-    const dedupedData = (allData || []).filter((s: any) => {
+    const dedupedData = filteredData.filter((s: any) => {
       const key = s.original_url ? normalizeUrl(s.original_url) : `title:${s.title}`;
       if (seenKeys.has(key)) return false;
       seenKeys.add(key);
       return true;
     });
 
-    console.log("[getSourcesByDate] Después de dedup:", dedupedData.length, "(de", allData?.length || 0, "total)");
+    console.log("[getSourcesByDate] Después de dedup:", dedupedData.length, "(de", filteredData.length, "filtrado)");
 
     return { success: !error, data: dedupedData as Source[], error: error?.message };
   } catch (err) {
