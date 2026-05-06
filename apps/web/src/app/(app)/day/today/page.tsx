@@ -1350,17 +1350,18 @@ const mapDbSource = (s: any): Source => {
     }
     prevSourceCountRef.current = currentSourceCount;
 
+    // DISABLED: Auto-analyze trigger
     // Trigger if: no summary OR new sources, and has checked sources, and not already analyzing
-    if (
-      hasCheckedSources &&
-      !isAnalyzing &&
-      !autoAnalyzeTriggeredRef.current &&
-      workspaceId &&
-      (!hasRealSummary || newSourcesAdded)
-    ) {
-      autoAnalyzeTriggeredRef.current = true;
-      handleAnalyzeDay();
-    }
+    // if (
+    //   hasCheckedSources &&
+    //   !isAnalyzing &&
+    //   !autoAnalyzeTriggeredRef.current &&
+    //   workspaceId &&
+    //   (!hasRealSummary || newSourcesAdded)
+    // ) {
+    //   autoAnalyzeTriggeredRef.current = true;
+    //   handleAnalyzeDay();
+    // }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, selectedDate, sources, summaryData]);
 
