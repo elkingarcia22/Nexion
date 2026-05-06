@@ -50,11 +50,6 @@ export default function ObjectivesTab({
   isSyncing?: boolean,
   jiraTasks?: any[]
 }) {
-  console.log("[ObjectivesTab] Render:", { 
-    initialObjectivesCount: initialObjectives?.length, 
-    jiraTasksCount: jiraTasks?.length 
-  });
-
   const [loading, setLoading] = useState(!initialObjectives);
   const [objectives, setObjectives] = useState<GroupedObjective[]>([]);
   const [selectedQuarter, setSelectedQuarter] = useState<string>("Q2");
@@ -117,8 +112,6 @@ export default function ObjectivesTab({
     });
 
     const utuTasks = currentJiraTasks.filter(jt => jt.key.startsWith('UTU-'));
-    console.log("[ObjectivesSync] Total UTU tasks found:", utuTasks.length);
-    console.log("[ObjectivesSync] Is UTU-350 in list?", currentJiraTasks.some(jt => jt.key === 'UTU-350'));
 
     return Object.values(groups).map(group => {
       const objTitle = (group.title || "").toLowerCase();
@@ -177,9 +170,6 @@ export default function ObjectivesTab({
 
           if (mentionsKR || krPhraseMatch) {
             linkedToKR.push(task);
-            if (task.fields.subtasks?.length > 0) {
-              console.log(`[JiraDebug] Task ${task.key} has ${task.fields.subtasks.length} subtasks. First subtask status:`, task.fields.subtasks[0].fields?.status?.name);
-            }
             if (!objectiveTasks.find(t => t.key === task.key)) {
               objectiveTasks.push(task);
             }
@@ -208,9 +198,7 @@ export default function ObjectivesTab({
   };
 
   const loadData = async () => {
-    console.log("[ObjectivesTab] loadData triggered. Jira tasks available:", jiraTasks.length);
     if (initialObjectives && initialObjectives.length > 0) {
-      console.log("[ObjectivesTab] Processing initialObjectives with", jiraTasks.length, "Jira tasks");
       setObjectives(processData(initialObjectives, jiraTasks));
       setLoading(false);
       return;
@@ -277,11 +265,7 @@ export default function ObjectivesTab({
       document.body.style.overflow = 'hidden';
       const timer = setTimeout(() => {
         const el = document.getElementById("objective-detail-drawer-content");
-        if (el) {
-          console.log("[Drawer Debug] Height:", el.offsetHeight, "Viewport:", window.innerHeight);
-          console.log("[Drawer Debug] ClientHeight:", el.clientHeight, "ScrollHeight:", el.scrollHeight);
-          console.log("[Drawer Debug] BoundingClientRect:", el.getBoundingClientRect());
-        }
+        // Debug measurements can be inspected in browser DevTools if needed
       }, 500);
       return () => {
         document.body.style.overflow = 'unset';

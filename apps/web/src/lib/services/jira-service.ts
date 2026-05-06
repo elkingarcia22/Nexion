@@ -29,11 +29,8 @@ export async function fetchJiraIssues(config: JiraConfig, jql: string = "updated
     
     let nextPageToken: string | undefined = undefined;
     let isLast = false;
-    
-    console.log(`[JiraService] Starting fetch for up to ${totalToFetch} issues...`);
 
     while (!isLast && allIssues.length < totalToFetch) {
-      console.log(`[JiraService] Fetching page... ${nextPageToken ? 'with token' : 'first page'}`);
       
       const response: Response = await fetch('/api/jira/test', {
         method: 'POST',
@@ -53,9 +50,7 @@ export async function fetchJiraIssues(config: JiraConfig, jql: string = "updated
         const pageIssues = result.data.issues || [];
         isLast = result.data.isLast;
         nextPageToken = result.data.nextPageToken;
-        
-        console.log(`[JiraService] Received ${pageIssues.length} issues. isLast: ${isLast}`);
-        
+
         allIssues = [...allIssues, ...pageIssues];
 
         // Deduplicate
@@ -71,7 +66,6 @@ export async function fetchJiraIssues(config: JiraConfig, jql: string = "updated
       }
     }
 
-    console.log(`[JiraService] Total unique issues fetched: ${allIssues.length}`);
     return { success: true, issues: allIssues };
   } catch (error: any) {
     console.error("[JiraService] Error in fetchJiraIssues:", error);

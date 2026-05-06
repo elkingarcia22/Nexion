@@ -20,8 +20,6 @@ export interface AnalysisResult {
 
 export async function analyzeDay(data: AnalysisRequest): Promise<AnalysisResult> {
   try {
-    console.log("Starting Day Analysis with sources:", data.sources.length);
-
     const response = await fetch("/api/analyze", {
       method: "POST",
       headers: {

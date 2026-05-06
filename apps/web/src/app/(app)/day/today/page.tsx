@@ -167,9 +167,9 @@ const typeStyles: Record<SourceType, string> = {
 /* ─── Shared Helpers ─────────────────────────────────────────── */
 
 const categorizeItem = (item: any, objectives: any[] = [], jiraTasks: any[] = []) => {
-  const context = (item.team || item.category || "").toLowerCase();
-  const title = (item.title || "").toLowerCase();
-  const content = (item.description || item.content || item.comentario || "").toLowerCase();
+  const context = String(item.team || item.category || "").toLowerCase();
+  const title = String(item.title || "").toLowerCase();
+  const content = String(item.description || item.content || item.comentario || "").toLowerCase();
   const combinedText = `${context} ${title} ${content}`.toLowerCase();
   
   const linkedGoal = objectives.find(o => o.id === item.goal_id);
@@ -194,7 +194,7 @@ const categorizeItem = (item: any, objectives: any[] = [], jiraTasks: any[] = []
 };
 
 const getResponsable = (item: any): string => {
-  return item.responsible || item.assignee_name || item.assignee || "Sin asignar";
+  return item.responsible || item.assignee_name || item.assignee?.displayName || "Sin asignar";
 };
 
 const ResponsablePills = ({ items, filter, setFilter }: {
@@ -793,6 +793,7 @@ export default function DayTodayPage() {
 
     const result = await getTasks(wsId);
     let localTasks = result.success ? (result.data || []) : [];
+    console.log('[Tasks] Loaded from DB:', localTasks.length, 'tasks', localTasks);
 
     // Jira sync if config exists
     if (wsData?.jira_config) {
@@ -929,11 +930,14 @@ export default function DayTodayPage() {
           ...linkedTasks.filter(lt => !lt.isLinkedChild)
         ];
 
+        console.log('[Tasks] Final structured tasks with Jira:', finalTasks.length, finalTasks);
         setStructuredTasks(finalTasks);
       } else {
+        console.log('[Tasks] Final structured tasks (no Jira):', localTasks.length, localTasks);
         setStructuredTasks(localTasks);
       }
     } else {
+      console.log('[Tasks] Final structured tasks (no Jira config):', localTasks.length, localTasks);
       setStructuredTasks(localTasks);
     }
   };
@@ -979,66 +983,58 @@ export default function DayTodayPage() {
   // State to track manual analysis (show "Analizando..." message)
   const [manualAnalyzeActive, setManualAnalyzeActive] = useState(false);
 
+  // Parse time from ISO string without timezone conversion
+  const parseISOTimeWithTimezone = (isoString: string): { hours: number; minutes: number; isAllDay?: boolean } => {
+    // Handle both date-only and datetime formats
+    // Date only: "2026-05-01"
+    // Datetime: "2026-05-06T09:00:00-05:00" or "2026-05-06T09:00:00Z"
+    const timeMatch = isoString.match(/T(\d{2}):(\d{2}):/);
+    if (timeMatch) {
+      return {
+        hours: parseInt(timeMatch[1], 10),
+        minutes: parseInt(timeMatch[2], 10)
+      };
+    }
+    // No time portion means all-day event
+    return { hours: 0, minutes: 0, isAllDay: true };
+  };
+
   // Calculate time metrics based on calendar events (8am-6pm workday)
   const calculateTimeMetrics = useCallback((events: any[]) => {
     const WORKDAY_START = 8; // 8am
     const WORKDAY_END = 18; // 6pm
     const TOTAL_WORKDAY_HOURS = WORKDAY_END - WORKDAY_START; // 10 hours
 
-    console.log("[calculateTimeMetrics] 📊 INICIANDO CÁLCULO DE MÉTRICAS");
-    console.log("[calculateTimeMetrics] Total events recibidos:", events?.length || 0);
-
     let totalMeetingMinutes = 0;
 
     events?.forEach((event, idx) => {
-      console.log(`[calculateTimeMetrics] [${idx}] Event:`, {
-        summary: event.summary,
-        start: event.start,
-        end: event.end,
-        hasDatetime: !!event.start?.dateTime && !!event.end?.dateTime,
-        hasDate: !!event.start?.date && !!event.end?.date,
-      });
+      // Events have start/end as direct string properties (not nested objects)
+      const startStr = event.start?.dateTime || event.start || "";
+      const endStr = event.end?.dateTime || event.end || "";
 
-      if (event.start?.dateTime && event.end?.dateTime) {
-        const start = new Date(event.start.dateTime);
-        const end = new Date(event.end.dateTime);
+      // Skip if no start/end
+      if (!startStr || !endStr) {
+        return;
+      }
 
-        // Only count meetings that overlap with workday
-        const eventStartHour = start.getHours() + start.getMinutes() / 60;
-        const eventEndHour = end.getHours() + end.getMinutes() / 60;
+      // Parse time directly from ISO string
+      const startParsed = parseISOTimeWithTimezone(startStr);
+      const endParsed = parseISOTimeWithTimezone(endStr);
 
-        console.log(`[calculateTimeMetrics] [${idx}] ${event.summary}:`, {
-          startDate: start.toISOString(),
-          endDate: end.toISOString(),
-          eventStartHour,
-          eventEndHour,
-          startTimezone: start.getTimezoneOffset(),
-        });
+      // Skip all-day events
+      if (!startStr.includes('T') || !endStr.includes('T')) {
+        return;
+      }
 
-        // Skip all-day events for time calculation
-        if (eventStartHour === 0 && eventEndHour === 24) {
-          console.log(`[calculateTimeMetrics] [${idx}] ⏭️  SKIPPED (all-day event)`);
-          return;
-        }
+      const eventStartHour = startParsed.hours + startParsed.minutes / 60;
+      const eventEndHour = endParsed.hours + endParsed.minutes / 60;
 
-        const meetingStart = Math.max(eventStartHour, WORKDAY_START);
-        const meetingEnd = Math.min(eventEndHour, WORKDAY_END);
+      const meetingStart = Math.max(eventStartHour, WORKDAY_START);
+      const meetingEnd = Math.min(eventEndHour, WORKDAY_END);
 
-        console.log(`[calculateTimeMetrics] [${idx}] Workday overlap:`, {
-          meetingStart,
-          meetingEnd,
-          overlapExists: meetingEnd > meetingStart,
-        });
-
-        if (meetingEnd > meetingStart) {
-          const eventMinutes = (meetingEnd - meetingStart) * 60;
-          totalMeetingMinutes += eventMinutes;
-          console.log(`[calculateTimeMetrics] [${idx}] ✅ ADDED ${eventMinutes} minutes`);
-        } else {
-          console.log(`[calculateTimeMetrics] [${idx}] ❌ NO OVERLAP (${meetingStart} to ${meetingEnd})`);
-        }
-      } else {
-        console.log(`[calculateTimeMetrics] [${idx}] ❌ SKIPPED (no dateTime, has date: ${!!event.start?.date})`);
+      if (meetingEnd > meetingStart) {
+        const eventMinutes = (meetingEnd - meetingStart) * 60;
+        totalMeetingMinutes += eventMinutes;
       }
     });
 
@@ -1046,14 +1042,6 @@ export default function DayTodayPage() {
     const availableHours = Math.round((TOTAL_WORKDAY_HOURS - meetingHours) * 10) / 10;
     const meetingPercentage = Math.round((meetingHours / TOTAL_WORKDAY_HOURS) * 100);
     const availablePercentage = 100 - meetingPercentage;
-
-    console.log("[calculateTimeMetrics] 🎯 RESULTADO FINAL:", {
-      totalMeetingMinutes,
-      meetingHours,
-      availableHours,
-      meetingPercentage,
-      availablePercentage,
-    });
 
     return {
       totalWorkdayHours: TOTAL_WORKDAY_HOURS,
@@ -1084,17 +1072,6 @@ export default function DayTodayPage() {
 
   // Map a raw DB row to the UI Source shape
 const mapDbSource = (s: any): Source => {
-    console.log("[mapDbSource] RAW DB ROW:", {
-      id: s.id,
-      title: s.title,
-      source_origin: s.source_origin,
-      original_url: s.original_url,
-      source_date: s.source_date,
-      created_at: s.created_at,
-      titleLowercase: s.title?.toLowerCase(),
-      hasGeminiInTitle: s.title?.toLowerCase().includes("notas de gemini")
-    });
-
     const isSlack = s.source_origin === "slack";
     const url: string = s.original_url || "";
 
@@ -1109,7 +1086,6 @@ const mapDbSource = (s: any): Source => {
     else if (url.includes("docs.google.com/document") || url.includes(".docx") || url.includes(".md")) fmt = "DOC";
 
     const isGemini = s.title?.toLowerCase().includes("notas de gemini") || s.title?.toLowerCase().includes("gemini");
-    console.log("[mapDbSource] Detection:", { isSlack, isDriveUrl, isGemini, fmt });
 
     let label: SourceType = "FUENTE EXTERNA";
     if (isSlack) {
@@ -1215,38 +1191,13 @@ const mapDbSource = (s: any): Source => {
 
       // 3. Load DB sources for the selected date only
       const sourcesResult = await getSourcesByDate(wsId, forDate);
-      console.log("[fetchData] 🔍 Sources query result:", {
-        success: sourcesResult.success,
-        count: sourcesResult.data?.length || 0,
-        error: sourcesResult.error,
-        dateQueried: forDate.toISOString()
-      });
 
       const dbRows = sourcesResult.success && sourcesResult.data ? sourcesResult.data : [];
-      console.log("[fetchData] 📋 ALL DB rows returned:", dbRows.length);
-      dbRows.forEach((r: any, i: number) => {
-        console.log(`[fetchData] [${i}] ID:${r.id} | Title:"${r.title}" | Origin:"${r.source_origin}" | Date:"${r.source_date}"`);
-      });
 
-      // DETAILED LOG: Check for Gemini notes specifically
-      const geminiNotes = dbRows.filter(r => r.title?.includes("Notas de Gemini"));
-      const manualSources = dbRows.filter(r => r.source_origin === "manual");
-      const googleSources = dbRows.filter(r => r.source_origin === "google");
-      console.log("[fetchData] 🧩 Source breakdown:", {
-        totalReturned: dbRows.length,
-        geminiNotes: geminiNotes.length,
-        manual: manualSources.length,
-        google: googleSources.length,
-        geminiDetails: geminiNotes.map(g => ({ title: g.title, origin: g.source_origin, hasGeminiString: g.title.includes("Notas de Gemini") }))
-      });
-
-      console.log("[fetchData] MAPPING sources to UI format...");
       const dbSources: Source[] = dbRows.map((r: any, idx: number) => {
         const mapped = mapDbSource(r);
-        console.log(`[fetchData] [${idx}] Mapped: "${r.title}" -> type:"${mapped.type}", isManual:${mapped.isManual}`);
         return mapped;
       });
-      console.log("[fetchData] ✅ All sources mapped, total:", dbSources.length);
       
       // Filter out noise AND duplicates that might already be in DB
       const noiseWords = ["Comprobante", "Transferencia", "Factura", "Payment"];
@@ -1267,30 +1218,14 @@ const mapDbSource = (s: any): Source => {
         return !noiseWords.some(w => s.name.toLowerCase().includes(w.toLowerCase()));
       });
       
-      console.log("[fetchData] After filtering, count:", cleanDbSources.length);
-      
       if (fetchId !== currentFetchIdRef.current) {
-        console.log("[fetchData] Fetch ID mismatch, aborting");
         return;
       }
       setSources(cleanDbSources);
-      console.log("[fetchData] Sources state updated, new count:", cleanDbSources.length);
 
       // 4. Fetch Calendar Events
-      console.log("[fetchData] 📅 Starting calendar fetch for:", dateStr);
       setCalendarLoading(true);
       const calendarResult = await fetchGoogleCalendarEvents(dateStr);
-
-      console.log("[fetchData] 📅 Calendar fetch result:", {
-        success: calendarResult.success,
-        eventsCount: calendarResult.events?.length || 0,
-        error: calendarResult.error,
-        eventsSummary: calendarResult.events?.map((e: any) => ({
-          summary: e.summary,
-          start: e.start,
-          end: e.end,
-        })) || [],
-      });
 
       if (fetchId !== currentFetchIdRef.current) return;
       setCalendarLoading(false);
@@ -1300,7 +1235,6 @@ const mapDbSource = (s: any): Source => {
         // Calculate time metrics based on meetings
         const metrics = calculateTimeMetrics(calendarResult.events);
         setTimeMetrics(metrics);
-        console.log("[fetchData] ✅ Time metrics calculated:", metrics);
       } else if (!calendarResult.success && calendarResult.error) {
         // If it's a 401/403 or token error, we want the global banner to show
         setSyncError(calendarResult.error);
@@ -1313,31 +1247,18 @@ const mapDbSource = (s: any): Source => {
       }
 
       // 5. Sync ONLY Gemini notes from Google Drive for today
-      console.log("[fetchData] 🔄 Starting Google Drive sync - ONLY Gemini notes");
       if (fetchId !== currentFetchIdRef.current) return;
       setDriveSyncing(true);
 
       try {
         const driveResult = await fetchGoogleDriveFiles("all", dateStr);
-        console.log("[fetchData] 🔍 Google Drive sync result:", {
-          success: driveResult.success,
-          totalFiles: driveResult.files?.length || 0,
-          error: driveResult.error
-        });
 
         if (driveResult.success && driveResult.files && driveResult.files.length > 0) {
           // FILTER: Only Gemini notes - title must contain "Notas de Gemini"
           const geminiNotesOnly = driveResult.files.filter((f: any) => {
             const hasGeminiInTitle = f.name?.toLowerCase().includes("notas de gemini");
-            if (hasGeminiInTitle) {
-              console.log("[fetchData] ✅ GEMINI NOTE FOUND:", f.name);
-            } else {
-              console.log("[fetchData] ❌ IGNORED (not Gemini note):", f.name);
-            }
             return hasGeminiInTitle;
           });
-
-          console.log("[fetchData] 🧩 Gemini notes found:", geminiNotesOnly.length, "from", driveResult.files.length, "total files");
 
           if (geminiNotesOnly.length > 0) {
             // Add to sources state
@@ -1370,7 +1291,6 @@ const mapDbSource = (s: any): Source => {
               // Merge: DB sources + Gemini notes (no duplicates by ID)
               const allIds = new Set(prevSources.map(s => s.id));
               const newGemini = geminiSources.filter(g => !allIds.has(g.id));
-              console.log("[fetchData] 🔗 Merging sources: DB sources + new Gemini notes");
               return [...prevSources, ...newGemini];
             });
           }
@@ -1409,7 +1329,6 @@ const mapDbSource = (s: any): Source => {
 
   // Re-fetch whenever selected date changes
   useEffect(() => {
-    console.log("[DateChange] Fetching data for new date:", selectedDate.toDateString());
     autoAnalyzeTriggeredRef.current = false;
     fetchData(selectedDate);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1424,24 +1343,13 @@ const mapDbSource = (s: any): Source => {
     const hasCheckedSources = sources.some(s => s.checked);
     const currentSourceCount = sources.length;
     
-    console.log("[AutoAnalyze] Checking:", { 
-      hasRealSummary, 
-      hasCheckedSources, 
-      sourcesCount: currentSourceCount,
-      prevSourceCount: prevSourceCountRef.current,
-      isAnalyzing, 
-      workspaceId,
-      summaryData: !!summaryData
-    });
-    
     // Detect new sources added (source count increased)
     const newSourcesAdded = currentSourceCount > prevSourceCountRef.current;
     if (newSourcesAdded) {
-      console.log("[AutoAnalyze] New sources detected, resetting flag");
       autoAnalyzeTriggeredRef.current = false;
     }
     prevSourceCountRef.current = currentSourceCount;
-    
+
     // Trigger if: no summary OR new sources, and has checked sources, and not already analyzing
     if (
       hasCheckedSources &&
@@ -1451,7 +1359,6 @@ const mapDbSource = (s: any): Source => {
       (!hasRealSummary || newSourcesAdded)
     ) {
       autoAnalyzeTriggeredRef.current = true;
-      console.log("[AutoAnalyze] Triggering analysis...");
       handleAnalyzeDay();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1464,10 +1371,8 @@ const mapDbSource = (s: any): Source => {
     }
 
     const checkedSources = sources.filter(s => s.checked);
-    console.log("[AnalyzeDay] Starting analysis with", checkedSources.length, "checked sources");
-    
+
     if (checkedSources.length === 0) {
-      console.warn("[AnalyzeDay] No checked sources");
       if (activeTab !== "fuentes") {
         setActiveTab("fuentes");
       }
@@ -1483,42 +1388,21 @@ const mapDbSource = (s: any): Source => {
       const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
       const d = String(selectedDate.getDate()).padStart(2, "0");
       const dateStr = `${y}-${m}-${d}`;
-      console.log("[AnalyzeDay] Date string:", dateStr);
-
       // 1. Fetch contents for all checked sources to provide context to Gemini
       setIsAnalyzing(true);
-      console.log("[AnalyzeDay] Fetching content for", checkedSources.length, "sources");
       const sourcesWithContent = await Promise.all(checkedSources.map(async (s) => {
         let content = "";
-        
-        // Debug: log all possible content fields
-        console.log("[AnalyzeDay] Source:", s.name, {
-          origin: s.origin,
-          source_origin: s.source_origin,
-          isManual: s.isManual,
-          hasDescription: !!s.description,
-          descriptionLength: s.description?.length || 0,
-          hasMetadataContent: !!s.metadata?.content,
-          metadataContentLength: s.metadata?.content?.length || 0,
-          externalSourceId: s.externalSourceId
-        });
-        
+
         if ((s.origin === 'google' || s.source_origin === 'google') && s.externalSourceId) {
           // Fetch from Google Drive
-          console.log("[AnalyzeDay] Fetching Drive content for:", s.name);
           const driveContent = await fetchGoogleFileContent(s.externalSourceId as string, s.mimeType as string);
           content = driveContent || "";
-          console.log("[AnalyzeDay] Got Drive content length:", content.length);
         } else if (s.description && s.description.length > 0) {
           // ANY source with description field (manual notes, Slack messages, etc.)
           content = s.description;
-          console.log("[AnalyzeDay] Using description field, length:", content.length);
         } else if (s.metadata?.content) {
           // Fallback to metadata.content
           content = s.metadata.content;
-          console.log("[AnalyzeDay] Using metadata.content, length:", content.length);
-        } else {
-          console.log("[AnalyzeDay] No content for source:", s.name, "- description:", !!s.description, "metadata.content:", !!s.metadata?.content);
         }
         
         return {
@@ -1529,14 +1413,11 @@ const mapDbSource = (s: any): Source => {
           content: content
         };
       }));
-      console.log("[AnalyzeDay] Sources with content:", sourcesWithContent.map(s => ({ name: s.name, contentLength: s.content?.length || 0 })));
       const withContent = sourcesWithContent.filter(s => s.content && s.content.length > 0);
-      console.log("[AnalyzeDay] Sources WITH actual content:", withContent.length, "out of", sourcesWithContent.length);
 
       // 1. Run the analysis with full content and user context
       // Compute userName directly from user state to avoid initialization issues
       const currentUserName = user?.user_metadata?.full_name || summaryData?.profiles?.full_name || "Usuario";
-      console.log("[AnalyzeDay] Using userName:", currentUserName);
       
       const result = await analyzeDay({
         date: dateStr,
@@ -1654,18 +1535,8 @@ const mapDbSource = (s: any): Source => {
   };
 
   const filteredSources = sources.filter((s) => {
-    console.log("[FILTER] Processing source:", {
-      name: s.name,
-      type: s.type,
-      origin: s.origin,
-      url: s.url?.substring(0, 50),
-      typeFilter,
-      formatFilter
-    });
-
     // If user selected specific filters, apply them
     if (typeFilter !== "all" || formatFilter !== "all") {
-      console.log("[FILTER] Custom filters applied: typeFilter=" + typeFilter + ", formatFilter=" + formatFilter);
       // Apply type filter
       if (typeFilter !== "all") {
         if (typeFilter === "FUENTE EXTERNA" && (s.origin !== "google" && s.origin !== "slack")) return false;
@@ -1681,46 +1552,19 @@ const mapDbSource = (s: any): Source => {
       return true;
     }
 
-    // Default: show only Gemini notes + truly manual sources (no Drive URL)
-    const isDriveFile = s.url?.includes("docs.google.com") || s.url?.includes("drive.google.com");
+    // Default: show only Notas de Gemini + Fuentes Externas (manually added only)
+    // Fuentes externas include: Slack, Google Drive (DOCUMENTO/SHEET/SLIDE), and manually added external URLs
     const isGeminiNote = s.type === "NOTAS DE GEMINI";
-    const isSimpleManual = s.origin === "manual" && !isDriveFile;
 
-    console.log("[FILTER] Default filter check:", {
-      name: s.name,
-      isDriveFile,
-      isGeminiNote,
-      isSimpleManual,
-      willInclude: isGeminiNote || isSimpleManual
-    });
+    // For SHEET: exclude if they have externalSourceId (auto-synced from Drive)
+    // Only show SHEET that were manually linked
+    const isSheetAutoSynced = s.type === "SHEET" && s.externalSourceId;
+    const isSheetManuallyAdded = s.type === "SHEET" && !s.externalSourceId;
 
-    // Gemini notes: always show if returned by the date query
-    if (isGeminiNote) {
-      console.log("[FILTER] ✅ INCLUDING (Gemini note):", s.name);
-      return true;
-    }
+    const isOtherExternalSource = ["SLACK", "DOCUMENTO", "SLIDE", "FUENTE EXTERNA"].includes(s.type);
+    const isExternalSource = isSheetManuallyAdded || isOtherExternalSource;
 
-    const shouldShow = isSimpleManual;
-
-    if (!shouldShow) {
-      console.log("[FILTER] ❌ EXCLUDING:", s.name, "| type:", s.type, "| origin:", s.origin, "| isDriveFile:", isDriveFile);
-    } else {
-      console.log("[FILTER] ✅ INCLUDING (Simple manual):", s.name);
-    }
-
-    return shouldShow;
-  });
-
-  console.log("[FILTEREDSOURCES FINAL]", {
-    totalInState: sources.length,
-    shownAfterFiltering: filteredSources.length,
-    filterSettings: { typeFilter, formatFilter },
-    byType: {
-      gemini: filteredSources.filter(s => s.type === "NOTAS DE GEMINI").length,
-      manual: filteredSources.filter(s => s.origin === "manual").length,
-      google: filteredSources.filter(s => s.origin === "google").length,
-      other: filteredSources.filter(s => s.origin !== "google" && s.origin !== "manual").length
-    }
+    return isGeminiNote || isExternalSource;
   });
 
   const checkedCount = filteredSources.filter((s) => s.checked).length;
@@ -2204,8 +2048,8 @@ const mapDbSource = (s: any): Source => {
                   }).length}
                 </span>
               </div>
-              
-              <button 
+
+              <button
                 onClick={() => setTaskDrawerOpen(true)}
                 className="px-4 py-1.5 bg-card border border-white/20 text-white/60 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all flex items-center gap-2"
               >
@@ -2215,54 +2059,109 @@ const mapDbSource = (s: any): Source => {
                 AÑADIR
               </button>
             </div>
-            
+
+            {/* Team filters */}
+            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 w-fit">
+              <button
+                onClick={() => { setJiraSubTab('talent'); setResponsableFilter("todos"); }}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                  jiraSubTab === 'talent' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                }`}
+              >
+                TALENT
+              </button>
+              <button
+                onClick={() => { setJiraSubTab('hiring'); setResponsableFilter("todos"); }}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                  jiraSubTab === 'hiring' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                }`}
+              >
+                HIRING
+              </button>
+              <button
+                onClick={() => { setJiraSubTab('ux'); setResponsableFilter("todos"); }}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                  jiraSubTab === 'ux' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                }`}
+              >
+                UX TEAM
+              </button>
+              <button
+                onClick={() => { setJiraSubTab('otras'); setResponsableFilter("todos"); }}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                  jiraSubTab === 'otras' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                }`}
+              >
+                OTRAS
+              </button>
+            </div>
+
             {(() => {
               const today = new Date();
               today.setHours(0,0,0,0);
-              
-              const pendingTasks = structuredTasks.filter((task: any) => {
+
+              const pendingTasksByStatus = structuredTasks.filter((task: any) => {
                 const isDone = task.status?.toLowerCase().includes('done') || task.status?.toLowerCase().includes('finalizada');
                 if (isDone) return false;
-                
-                const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
+
+                // Show all pending/in-progress tasks, not just those due today
+                const isPending = task.status?.toLowerCase().includes('pend') || task.status?.toLowerCase().includes('pendiente') || task.status?.toLowerCase().includes('todo');
                 const isInProgress = task.status?.toLowerCase().includes('progress') || task.status?.toLowerCase().includes('curso');
+                const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
                 const isOverdue = task.due_date && new Date(task.due_date) < today && !isDone;
-                
-                return isDueToday || isInProgress || isOverdue;
+
+                return isPending || isInProgress || isDueToday || isOverdue;
               });
+
+              const tasksByTeam = pendingTasksByStatus.filter((task: any) => {
+                return categorizeItem(task, objectives, structuredTasks.filter((t: any) => t.origin === 'jira')) === jiraSubTab;
+              });
+
+              const pendingTasks = responsableFilter === "todos"
+                ? tasksByTeam
+                : tasksByTeam.filter((task: any) => getResponsable(task) === responsableFilter);
+
+              console.log('[Filter] Pending by status:', pendingTasksByStatus.length, pendingTasksByStatus);
+              console.log('[Filter] Pending by team:', tasksByTeam.length, 'team filter:', jiraSubTab);
+              console.log('[Filter] Final pending tasks:', pendingTasks.length, pendingTasks);
 
               if (pendingTasks.length === 0) {
                 return (
-                  <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-white/10 p-8 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center mx-auto mb-4">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                        <polyline points="22 4 12 14.01 9 11.01" />
-                      </svg>
+                  <div>
+                    <ResponsablePills items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+                    <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-white/10 p-8 text-center mt-4">
+                      <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center mx-auto mb-4">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-white/40 font-medium">¡Sin tareas pendientes para hoy!</p>
+                      <p className="text-xs text-white/20 mt-1">Aprovecha tu tiempo disponible para avanzar en proyectos largos.</p>
                     </div>
-                    <p className="text-sm text-white/40 font-medium">¡Sin tareas pendientes para hoy!</p>
-                    <p className="text-xs text-white/20 mt-1">Aprovecha tu tiempo disponible para avanzar en proyectos largos.</p>
                   </div>
                 );
               }
 
               return (
-                <div className="space-y-2">
-                  {pendingTasks.slice(0, 8).map((task: any) => {
-                    const isOverdue = task.due_date && new Date(task.due_date) < today && !(task.status?.toLowerCase().includes('done'));
-                    const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
-                    
-                    return (
-                      <div 
-                        key={task.id}
-                        onClick={() => handleEditTask(task)}
-                        className={`bg-card rounded-2xl border p-4 hover:border-primary/30 transition-all cursor-pointer group ${
-                          isOverdue ? 'border-red-500/30 bg-red-500/5' : 'border-white/10'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                <div className="space-y-4">
+                  <ResponsablePills items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+                  <div className="space-y-2">
+                    {pendingTasks.slice(0, 8).map((task: any) => {
+                      const isOverdue = task.due_date && new Date(task.due_date) < today && !(task.status?.toLowerCase().includes('done'));
+                      const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
+
+                      return (
+                        <div
+                          key={task.id}
+                          onClick={() => handleEditTask(task)}
+                          className={`bg-card rounded-2xl border p-4 hover:border-primary/30 transition-all cursor-pointer group ${
+                            isOverdue ? 'border-red-500/30 bg-red-500/5' : 'border-white/10'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 flex-1">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                               task.origin === 'jira' ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/10 text-primary'
                             }`}>
                               {task.origin === 'jira' ? (
@@ -2314,6 +2213,7 @@ const mapDbSource = (s: any): Source => {
                       +{pendingTasks.length - 8} tareas más...
                     </p>
                   )}
+                  </div>
                 </div>
                 );
             })()}
@@ -2600,45 +2500,14 @@ const mapDbSource = (s: any): Source => {
         open={drawerOpen} 
         onClose={() => setDrawerOpen(false)} 
         onAdd={(newSource) => {
-          console.log("[AddSource] New source added:", newSource);
           setDrawerOpen(false);
           // Reset auto-analyze flag and refresh data
           autoAnalyzeTriggeredRef.current = false;
-          console.log("[AddSource] selectedDate:", selectedDate.toDateString());
           // Force immediate refresh
-          console.log("[AddSource] Calling fetchData immediately...");
           fetchData(selectedDate);
         }}
         sourceDate={selectedDate}
       />
-      <button
-        onClick={async () => {
-          // Debug: check what's in DB for today (with date filter)
-          const y = selectedDate.getFullYear();
-          const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
-          const d = String(selectedDate.getDate()).padStart(2, "0");
-          const dateStr = `${y}-${m}-${d}`;
-          console.log("[Debug] Checking DB for date:", dateStr);
-          const { data, error } = await supabase
-            .from("sources")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .eq("source_date", dateStr);
-          console.log("[Debug] DB sources for today:", { count: data?.length || 0, error, sample: data?.slice(0, 3) });
-          
-          // Also check ALL sources for workspace (no date filter)
-          const { data: allData, error: allError } = await supabase
-            .from("sources")
-            .select("*")
-            .eq("workspace_id", workspaceId)
-            .order("created_at", { ascending: false })
-            .limit(20);
-          console.log("[Debug] ALL recent sources:", { count: allData?.length || 0, allError, sample: allData?.slice(0, 5).map(s => ({ title: s.title, source_date: s.source_date })) });
-        }}
-        className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg text-xs font-bold z-50"
-      >
-        DEBUG DB
-      </button>
 
       <TaskDrawer 
         open={taskDrawerOpen}

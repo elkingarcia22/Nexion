@@ -339,9 +339,7 @@ export function TaskDrawer({
   const [draggedSubtaskId, setDraggedSubtaskId] = useState<number | null>(null);
 
   useEffect(() => {
-    console.log("TaskDrawer Received Task:", task);
     if (task) {
-      console.log("Setting formData for task:", task.title);
       const isJira = task.origin === 'jira';
       
       // Parse Jira comments into activity format
