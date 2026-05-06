@@ -1257,19 +1257,74 @@ const mapDbSource = (s: any): Source => {
         await fetchAlerts(wsId, dateStr);
       }
 
-      // 5. DISABLED: Auto-sync Drive files - only show manually added sources and Gemini notes
-      // Google Drive sync was creating 10+ automatic sources per day, cluttering the view.
-      // Re-enable this section if we want automatic Google Drive sync in the future.
-
-      /*
-      const existingUrls = new Set(dbRows.map((s: any) => s.original_url).filter(Boolean));
+      // 5. Sync ONLY Gemini notes from Google Drive for today
+      console.log("[fetchData] 🔄 Starting Google Drive sync - ONLY Gemini notes");
       if (fetchId !== currentFetchIdRef.current) return;
       setDriveSyncing(true);
-      const driveResult = await fetchGoogleDriveFiles("all", dateStr);
-      ... (Google Drive sync code disabled)
-      */
 
-      setDriveSyncing(false);
+      try {
+        const driveResult = await fetchGoogleDriveFiles("all", dateStr);
+        console.log("[fetchData] 🔍 Google Drive sync result:", {
+          success: driveResult.success,
+          totalFiles: driveResult.files?.length || 0,
+          error: driveResult.error
+        });
+
+        if (driveResult.success && driveResult.files && driveResult.files.length > 0) {
+          // FILTER: Only Gemini notes - title must contain "Notas de Gemini"
+          const geminiNotesOnly = driveResult.files.filter((f: any) => {
+            const hasGeminiInTitle = f.name?.toLowerCase().includes("notas de gemini");
+            if (hasGeminiInTitle) {
+              console.log("[fetchData] ✅ GEMINI NOTE FOUND:", f.name);
+            } else {
+              console.log("[fetchData] ❌ IGNORED (not Gemini note):", f.name);
+            }
+            return hasGeminiInTitle;
+          });
+
+          console.log("[fetchData] 🧩 Gemini notes found:", geminiNotesOnly.length, "from", driveResult.files.length, "total files");
+
+          if (geminiNotesOnly.length > 0) {
+            // Add to sources state
+            const geminiSources: Source[] = geminiNotesOnly.map((f: any) => ({
+              id: f.id,
+              name: f.name,
+              type: "NOTAS DE GEMINI" as SourceType,
+              format: "DOC",
+              time: new Date(f.createdTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              checked: true,
+              url: f.webViewLink || null,
+              isManual: false,
+              displayTag: "NOTAS DE GEMINI",
+              externalSourceId: f.id,
+              mimeType: f.mimeType || null,
+              origin: "google",
+              source_date: new Date(f.createdTime).toISOString().split('T')[0],
+              created_at: f.createdTime,
+              description: f.description || "",
+              metadata: { mimeType: f.mimeType, webViewLink: f.webViewLink },
+              icon: (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+              ),
+            }));
+
+            setSources((prevSources) => {
+              // Merge: DB sources + Gemini notes (no duplicates by ID)
+              const allIds = new Set(prevSources.map(s => s.id));
+              const newGemini = geminiSources.filter(g => !allIds.has(g.id));
+              console.log("[fetchData] 🔗 Merging sources: DB sources + new Gemini notes");
+              return [...prevSources, ...newGemini];
+            });
+          }
+        }
+      } catch (driveError) {
+        console.error("[fetchData] Drive sync error:", driveError);
+      } finally {
+        setDriveSyncing(false);
+      }
     } catch (err) {
       console.error("Error fetching data:", err);
       setSyncError("Error inesperado al cargar datos.");
