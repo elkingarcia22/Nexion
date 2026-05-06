@@ -80,8 +80,11 @@ interface Source {
   externalSourceId?: string | null;
   mimeType?: string | null;
   origin?: string;
+  source_origin?: string;
   description?: string;
   metadata?: any;
+  source_date?: string;
+  created_at?: string;
 }
 
 const initialSources: Source[] = [
@@ -706,12 +709,15 @@ export default function DayTodayPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [structuredTasks, setStructuredTasks] = useState<any[]>([]);
   const [objectives, setObjectives] = useState<any[]>([]);
-  const [profiles, setProfiles] = useState<any[]>([]);
   const [jiraSubTab, setJiraSubTab] = useState<'talent' | 'hiring' | 'ux' | 'otras'>('talent');
-
+  
+  // User full name
+  const userFullName = user?.user_metadata?.full_name || "Usuario";
+  
   const fetchProfiles = async () => {
     const { data } = await supabase.from("profiles").select("*");
     if (data) setProfiles(data);
@@ -736,7 +742,7 @@ export default function DayTodayPage() {
       const jql = 'assignee = "60cd00d4dae5670068abf978" AND statusCategory = "In Progress" AND (project in ("HIRING", "TALENT", "UTU") OR customfield_10001 ~ "Hiring" OR customfield_10001 ~ "Talent")';
       const jiraResult = await fetchJiraIssues(wsData.jira_config, jql);
       
-      if (jiraResult.success) {
+      if (jiraResult.success && jiraResult.issues) {
         // Step 1: Collect all subtask keys to fetch full details
         const subtaskKeys: string[] = [];
         jiraResult.issues.forEach((issue: any) => {
@@ -750,14 +756,14 @@ export default function DayTodayPage() {
         if (subtaskKeys.length > 0) {
           const subtasksJql = `key in (${subtaskKeys.join(',')})`;
           const subtasksResult = await fetchJiraIssues(wsData.jira_config, subtasksJql);
-          if (subtasksResult.success) {
+          if (subtasksResult.success && subtasksResult.issues) {
             subtasksResult.issues.forEach((si: any) => {
               fullSubtasksMap[si.key] = si;
             });
           }
         }
 
-        const jiraTasks = jiraResult.issues
+        const jiraTasks = (jiraResult.issues || [])
           .filter((issue: any) => !issue.fields?.issuetype?.subtask)
           .map((issue: any) => {
           const jiraTitle = issue.fields?.summary;
@@ -892,6 +898,90 @@ export default function DayTodayPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  
+  // Time calculation states (8am-6pm workday)
+  const [timeMetrics, setTimeMetrics] = useState<{
+    totalWorkdayHours: number;
+    meetingHours: number;
+    availableHours: number;
+    meetingPercentage: number;
+    availablePercentage: number;
+  }>({
+    totalWorkdayHours: 10, // 8am-6pm = 10 hours
+    meetingHours: 0,
+    availableHours: 10,
+    meetingPercentage: 0,
+    availablePercentage: 100,
+  });
+  
+  // Alerts state
+  const [alerts, setAlerts] = useState<any[]>([]);
+  
+  // Ref to track auto-analysis triggering
+  const autoAnalyzeTriggeredRef = useRef(false);
+  // State to track manual analysis (show "Analizando..." message)
+  const [manualAnalyzeActive, setManualAnalyzeActive] = useState(false);
+
+  // Calculate time metrics based on calendar events (8am-6pm workday)
+  const calculateTimeMetrics = useCallback((events: any[]) => {
+    const WORKDAY_START = 8; // 8am
+    const WORKDAY_END = 18; // 6pm
+    const TOTAL_WORKDAY_HOURS = WORKDAY_END - WORKDAY_START; // 10 hours
+    
+    let totalMeetingMinutes = 0;
+    
+    events.forEach(event => {
+      if (event.start?.dateTime && event.end?.dateTime) {
+        const start = new Date(event.start.dateTime);
+        const end = new Date(event.end.dateTime);
+        
+        // Only count meetings that overlap with workday
+        const eventStartHour = start.getHours() + start.getMinutes() / 60;
+        const eventEndHour = end.getHours() + end.getMinutes() / 60;
+        
+        // Skip all-day events for time calculation
+        if (eventStartHour === 0 && eventEndHour === 24) return;
+        
+        const meetingStart = Math.max(eventStartHour, WORKDAY_START);
+        const meetingEnd = Math.min(eventEndHour, WORKDAY_END);
+        
+        if (meetingEnd > meetingStart) {
+          totalMeetingMinutes += (meetingEnd - meetingStart) * 60;
+        }
+      }
+    });
+    
+    const meetingHours = Math.round(totalMeetingMinutes / 60 * 10) / 10;
+    const availableHours = Math.round((TOTAL_WORKDAY_HOURS - meetingHours) * 10) / 10;
+    const meetingPercentage = Math.round((meetingHours / TOTAL_WORKDAY_HOURS) * 100);
+    const availablePercentage = 100 - meetingPercentage;
+    
+    return {
+      totalWorkdayHours: TOTAL_WORKDAY_HOURS,
+      meetingHours,
+      availableHours: Math.max(0, availableHours),
+      meetingPercentage,
+      availablePercentage: Math.max(0, availablePercentage),
+    };
+  }, []);
+
+  // Fetch alerts for the day
+  const fetchAlerts = useCallback(async (wsId: string, dateStr: string) => {
+    try {
+      // Fetch from task_proposals table where priority is high/critical or status indicates alert
+      const { data, error } = await supabase
+        .from("task_proposals")
+        .select("*")
+        .eq("workspace_id", wsId)
+        .or("priority.eq.High,priority.eq.Highest,status.eq.Blocked,status.eq.Critical");
+      
+      if (!error && data) {
+        setAlerts(data.filter(a => a.priority === 'High' || a.priority === 'Highest').slice(0, 5));
+      }
+    } catch (err) {
+      console.error("Error fetching alerts:", err);
+    }
+  }, []);
 
   // Map a raw DB row to the UI Source shape
 const mapDbSource = (s: any): Source => {
@@ -935,11 +1025,15 @@ const isSlack = s.source_origin === "slack";
       externalSourceId: s.external_source_id,
       mimeType: s.metadata?.mimeType || null,
       origin: s.source_origin,
-      description: s.metadata?.preview || s.metadata?.description || (s.metadata?.messages ? `${s.metadata.messages.length} mensajes` : ""),
+      // Preserve date fields for filtering
+      source_date: s.source_date,
+      created_at: s.created_at,
+      // Extract content from metadata for manual sources
+      description: s.metadata?.content || s.metadata?.preview || s.metadata?.description || (s.metadata?.messages ? `${s.metadata.messages.length} mensajes` : ""),
       metadata: s.metadata || {},
       icon: isSlack ? (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#E01E5A">
-          <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.522 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.166 0a2.528 2.528 0 0 1 2.522 2.522v6.312zM15.166 18.956a2.528 2.528 0 0 1 2.522 2.522A2.528 2.528 0 0 1 15.166 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.166 17.688a2.527 2.527 0 0 1-2.52-2.52 2.526 2.526 0 0 1 2.52-2.522h6.312A2.527 2.527 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.522h-6.312z"/>
+          <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.521-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.522 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.166 0a2.528 2.528 0 0 1 2.522 2.522v6.312zM15.166 18.956a2.528 2.528 0 0 1 2.522 2.522A2.528 2.528 0 0 1 15.166 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.166 17.688a2.527 2.527 0 0 1-2.52-2.52 2.526 2.526 0 0 1 2.52-2.522h6.312A2.527 2.527 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.522h-6.312z"/>
         </svg>
       ) : (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -991,16 +1085,8 @@ const isSlack = s.source_origin === "slack";
       setWorkspaceId(wsId);
       loadStructuredTasks(wsId, wsResult.data);
       fetchProfiles();
-      fetchObjectives();
-
-      // Load objectives and profiles for mapping
-      const { data: objData } = await supabase
-        .from("workspace_objectives")
-        .select("id, title")
-        .eq("workspace_id", wsId);
-      if (objData) setObjectives(objData);
-      
-      fetchProfiles();
+      // NOTE: Objetivos removidos de la carga inicial del tab Hoy
+      // Se cargan solo si es necesario para otras pestañas
 
       // 2. Load existing summary
       const y = forDate.getFullYear();
@@ -1016,16 +1102,24 @@ const isSlack = s.source_origin === "slack";
 
       // 3. Load DB sources for the selected date only
       const sourcesResult = await getSourcesByDate(wsId, forDate);
+      console.log("[fetchData] Sources query result:", { 
+        success: sourcesResult.success, 
+        count: sourcesResult.data?.length || 0,
+        error: sourcesResult.error 
+      });
+      
       const dbRows = sourcesResult.success && sourcesResult.data ? sourcesResult.data : [];
+      console.log("[fetchData] DB rows sample:", dbRows.slice(0, 2).map(r => ({ id: r.id, title: r.title, source_date: r.source_date })));
       
       const dbSources: Source[] = dbRows.map(mapDbSource);
+      console.log("[fetchData] Mapped sources count:", dbSources.length, "sample:", dbSources.slice(0, 2));
       
       // Filter out noise AND duplicates that might already be in DB
       const noiseWords = ["Comprobante", "Transferencia", "Factura", "Payment"];
       const seenIdsInitial = new Set();
       const seenUrlsInitial = new Set();
       const normalize = (u: string) => u ? u.split("?")[0].replace(/\/$/, "") : "";
-
+      
       const cleanDbSources = dbSources.filter(s => {
         if (seenIdsInitial.has(s.id)) return false;
         seenIdsInitial.add(s.id);
@@ -1035,12 +1129,18 @@ const isSlack = s.source_origin === "slack";
           if (seenUrlsInitial.has(norm)) return false;
           seenUrlsInitial.add(norm);
         }
-
+        
         return !noiseWords.some(w => s.name.toLowerCase().includes(w.toLowerCase()));
       });
-
-      if (fetchId !== currentFetchIdRef.current) return;
+      
+      console.log("[fetchData] After filtering, count:", cleanDbSources.length);
+      
+      if (fetchId !== currentFetchIdRef.current) {
+        console.log("[fetchData] Fetch ID mismatch, aborting");
+        return;
+      }
       setSources(cleanDbSources);
+      console.log("[fetchData] Sources state updated, new count:", cleanDbSources.length);
 
       // 4. Fetch Calendar Events
       setCalendarLoading(true);
@@ -1051,10 +1151,18 @@ const isSlack = s.source_origin === "slack";
       
       if (calendarResult.success && calendarResult.events) {
         setCalendarEvents(calendarResult.events);
+        // Calculate time metrics based on meetings
+        const metrics = calculateTimeMetrics(calendarResult.events);
+        setTimeMetrics(metrics);
       } else if (!calendarResult.success && calendarResult.error) {
         // If it's a 401/403 or token error, we want the global banner to show
         setSyncError(calendarResult.error);
         console.error("Calendar Sync Error:", calendarResult.error);
+      }
+
+      // 5. Fetch alerts for the day
+      if (wsId) {
+        await fetchAlerts(wsId, dateStr);
       }
 
       // 5. Auto-sync Drive files for the selected date
@@ -1075,13 +1183,13 @@ const isSlack = s.source_origin === "slack";
           const fileUrl = normalizeUrl(file.webViewLink);
           const existing = dbRows.find((r: any) => normalizeUrl(r.original_url) === fileUrl);
           
-          if (existing) {
-            if (existing.source_origin === "manual") {
-              await updateSource(existing.id, { source_origin: "google" } as any);
-              setSources(prev => prev.map(s => 
-                s.id === existing.id ? { ...s, isManual: false, type: "NOTAS DE GEMINI" } : s
-              ));
-            }
+            if (existing) {
+              if (existing.source_origin === "manual") {
+                await updateSource({ id: existing.id, source_origin: "google" } as any);
+                setSources(prev => prev.map(s => 
+                  s.id === existing.id ? { ...s, isManual: false, type: "NOTAS DE GEMINI" } : s
+                ));
+              }
             continue;
           }
 
@@ -1155,16 +1263,65 @@ const isSlack = s.source_origin === "slack";
 
   // Re-fetch whenever selected date changes
   useEffect(() => {
+    console.log("[DateChange] Fetching data for new date:", selectedDate.toDateString());
+    autoAnalyzeTriggeredRef.current = false;
     fetchData(selectedDate);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
+  // Auto-analyze: triggers when sources change (new sources added) or no summary exists
+  // Uses a ref to track previous source count to detect new sources
+  const prevSourceCountRef = useRef(0);
+  
+  useEffect(() => {
+    const hasRealSummary = summaryData?.summary_text && summaryData.summary_text.length > 0;
+    const hasCheckedSources = sources.some(s => s.checked);
+    const currentSourceCount = sources.length;
+    
+    console.log("[AutoAnalyze] Checking:", { 
+      hasRealSummary, 
+      hasCheckedSources, 
+      sourcesCount: currentSourceCount,
+      prevSourceCount: prevSourceCountRef.current,
+      isAnalyzing, 
+      workspaceId,
+      summaryData: !!summaryData
+    });
+    
+    // Detect new sources added (source count increased)
+    const newSourcesAdded = currentSourceCount > prevSourceCountRef.current;
+    if (newSourcesAdded) {
+      console.log("[AutoAnalyze] New sources detected, resetting flag");
+      autoAnalyzeTriggeredRef.current = false;
+    }
+    prevSourceCountRef.current = currentSourceCount;
+    
+    // Trigger if: no summary OR new sources, and has checked sources, and not already analyzing
+    if (
+      hasCheckedSources &&
+      !isAnalyzing &&
+      !autoAnalyzeTriggeredRef.current &&
+      workspaceId &&
+      (!hasRealSummary || newSourcesAdded)
+    ) {
+      autoAnalyzeTriggeredRef.current = true;
+      console.log("[AutoAnalyze] Triggering analysis...");
+      handleAnalyzeDay();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId, selectedDate, sources, summaryData]);
+
   const handleAnalyzeDay = async () => {
-    if (!workspaceId) return;
+    if (!workspaceId) {
+      console.error("[AnalyzeDay] No workspaceId");
+      return;
+    }
 
     const checkedSources = sources.filter(s => s.checked);
+    console.log("[AnalyzeDay] Starting analysis with", checkedSources.length, "checked sources");
     
     if (checkedSources.length === 0) {
+      console.warn("[AnalyzeDay] No checked sources");
       if (activeTab !== "fuentes") {
         setActiveTab("fuentes");
       }
@@ -1180,21 +1337,44 @@ const isSlack = s.source_origin === "slack";
       const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
       const d = String(selectedDate.getDate()).padStart(2, "0");
       const dateStr = `${y}-${m}-${d}`;
+      console.log("[AnalyzeDay] Date string:", dateStr);
 
       // 1. Fetch contents for all checked sources to provide context to Gemini
       setIsAnalyzing(true);
+      console.log("[AnalyzeDay] Fetching content for", checkedSources.length, "sources");
       const sourcesWithContent = await Promise.all(checkedSources.map(async (s) => {
         let content = "";
         
+        // Debug: log all possible content fields
+        console.log("[AnalyzeDay] Source:", s.name, {
+          origin: s.origin,
+          source_origin: s.source_origin,
+          isManual: s.isManual,
+          hasDescription: !!s.description,
+          descriptionLength: s.description?.length || 0,
+          hasMetadataContent: !!s.metadata?.content,
+          metadataContentLength: s.metadata?.content?.length || 0,
+          externalSourceId: s.externalSourceId
+        });
+        
         if ((s.origin === 'google' || s.source_origin === 'google') && s.externalSourceId) {
           // Fetch from Google Drive
+          console.log("[AnalyzeDay] Fetching Drive content for:", s.name);
           const driveContent = await fetchGoogleFileContent(s.externalSourceId as string, s.mimeType as string);
           content = driveContent || "";
-        } else if (s.isManual && s.description) {
-          // Manual notes already have content in description
+          console.log("[AnalyzeDay] Got Drive content length:", content.length);
+        } else if (s.description && s.description.length > 0) {
+          // ANY source with description field (manual notes, Slack messages, etc.)
           content = s.description;
+          console.log("[AnalyzeDay] Using description field, length:", content.length);
+        } else if (s.metadata?.content) {
+          // Fallback to metadata.content
+          content = s.metadata.content;
+          console.log("[AnalyzeDay] Using metadata.content, length:", content.length);
+        } else {
+          console.log("[AnalyzeDay] No content for source:", s.name, "- description:", !!s.description, "metadata.content:", !!s.metadata?.content);
         }
-
+        
         return {
           id: s.id,
           name: s.name,
@@ -1203,13 +1383,20 @@ const isSlack = s.source_origin === "slack";
           content: content
         };
       }));
+      console.log("[AnalyzeDay] Sources with content:", sourcesWithContent.map(s => ({ name: s.name, contentLength: s.content?.length || 0 })));
+      const withContent = sourcesWithContent.filter(s => s.content && s.content.length > 0);
+      console.log("[AnalyzeDay] Sources WITH actual content:", withContent.length, "out of", sourcesWithContent.length);
 
       // 1. Run the analysis with full content and user context
+      // Compute userName directly from user state to avoid initialization issues
+      const currentUserName = user?.user_metadata?.full_name || summaryData?.profiles?.full_name || "Usuario";
+      console.log("[AnalyzeDay] Using userName:", currentUserName);
+      
       const result = await analyzeDay({
         date: dateStr,
         meetings: calendarEvents,
         sources: sourcesWithContent,
-        userName: userFullName,
+        userName: currentUserName,
         objectives: objectives,
         jiraContext: structuredTasks.filter(t => t.origin === 'jira').map(jt => ({
           key: jt.external_key,
@@ -1249,6 +1436,7 @@ const isSlack = s.source_origin === "slack";
       setSyncError(err.message || "Error al analizar el día");
     } finally {
       setIsAnalyzing(false);
+      setManualAnalyzeActive(false);
     }
   };
 
@@ -1280,7 +1468,7 @@ const isSlack = s.source_origin === "slack";
     const newTitle = prompt("Nuevo nombre de la fuente:", currentTitle);
     if (!newTitle || newTitle === currentTitle) return;
 
-    const result = await updateSource(id, { title: newTitle });
+    const result = await updateSource({ id, title: newTitle });
     if (result.success) {
       setSources((prev) => prev.map((s) => s.id === id ? { ...s, name: newTitle } : s));
     } else {
@@ -1305,11 +1493,53 @@ const isSlack = s.source_origin === "slack";
   };
 
   const filteredSources = sources.filter((s) => {
-    const isSlack = s.origin === "slack";
+    // Debug: Log all sources being evaluated
+    console.log("[filteredSources] Evaluating source:", {
+      name: s.name,
+      type: s.type,
+      origin: s.origin,
+      source_origin: s.source_origin,
+      source_date: s.source_date,
+      typeFilter: typeFilter,
+      formatFilter: formatFilter
+    });
+
+    // If user selected specific filters, apply them
+    if (typeFilter !== "all" || formatFilter !== "all") {
+      console.log("[filteredSources] Custom filters active - typeFilter:", typeFilter, "formatFilter:", formatFilter);
+      // Apply type filter
+      if (typeFilter !== "all") {
+        if (typeFilter === "FUENTE EXTERNA" && (s.origin !== "google" && s.origin !== "slack")) return false;
+        if (typeFilter === "NOTAS DE GEMINI" && s.type !== "NOTAS DE GEMINI") return false;
+      }
+
+      // Apply format filter
+      if (formatFilter !== "all") {
+        const fileType = s.format?.toUpperCase() || s.name?.split(".").pop()?.toUpperCase() || "";
+        if (fileType !== formatFilter) return false;
+      }
+
+      return true;
+    }
+
+    // Default behavior: Show only Gemini notes + manually added External sources
     const isGeminiNote = s.type === "NOTAS DE GEMINI";
     const isGeminiTitle = s.name?.toLowerCase().includes("gemini");
-    return isSlack || isGeminiNote || isGeminiTitle;
+    const isManualExternal = s.origin === "manual";
+
+    const shouldShow = isGeminiNote || isGeminiTitle || isManualExternal;
+    console.log("[filteredSources] DEFAULT FILTER for:", s.name,
+      "| type:", s.type,
+      "| origin:", s.origin,
+      "| isGeminiNote:", isGeminiNote,
+      "| isGeminiTitle:", isGeminiTitle,
+      "| isManualExternal:", isManualExternal,
+      "| SHOW:", shouldShow);
+
+    return shouldShow;
   });
+
+  console.log("[filteredSources] Total sources in state:", sources.length, "Filtered sources shown:", filteredSources.length, "Sources:", filteredSources.map(s => ({ name: s.name, date: s.source_date, origin: s.origin })));
 
   const checkedCount = filteredSources.filter((s) => s.checked).length;
 
@@ -1320,8 +1550,6 @@ const isSlack = s.source_origin === "slack";
       </div>
     );
   }
-
-  const userFullName = user?.user_metadata?.full_name || summaryData?.profiles?.full_name || "Usuario";
 
   return (
     <div className="min-h-full">
@@ -1353,9 +1581,9 @@ const isSlack = s.source_origin === "slack";
           </button>
 
           <button
-            onClick={handleAnalyzeDay}
+            onClick={() => { setManualAnalyzeActive(true); handleAnalyzeDay(); }}
             disabled={isAnalyzing}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-[12px] font-black tracking-widest text-white shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-1 active:translate-y-0 transition-all disabled:opacity-20 disabled:grayscale disabled:hover:translate-y-0 ${isAnalyzing ? "animate-pulse shadow-primary/50 ring-4 ring-primary/10" : ""}`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-[12px] font-black tracking-widest text-white shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-1 active:translate-y-0 transition-all disabled:opacity-20 disabled:cursor-not-allowed ${isAnalyzing ? "animate-pulse ring-4 ring-primary/10" : ""}`}
             style={{ background: "linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%)" }}
           >
             {isAnalyzing ? (
@@ -1365,7 +1593,7 @@ const isSlack = s.source_origin === "slack";
               </>
             ) : (
               <>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z" />
                 </svg>
                 ANALIZAR DÍA
@@ -1510,29 +1738,136 @@ const isSlack = s.source_origin === "slack";
             </div>
           )}
 
-          {!summaryData?.summary_text && (
-            <div className="bg-card rounded-3xl border border-dashed border-white/30 p-10 text-center relative overflow-hidden group hover:border-primary/30 transition-all">
-              <div className="relative z-10 max-w-md mx-auto">
-                <div className="w-16 h-16 rounded-2xl bg-card/5 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white/20">
-                    <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z" />
-                  </svg>
-                </div>
-                <h4 className="text-lg font-bold text-white mb-2">Análisis pendiente</h4>
-                <p className="text-sm text-white/40 leading-relaxed mb-6">
-                  Nexión aún no ha procesado tus fuentes. Selecciona los documentos y notas relevantes en la pestaña de fuentes para generar tu resumen inteligente.
-                </p>
-                <button 
-                  onClick={() => setActiveTab("fuentes")}
-                  className="px-6 py-2.5 bg-card/5 text-white/60 text-[11px] font-black tracking-wider rounded-xl hover:bg-primary hover:text-white transition-all uppercase"
-                >
-                  Ir a Fuentes
-                </button>
+          {!summaryData?.summary_text && isAnalyzing && (
+            <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-primary/20 p-10 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-6">
+                <svg className="animate-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="2">
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                  <polyline points="21 3 21 8 16 8" />
+                </svg>
               </div>
+              <p className="text-sm text-white/40 font-medium">Analizando tu día con IA...</p>
+              <p className="text-xs text-white/20 mt-1">Esto puede tardar unos segundos.</p>
             </div>
           )}
 
-          {/* Quick Stats Grid Removed as per request (Plan de Acción context) */}
+          {!summaryData?.summary_text && isAnalyzing && manualAnalyzeActive && (
+            <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-primary/20 p-10 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-6">
+                <svg className="animate-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="2">
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                  <polyline points="21 3 21 8 16 8" />
+                </svg>
+              </div>
+              <p className="text-sm text-white/40 font-medium">Analizando tu día con IA...</p>
+              <p className="text-xs text-white/20 mt-1">Esto puede tardar unos segundos.</p>
+            </div>
+          )}
+
+          {/* Productivity Card - Time Metrics */}
+          <div className="bg-card rounded-[2.5rem] border border-white/10 p-6 shadow-soft">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Mi Día</h3>
+                  <p className="text-[10px] text-white/40 font-medium">Jornada: 8:00 AM - 6:00 PM</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => fetchData(selectedDate)}
+                disabled={loading}
+                className="p-2 text-white/30 hover:text-primary transition-colors bg-card/5 rounded-lg border border-white/10 hover:border-primary/30"
+                title="Actualizar datos"
+              >
+                <svg 
+                  className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                >
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                  <polyline points="21 3 21 8 16 8" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Time Progress Bar */}
+            <div className="space-y-4">
+              <div className="relative h-3 bg-white/5 rounded-full overflow-hidden">
+                <div 
+                  className="absolute left-0 top-0 h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full transition-all duration-700"
+                  style={{ width: `${timeMetrics.meetingPercentage}%` }}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-black text-white font-mono">{timeMetrics.totalWorkdayHours}h</p>
+                  <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mt-1">Jornada</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-black text-red-400 font-mono">{timeMetrics.meetingHours}h</p>
+                  <p className="text-[9px] font-bold text-red-400/60 uppercase tracking-widest mt-1">Reuniones</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-black text-green-400 font-mono">{timeMetrics.availableHours}h</p>
+                  <p className="text-[9px] font-bold text-green-400/60 uppercase tracking-widest mt-1">Disponible</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                <span className="text-[10px] font-bold text-white/40">
+                  {timeMetrics.meetingPercentage}% en reuniones · {timeMetrics.availablePercentage}% para trabajo
+                </span>
+                {timeMetrics.meetingHours === 0 && (
+                  <span className="text-[9px] font-black text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">
+                    ✓ Día libre de reuniones
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Alerts Section */}
+          {alerts.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-red-500/10 flex items-center justify-center animate-pulse">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </div>
+                <h3 className="text-[11px] font-black tracking-[0.2em] text-red-400 uppercase">Alertas Importantes</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+                  {alerts.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {alerts.map((alert, idx) => (
+                  <div key={idx} className="bg-card border border-red-500/20 rounded-xl p-4 flex items-start gap-3 hover:border-red-500/40 transition-all">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0 animate-pulse" />
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-white">{alert.title}</p>
+                      {alert.description && (
+                        <p className="text-xs text-white/50 mt-1">{alert.description}</p>
+                      )}
+                    </div>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg uppercase ${
+                      alert.priority === 'Highest' ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/20 text-amber-500'
+                    }`}>
+                      {alert.priority}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
 
 
@@ -1668,205 +2003,138 @@ const isSlack = s.source_origin === "slack";
             )}
           </div>
 
-          {/* Future Tasks Placeholder */}
+          {/* Today's Tasks - Real pending tasks */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-card/5 flex items-center justify-center text-white/30">
+                <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2" /><polyline points="12 6 12 12 16 14" />
                   </svg>
                 </div>
-                <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/40 uppercase">Próximas Tareas</h3>
+                <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase">Tareas Pendientes Hoy</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  {structuredTasks.filter(t => {
+                    const isDone = t.status?.toLowerCase().includes('done') || t.status?.toLowerCase().includes('finalizada');
+                    const isDueToday = t.due_date && new Date(t.due_date).toDateString() === selectedDate.toDateString();
+                    const isInProgress = t.status?.toLowerCase().includes('progress') || t.status?.toLowerCase().includes('curso');
+                    return !isDone && (isDueToday || isInProgress);
+                  }).length}
+                </span>
               </div>
               
-              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-                <button 
-                  onClick={() => setJiraSubTab('talent')}
-                  className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
-                    jiraSubTab === 'talent' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/20 hover:text-white/40'
-                  }`}
-                >
-                  TALENT
-                </button>
-                <button 
-                  onClick={() => setJiraSubTab('hiring')}
-                  className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
-                    jiraSubTab === 'hiring' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/20 hover:text-white/40'
-                  }`}
-                >
-                  HIRING
-                </button>
-                <button 
-                  onClick={() => setJiraSubTab('ux')}
-                  className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
-                    jiraSubTab === 'ux' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/20 hover:text-white/40'
-                  }`}
-                >
-                  UX TEAM
-                </button>
-                <button 
-                  onClick={() => setJiraSubTab('otras')}
-                  className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
-                    jiraSubTab === 'otras' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/20 hover:text-white/40'
-                  }`}
-                >
-                  OTRAS
-                </button>
-              </div>
+              <button 
+                onClick={() => setTaskDrawerOpen(true)}
+                className="px-4 py-1.5 bg-card border border-white/20 text-white/60 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all flex items-center gap-2"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                AÑADIR
+              </button>
             </div>
             
-            {(structuredTasks.length > 0 || (summaryData?.tasks && summaryData.tasks.length > 0)) ? (
-              <div className="space-y-3">
-                {/* Structured Tasks (Source of Truth) */}
-                {structuredTasks.filter(task => {
-                  const context = (task.team || "").toLowerCase();
-                  const isTalent = (context.includes("talent") || context.includes("culture") || context.includes("growth")) && 
-                                   !context.includes("hiring") && !context.includes("utu") && !context.includes("talent-os");
-                  const isHiring = context.includes("hiring") || context.includes("utu") || context.includes("talent-os") || context.includes("recruit");
-                  const isUx = context.includes("ux") || context.includes("design") || context.includes("diseño") || context.includes("triada");
-                  
-                  if (jiraSubTab === 'talent') return isTalent;
-                  if (jiraSubTab === 'hiring') return isHiring;
-                  if (jiraSubTab === 'ux') return isUx;
-                  return !isTalent && !isHiring && !isUx;
-                }).map((task: any) => (
-                  <div key={task.id} className="space-y-2">
-                    <div 
-                      onClick={() => handleEditTask(task)}
-                      className={`bg-card rounded-2xl border-2 p-4 shadow-sm hover:shadow-primary/10 hover:-translate-y-0.5 transition-all flex items-center justify-between group cursor-pointer ${
-                        task.origin === 'jira' ? 'border-primary/20 bg-primary/5' : 'border-primary/10'
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                          task.origin === 'jira' ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/5 text-primary group-hover:bg-primary group-hover:text-white'
-                        }`}>
-                          {task.origin === 'jira' ? (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z"/>
-                            </svg>
-                          ) : (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          )}
-                        </div>
-                        <div>
-                          <p className={`text-sm font-bold ${task.origin === 'jira' ? 'text-white' : 'text-white/80'}`}>{task.title}</p>
-                          {task.goal_id && (
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <div className="w-1 h-1 rounded-full bg-primary" />
-                              <span className="text-[9px] font-black text-primary uppercase tracking-widest opacity-80">
-                                {objectives.find(o => o.id === task.goal_id)?.title || "Objetivo Vinculado"}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {task.origin === 'jira' ? (
-                              <span className="flex items-center gap-1.5 text-[9px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded uppercase tracking-widest border border-blue-500/20">
-                                ESTRATÉGICO · {task.external_key}
-                              </span>
-                            ) : (
-                              <span className="text-[9px] font-bold text-white/20 uppercase tracking-tighter">Tarea del día (IA)</span>
-                            )}
-                            {task.due_date && (
-                              <span className="text-[9px] font-bold text-primary/60">📅 {new Date(task.due_date).toLocaleDateString()}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <span className={`text-[9px] font-black tracking-widest px-2 py-1 rounded-lg uppercase ${
-                        task.priority === 'High' || task.priority === 'Highest' ? 'bg-red-500/100/10 text-red-500' : 
-                        task.priority === 'Medium' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'
-                      }`}>
-                        {task.priority || 'Low'}
-                      </span>
-                    </div>
+            {(() => {
+              const today = new Date();
+              today.setHours(0,0,0,0);
+              
+              const pendingTasks = structuredTasks.filter((task: any) => {
+                const isDone = task.status?.toLowerCase().includes('done') || task.status?.toLowerCase().includes('finalizada');
+                if (isDone) return false;
+                
+                const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
+                const isInProgress = task.status?.toLowerCase().includes('progress') || task.status?.toLowerCase().includes('curso');
+                const isOverdue = task.due_date && new Date(task.due_date) < today && !isDone;
+                
+                return isDueToday || isInProgress || isOverdue;
+              });
 
-                    {/* Integrated Hierarchy: AI Tasks Linked to this Jira HU */}
-                    {task.origin === 'jira' && task.linkedAiTasks && task.linkedAiTasks.length > 0 && (
-                      <div className="ml-10 space-y-3 mt-4 border-l-2 border-primary/20 pl-6 py-2">
-                        {task.linkedAiTasks.map((aiTask: any) => (
-                          <div 
-                            key={aiTask.id} 
-                            onClick={(e) => { e.stopPropagation(); onTaskClick(aiTask); }}
-                            className="bg-primary/5 rounded-2xl border border-primary/10 p-4 hover:border-primary/30 transition-all cursor-pointer group/ai"
-                          >
-                            <div className="flex items-center justify-between gap-4">
-                              <div className="flex-1">
-                                <p className="text-sm font-black text-white group-hover/ai:text-primary transition-colors">{aiTask.title}</p>
-                                {aiTask.linked_jira_subtask_id && (
-                                  <div className="flex items-center gap-1.5 mt-1">
-                                    <span className="text-[8px] font-black text-primary/40 uppercase tracking-widest">Le pega a:</span>
-                                    <span className="text-[9px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded">
-                                      {task.subtasks?.find((s: any) => s.id === aiTask.linked_jira_subtask_id)?.title || "Subtarea General"}
-                                    </span>
-                                  </div>
+              if (pendingTasks.length === 0) {
+                return (
+                  <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-white/10 p-8 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center mx-auto mb-4">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-white/40 font-medium">¡Sin tareas pendientes para hoy!</p>
+                    <p className="text-xs text-white/20 mt-1">Aprovecha tu tiempo disponible para avanzar en proyectos largos.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-2">
+                  {pendingTasks.slice(0, 8).map((task: any) => {
+                    const isOverdue = task.due_date && new Date(task.due_date) < today && !(task.status?.toLowerCase().includes('done'));
+                    const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
+                    
+                    return (
+                      <div 
+                        key={task.id}
+                        onClick={() => handleEditTask(task)}
+                        className={`bg-card rounded-2xl border p-4 hover:border-primary/30 transition-all cursor-pointer group ${
+                          isOverdue ? 'border-red-500/30 bg-red-500/5' : 'border-white/10'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              task.origin === 'jira' ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/10 text-primary'
+                            }`}>
+                              {task.origin === 'jira' ? (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" />
+                                </svg>
+                              ) : (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-bold truncate ${isOverdue ? 'text-red-400' : 'text-white'}`}>{task.title}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {task.origin === 'jira' && (
+                                  <span className="text-[8px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded uppercase tracking-widest">
+                                    {task.external_key}
+                                  </span>
+                                )}
+                                {task.due_date && (
+                                  <span className={`text-[9px] font-medium ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-white/30'}`}>
+                                    📅 {new Date(task.due_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                  </span>
                                 )}
                               </div>
-                              <span className={`text-[8px] font-black tracking-widest px-2 py-1 rounded-lg uppercase ${
-                                aiTask.status?.toLowerCase().includes('done') ? 'bg-green-500/10 text-green-500' : 'bg-primary/20 text-primary'
-                              }`}>
-                                {aiTask.status}
-                              </span>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Native Jira Activities (Show only if no AI tasks or as collapsed) */}
-                    {task.origin === 'jira' && task.subtasks && task.subtasks.length > 0 && (!task.linkedAiTasks || task.linkedAiTasks.length === 0) && (
-                      <div className="ml-10 space-y-2 border-l-2 border-primary/10 pl-4 py-2 mt-2">
-                        <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mb-2 block">Actividades Operativas ({task.subtasks.length})</span>
-                        {task.subtasks.slice(0, 3).map((sub: any) => (
-                          <div key={sub.id} className="flex items-center justify-between group py-1">
-                            <div className="flex items-center gap-3">
-                              <div className="w-1.5 h-1.5 rounded-full bg-primary/40 group-hover:bg-primary transition-all" />
-                              <p className="text-xs font-medium text-white/40 group-hover:text-white/70 transition-colors">{sub.title}</p>
-                            </div>
-                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">{sub.status}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${
+                              task.priority === 'High' || task.priority === 'Highest' ? 'bg-red-500/10 text-red-500' : 
+                              task.priority === 'Medium' ? 'bg-amber-500/10 text-amber-500' : 'bg-white/5 text-white/20'
+                            }`}>
+                              {task.priority || 'Low'}
+                            </span>
+                            <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${
+                              task.status?.toLowerCase().includes('progress') ? 'bg-blue-500/10 text-blue-400' : 'bg-white/5 text-white/20'
+                            }`}>
+                              {task.status || 'Pendiente'}
+                            </span>
                           </div>
-                        ))}
-                        {task.subtasks.length > 3 && (
-                          <p className="text-[10px] font-bold text-primary/40 pl-4">+ {task.subtasks.length - 3} actividades más</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {/* AI Suggestions (Lighter style) */}
-                {summaryData?.tasks?.map((task: any, idx: number) => {
-                  // Only show if not already promoting to structured (optional logic here)
-                  return (
-                    <div 
-                      key={`suggest-${idx}`} 
-                      className="bg-card/50 rounded-2xl border border-dashed border-navy/10 p-4 hover:border-primary/20 hover:bg-card transition-all flex items-center justify-between group cursor-help"
-                      title="Sugerencia de IA"
-                    >
-                      <div className="flex items-center gap-4 opacity-60 group-hover:opacity-100 transition-opacity">
-                        <div className="w-8 h-8 rounded-full border border-dashed border-navy/20 flex items-center justify-center text-white/30">
-                          {idx + 1}
                         </div>
-                        <p className="text-sm font-medium text-white/60">{task.title}</p>
                       </div>
-                      <button 
-                        onClick={() => handleEditTask({ ...task, isSuggestion: true })}
-                        className="text-[9px] font-black tracking-widest px-3 py-1.5 rounded-lg border border-primary/20 text-primary opacity-0 group-hover:opacity-100 hover:bg-primary hover:text-white transition-all"
-                      >
-                        REVISAR
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-navy/5 p-8 text-center">
-                <p className="text-xs text-white/20 font-medium italic">Sin tareas programadas para este periodo.</p>
-              </div>
-            )}
+                    );
+                  })}
+                  
+                  {pendingTasks.length > 8 && (
+                    <p className="text-center text-xs text-white/30 font-medium pt-2">
+                      +{pendingTasks.length - 8} tareas más...
+                    </p>
+                  )}
+                </div>
+                );
+            })()}
           </div>
         </div>
       )}
@@ -2080,48 +2348,7 @@ const isSlack = s.source_origin === "slack";
 
       {activeTab === "resumen-del-analisis" && summaryData && (
         <div className="space-y-6">
-          <ResumenDelAnalisisTab data={{
-            summary_text: summaryData.summary_text || "Resumen del día basado en las fuentes analizadas.",
-            hallazgos_clave: {
-              decisiones: [
-                "Priorizar la implementación del módulo de fidelización",
-                "Acelerar la aprobación del presupuesto Q4",
-                "Iniciar diálogos con SteelCore para cierre de alianza"
-              ],
-              riesgos: [
-                "Retrasos en certificación de seguridad pueden afectar timeline de producción",
-                "Presupuesto Q4 aún sin confirmar; requiere aprobación directiva",
-                "Falta de confirmación en propuesta de diseño móvil"
-              ],
-              oportunidades: [
-                "Expansión de mercado LATAM mediante alianza SteelCore",
-                "Mejora de métricas de fidelización con nuevo módulo",
-                "Optimización de costos operacionales con nueva estructura presupuestaria"
-              ]
-            },
-            proximos_pasos: [
-              {
-                id: 1,
-                texto: "Completar actualización de certificados SSL del cluster de producción",
-                prioridad: "critica"
-              },
-              {
-                id: 2,
-                texto: "Revisar y aprobar propuesta de diseño para panel móvil con stakeholders",
-                prioridad: "media"
-              },
-              {
-                id: 3,
-                texto: "Confirmar términos finales de exclusividad con SteelCore",
-                prioridad: "media"
-              },
-              {
-                id: 4,
-                texto: "Definir y validar KPIs para módulo de fidelización",
-                prioridad: "baja"
-              }
-            ]
-          }} />
+          <ResumenDelAnalisisTab data={summaryData} objectives={objectives} />
         </div>
       )}
       {activeTab === "feedback" && summaryData?.feedback && (
@@ -2182,12 +2409,46 @@ const isSlack = s.source_origin === "slack";
       <AddSourceDrawer 
         open={drawerOpen} 
         onClose={() => setDrawerOpen(false)} 
-        onAdd={() => {
+        onAdd={(newSource) => {
+          console.log("[AddSource] New source added:", newSource);
           setDrawerOpen(false);
+          // Reset auto-analyze flag and refresh data
+          autoAnalyzeTriggeredRef.current = false;
+          console.log("[AddSource] selectedDate:", selectedDate.toDateString());
+          // Force immediate refresh
+          console.log("[AddSource] Calling fetchData immediately...");
           fetchData(selectedDate);
         }}
         sourceDate={selectedDate}
       />
+      <button
+        onClick={async () => {
+          // Debug: check what's in DB for today (with date filter)
+          const y = selectedDate.getFullYear();
+          const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
+          const d = String(selectedDate.getDate()).padStart(2, "0");
+          const dateStr = `${y}-${m}-${d}`;
+          console.log("[Debug] Checking DB for date:", dateStr);
+          const { data, error } = await supabase
+            .from("sources")
+            .select("*")
+            .eq("workspace_id", workspaceId)
+            .eq("source_date", dateStr);
+          console.log("[Debug] DB sources for today:", { count: data?.length || 0, error, sample: data?.slice(0, 3) });
+          
+          // Also check ALL sources for workspace (no date filter)
+          const { data: allData, error: allError } = await supabase
+            .from("sources")
+            .select("*")
+            .eq("workspace_id", workspaceId)
+            .order("created_at", { ascending: false })
+            .limit(20);
+          console.log("[Debug] ALL recent sources:", { count: allData?.length || 0, allError, sample: allData?.slice(0, 5).map(s => ({ title: s.title, source_date: s.source_date })) });
+        }}
+        className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg text-xs font-bold z-50"
+      >
+        DEBUG DB
+      </button>
 
       <TaskDrawer 
         open={taskDrawerOpen}

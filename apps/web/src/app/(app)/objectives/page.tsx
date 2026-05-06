@@ -55,7 +55,7 @@ export default function ObjectivesPage() {
         const jql = "updated >= -365d order by updated DESC";
         console.log("[ObjectivesPage] JQL Query:", jql);
         const jiraResult = await fetchJiraIssues(wsData.jira_config, jql);
-        if (jiraResult.success) {
+        if (jiraResult.success && jiraResult.issues) {
           console.log(`[ObjectivesPage] Successfully fetched ${jiraResult.issues.length} Jira issues`);
           setJiraTasks(jiraResult.issues);
         } else {

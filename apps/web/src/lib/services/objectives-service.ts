@@ -204,7 +204,7 @@ export async function syncObjectives(workspaceId: string) {
         
         // Normalize text and split by line breaks
         const cleanRawText = rawKrText.replace(/^[\n\r]+|[\n\r]+$/g, "");
-        const lines = cleanRawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+        const lines = cleanRawText.split(/\r?\n/).map((l: string) => l.trim()).filter((l: string) => l.length > 0);
         
         if (lines.length > 0) {
           // Identify if the first line is a title
@@ -215,21 +215,21 @@ export async function syncObjectives(workspaceId: string) {
           if (!firstLineHasMarker && lines.length > 1) {
             // First line is title, others are tasks
             krTitle = lines[0];
-            tasks = lines.slice(1).map(l => l.replace(taskMarkerRegex, "").trim());
+            tasks = lines.slice(1).map((l: string) => l.replace(taskMarkerRegex, "").trim());
           } else if (!firstLineHasMarker && lines.length === 1) {
             // Single line, check for inline separators
             const inlineSeparators = /([ ]+[-—–*•·∙○■□][ ]+)|([;][ ]+)|([ ]{3,})|([.][ ]+(?=[A-Z]))/;
-            const parts = lines[0].split(inlineSeparators).filter(p => p && p.trim().length > 2 && !taskMarkerRegex.test(p));
+            const parts = lines[0].split(inlineSeparators).filter((p: string) => p && p.trim().length > 2 && !taskMarkerRegex.test(p));
             
             if (parts.length > 1) {
               krTitle = parts[0];
-              tasks = parts.slice(1).map(p => p.trim());
+              tasks = parts.slice(1).map((p: string) => p.trim());
             } else {
               // Try split by colon if it's "Title: Task 1, Task 2"
               const colonParts = lines[0].split(/[:：][ ]*/);
               if (colonParts.length > 1 && colonParts[0].length < 60) {
                 krTitle = colonParts[0];
-                tasks = colonParts.slice(1).join(": ").split(/[,;][ ]+/).map(t => t.trim());
+                tasks = colonParts.slice(1).join(": ").split(/[,;][ ]+/).map((t: string) => t.trim());
               } else {
                 krTitle = lines[0];
                 tasks = [];
@@ -238,7 +238,7 @@ export async function syncObjectives(workspaceId: string) {
           } else {
             // First line has a marker or it's a list without a clear title
             krTitle = lines[0].replace(taskMarkerRegex, "").trim();
-            tasks = lines.slice(1).map(l => l.replace(taskMarkerRegex, "").trim());
+            tasks = lines.slice(1).map((l: string) => l.replace(taskMarkerRegex, "").trim());
             
             // If the title we extracted is too generic, use a default
             if (/^(resultado clave|kr|key result|meta|entregable)$/i.test(krTitle)) {
@@ -291,12 +291,12 @@ export async function syncObjectives(workspaceId: string) {
       }
     }
     
-    const uniqueTeams = [...new Set(allObjectives.map(o => o.team))];
+    const uniqueTeams = [...new Set(allObjectives.filter(o => o != null).map((o: any) => o.team))];
     console.log(`[ObjectivesSync] Total unique teams found: ${uniqueTeams.join(", ")}`);
 
     if (allObjectives.length > 0) {
       const uniqueObjectives = Array.from(new Map(
-        allObjectives.map(o => [`${o.workspace_id}-${o.quarter}-${o.title}-${o.key_result}-${o.owner}`, o])
+        allObjectives.filter(o => o != null).map((o: any) => [`${o.workspace_id}-${o.quarter}-${o.title}-${o.key_result}-${o.owner}`, o])
       ).values());
 
       // Clean up previous data for these quarters to avoid mixing (e.g. Q1 with Q2)
@@ -327,11 +327,11 @@ export async function syncObjectives(workspaceId: string) {
       effort: row[6] || "",
       priority: row[7] || "",
       last_synced_at: new Date().toISOString(),
-    })).filter(ini => ini.title);
+    })).filter((ini: any) => ini.title);
 
     if (initiatives.length > 0) {
       const uniqueInitiatives = Array.from(new Map(
-        initiatives.map(i => [`${i.workspace_id}-${i.title}-${i.quarter}`, i])
+        initiatives.map((i: any) => [`${i.workspace_id}-${i.title}-${i.quarter}`, i])
       ).values());
 
       await supabase

@@ -401,7 +401,7 @@ export default function Sources() {
                         : "Pendiente"}
                     </span>
                     <span className="text-xs text-white/30">
-                      {new Date(source.created_at).toLocaleDateString("es-ES", {
+                      {new Date(source.created_at ?? '').toLocaleDateString("es-ES", {
                         day: "numeric", month: "short"
                       })}
                     </span>

@@ -68,17 +68,22 @@ export default function DaySourcesPage() {
     e.preventDefault();
     setError("");
 
+    console.log("[handleAddSource] Starting - title:", title, "type:", type, "url:", url);
+
     if (!title.trim()) {
       setError("Title is required");
+      console.warn("[handleAddSource] Title is empty");
       return;
     }
 
     if (!type) {
       setError("Source type is required");
+      console.warn("[handleAddSource] Type is empty");
       return;
     }
 
     setSubmitting(true);
+    console.log("[handleAddSource] Submitting with workspace:", workspace.id, "user:", user.id);
 
     const result = await createSource({
       title: title.trim(),
@@ -88,15 +93,21 @@ export default function DaySourcesPage() {
       createdBy: user.id,
     });
 
+    console.log("[handleAddSource] Result from createSource:", result);
+
     if (!result.success) {
       setError(result.error || "Error adding source");
       setSubmitting(false);
+      console.error("[handleAddSource] Error:", result.error);
       return;
     }
 
     // Add to sources list
     if (result.data) {
+      console.log("[handleAddSource] Adding new source to list:", result.data);
       setSources([result.data, ...sources]);
+    } else {
+      console.warn("[handleAddSource] No data returned from createSource");
     }
 
     // Reset form
@@ -104,6 +115,7 @@ export default function DaySourcesPage() {
     setUrl("");
     setType("");
     setSubmitting(false);
+    console.log("[handleAddSource] Source added successfully");
   };
 
   const handleDeleteSource = async (sourceId: string) => {
@@ -140,6 +152,18 @@ export default function DaySourcesPage() {
     setEditingSource(null);
     // Reload sources
     window.location.reload();
+  };
+
+  const loadSources = async () => {
+    if (!workspace) return;
+    console.log("[loadSources] Reloading sources for workspace:", workspace.id);
+    const sourcesResult = await getSourcesByWorkspace(workspace.id);
+    if (sourcesResult.success && sourcesResult.data) {
+      console.log("[loadSources] Loaded sources count:", sourcesResult.data.length);
+      setSources(sourcesResult.data);
+    } else {
+      console.error("[loadSources] Error loading sources:", sourcesResult.error);
+    }
   };
 
   const getStatusVariant = (status: string) => {
@@ -260,7 +284,7 @@ export default function DaySourcesPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => console.log("BUTTON CLICKED") || handleEditSource(source)}
+                  onClick={() => handleEditSource(source)}
                   className="ml-2 flex-shrink-0 text-white/60 hover:text-primary"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -286,7 +310,10 @@ export default function DaySourcesPage() {
         open={drawerOpen}
         onClose={() => { setDrawerOpen(false); }}
         onAdd={() => {
+          console.log("[DaySourcesPage] AddSourceDrawer onAdd triggered");
           setDrawerOpen(false);
+          setEditingSource(null);
+          loadSources();
         }}
         editMode={drawerOpen && !!editingSource}
         onEditData={getEditData()}

@@ -103,17 +103,28 @@ useEffect(() => {
     e.preventDefault();
     setGeneralError("");
 
+    console.log("[AddSourceDrawer.handleSubmit] Starting - sourceMode:", sourceMode, "editMode:", editMode);
+    console.log("[AddSourceDrawer.handleSubmit] name:", name, "url:", url, "type:", type);
+
     if (sourceMode === "manual") {
       if (!name.trim()) {
         setGeneralError("Añade un nombre para la fuente.");
+        console.warn("[AddSourceDrawer.handleSubmit] Manual mode but no name");
         return;
       }
     } else {
       const err = validateUrl(url);
-      if (err) { setUrlError(err); return; }
+      if (err) {
+        setUrlError(err);
+        console.warn("[AddSourceDrawer.handleSubmit] URL validation error:", err);
+        return;
+      }
     }
 
-    if (!type) return;
+    if (!type) {
+      console.warn("[AddSourceDrawer.handleSubmit] No type selected");
+      return;
+    }
 
     setSubmitting(true);
 
@@ -121,12 +132,14 @@ useEffect(() => {
       const selectedType = SOURCE_TYPES.find(t => t.value === type);
       const serviceType = (selectedType?.serviceType || "manual") as any;
 
+      console.log("[AddSourceDrawer.handleSubmit] Selected type:", selectedType, "serviceType:", serviceType);
+
       let metadata: any = {};
-      
+
       if (editMode && onEditData?.metadata) {
         metadata = { ...onEditData.metadata };
       }
-      
+
       if (sourceMode === "manual") {
         if (manualContent) metadata.content = manualContent;
         if (manualFiles.length > 0) metadata.fileNames = manualFiles.map(f => f.name);
@@ -134,65 +147,88 @@ useEffect(() => {
       }
 
       if (editMode && onEditData?.id) {
+        console.log("[AddSourceDrawer.handleSubmit] Updating existing source:", onEditData.id);
         const result = await updateSource({
           id: onEditData.id,
           title: name,
           url: sourceMode === "url" ? url : undefined,
           type: serviceType,
-          origin: sourceMode === "manual" ? "manual" : "google",
           metadata
         });
+
+        console.log("[AddSourceDrawer.handleSubmit] Update result:", result);
 
         if (!result.success) {
           setGeneralError(result.error || "Error al actualizar.");
           setSubmitting(false);
+          console.error("[AddSourceDrawer.handleSubmit] Update error:", result.error);
           return;
         }
 
         onAdd({ name: name, url: sourceMode === "url" ? url : "", type });
       } else {
+        console.log("[AddSourceDrawer.handleSubmit] Creating new source");
         const { data: { session } } = await supabase.auth.getSession();
+
+        console.log("[AddSourceDrawer.handleSubmit] Session user:", session?.user?.id);
+
         if (!session?.user) {
           setGeneralError("Debes iniciar sesión.");
           setSubmitting(false);
+          console.error("[AddSourceDrawer.handleSubmit] No session");
           return;
         }
 
         const { data: workspace, error: wsError } = await getUserWorkspace(session.user.id);
+
+        console.log("[AddSourceDrawer.handleSubmit] Workspace:", workspace, "error:", wsError);
+
         if (wsError || !workspace) {
           setGeneralError("No se pudo encontrar workspace.");
           setSubmitting(false);
+          console.error("[AddSourceDrawer.handleSubmit] Workspace error:", wsError);
           return;
         }
+
+        console.log("[AddSourceDrawer.handleSubmit] About to create source with:", {
+          title: name || (sourceMode === "url" ? url : "Fuente manual"),
+          url: sourceMode === "url" ? url : undefined,
+          type: serviceType,
+          workspaceId: workspace.id,
+          createdBy: session.user.id,
+        });
 
         const result = await createSource({
           title: name || (sourceMode === "url" ? url : "Fuente manual"),
           url: sourceMode === "url" ? url : undefined,
           type: serviceType,
-          origin: sourceMode === "manual" ? "manual" : "google",
           workspaceId: workspace.id,
           createdBy: session.user.id,
           sourceDate: sourceDate?.toISOString(),
           metadata
         });
 
+        console.log("[AddSourceDrawer.handleSubmit] Create result:", result);
+
         if (!result.success) {
           setGeneralError(result.error || "Error al registrar.");
           setSubmitting(false);
+          console.error("[AddSourceDrawer.handleSubmit] Create error:", result.error);
           return;
         }
 
-        onAdd({ 
-          name: name || (sourceMode === "url" ? url : "Fuente manual"), 
-          url: sourceMode === "url" ? url : "", 
-          type 
+        console.log("[AddSourceDrawer.handleSubmit] Source created successfully, calling onAdd");
+        onAdd({
+          name: name || (sourceMode === "url" ? url : "Fuente manual"),
+          url: sourceMode === "url" ? url : "",
+          type
         });
       }
 
       setSubmitting(false);
       onClose();
     } catch (err) {
-      console.error("Error:", err);
+      console.error("[AddSourceDrawer.handleSubmit] Unexpected error:", err);
       setGeneralError("Error inesperado.");
       setSubmitting(false);
     }

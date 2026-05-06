@@ -35,19 +35,19 @@ export async function fetchJiraIssues(config: JiraConfig, jql: string = "updated
     while (!isLast && allIssues.length < totalToFetch) {
       console.log(`[JiraService] Fetching page... ${nextPageToken ? 'with token' : 'first page'}`);
       
-      const response = await fetch('/api/jira/test', {
+      const response: Response = await fetch('/api/jira/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ...config, 
-          action: "fetch_issues", 
-          jql, 
+        body: JSON.stringify({
+          ...config,
+          action: "fetch_issues",
+          jql,
           nextPageToken,
-          maxResults: pageSize 
+          maxResults: pageSize
         })
       });
 
-      const result = await response.json();
+      const result: { success: boolean; data?: any; error?: string } = await response.json();
       
       if (result.success && result.data) {
         const pageIssues = result.data.issues || [];

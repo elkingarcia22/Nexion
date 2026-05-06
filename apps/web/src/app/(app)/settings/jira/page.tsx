@@ -70,7 +70,7 @@ export default function JiraSettingsPage() {
     const jql = 'project = "UTU" AND assignee = "60cd00d4dae5670068abf978"';
     const result = await fetchJiraIssues(config, jql);
     
-    if (result.success) {
+    if (result.success && result.issues) {
       setIssues(result.issues);
     } else {
       alert("Error al traer tareas: " + result.error);

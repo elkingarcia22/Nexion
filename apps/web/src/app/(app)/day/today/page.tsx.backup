@@ -5,13 +5,16 @@ import { AddSourceDrawer } from "@/components/sources/AddSourceDrawer";
 import { getDaySummary, saveDayAnalysis } from "@/lib/services/summary-service";
 import { getSourcesByDate, createSource, deleteSource, updateSource } from "@/lib/services/source-service";
 import { getOrCreateWorkspace } from "@/lib/services/workspace-service";
-import { fetchGoogleDriveFiles, DriveFile } from "@/lib/services/google-drive-service";
+import { fetchGoogleDriveFiles, fetchGoogleFileContent, DriveFile } from "@/lib/services/google-drive-service";
 import { fetchGoogleCalendarEvents, CalendarEvent } from "@/lib/services/google-calendar-service";
 import { analyzeDay } from "@/lib/services/analyze-service";
 import { DayNavigator } from "@/components/ui/DayNavigator";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-// import { ResumenDelAnalisisTab } from "@/components/day/ResumenDelAnalisisTab";
+import { ResumenDelAnalisisTab } from "@/components/day/ResumenDelAnalisisTab";
+import { TaskDrawer } from "@/components/day/TaskDrawer";
 import { supabase } from "@/lib/supabase";
+import { getTasks, reorderTasks } from "@/lib/services/task-service";
+import { fetchJiraIssues } from "@/lib/services/jira-service";
 
 /* ─── Data ────────────────────────────────────────────────────── */
 
@@ -78,6 +81,7 @@ interface Source {
   mimeType?: string | null;
   origin?: string;
   description?: string;
+  metadata?: any;
 }
 
 const initialSources: Source[] = [
@@ -157,148 +161,527 @@ const typeStyles: Record<SourceType, string> = {
   "DOCUMENTO": "bg-primary/100/10 text-blue-600",
 };
 
+/* ─── Shared Helpers ─────────────────────────────────────────── */
+
+const categorizeItem = (item: any, objectives: any[] = [], jiraTasks: any[] = []) => {
+  const context = (item.team || item.category || "").toLowerCase();
+  const title = (item.title || "").toLowerCase();
+  const content = (item.description || item.content || item.comentario || "").toLowerCase();
+  const combinedText = `${context} ${title} ${content}`.toLowerCase();
+  
+  const linkedGoal = objectives.find(o => o.id === item.goal_id);
+  const goalContext = linkedGoal ? `${linkedGoal.title} ${linkedGoal.team}`.toLowerCase() : "";
+  
+  const linkedJira = jiraTasks.find(j => j.external_key === item.linked_jira_key);
+  const jiraContext = linkedJira ? `${linkedJira.title} ${linkedJira.team}`.toLowerCase() : "";
+  
+  const fullContext = `${combinedText} ${goalContext} ${jiraContext}`;
+
+  if ((fullContext.includes("talent") || fullContext.includes("culture") || fullContext.includes("growth") || 
+       fullContext.includes("nom 035") || fullContext.includes("nom-035")) && 
+      !fullContext.includes("hiring") && !fullContext.includes("utu") && !fullContext.includes("talent-os")) return 'talent';
+  
+  if (fullContext.includes("hiring") || fullContext.includes("utu") || fullContext.includes("talent-os") || fullContext.includes("recruit") ||
+      fullContext.includes("contratación") || fullContext.includes("reclutamiento")) return 'hiring';
+  
+  if (fullContext.includes("ux") || fullContext.includes("design") || fullContext.includes("diseño") || fullContext.includes("triada") ||
+      fullContext.includes("ux_team")) return 'ux';
+  
+  return 'otras';
+};
+
 /* ─── Components ─────────────────────────────────────────────── */
 
-function FeedbackTab({ items }: { items: any[] }) {
+function FeedbackTab({ items, objectives = [], jiraTasks = [], team, setTeam }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void }) {
+  const filteredItems = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {items.map((item, i) => (
-        <div key={i} className="bg-card rounded-3xl border border-white/20 p-6 shadow-soft hover:shadow-hard transition-all group">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+        <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">FEEDBACK Y COMENTARIOS</h3>
+        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+          {['talent', 'hiring', 'ux', 'otras'].map((t) => (
+            <button 
+              key={t}
+              onClick={() => setTeam(t as any)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                team === t ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              {t === 'ux' ? 'UX TEAM' : t.toUpperCase()} ({items.filter(it => categorizeItem(it, objectives, jiraTasks) === t).length})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {filteredItems.map((item, i) => {
+          const linkedGoal = objectives.find(o => o.id === item.goal_id);
+          const linkedJira = jiraTasks.find(j => j.external_key === item.linked_jira_key);
+          return (
+            <div key={i} className="bg-card rounded-[2rem] border border-white/10 p-6 flex flex-col gap-4 hover:border-primary/40 transition-all relative overflow-hidden group">
+              <div className="flex items-center justify-between relative z-10">
+                <span className={`text-[9px] font-black tracking-widest px-2.5 py-1 rounded-lg uppercase ${
+                  item.type === 'producto' ? 'bg-purple-500/10 text-purple-400' : 
+                  item.type === 'laboral' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-500'
+                }`}>
+                  {item.type || 'COMENTARIO'}
+                </span>
+                <span className={`text-[9px] font-black tracking-widest px-2 py-1 rounded-lg uppercase ${
+                  item.priority === 'critica' ? 'bg-red-500/100/10 text-red-500' : 'text-white/20'
+                }`}>
+                  {item.priority || 'NORMAL'}
+                </span>
               </div>
-              <div>
-                <h4 className="text-sm font-bold text-white">{item.title}</h4>
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{item.type}</span>
+              <h4 className="text-base font-bold text-white group-hover:text-primary transition-colors relative z-10">{item.title}</h4>
+              <p className="text-sm text-white/50 leading-relaxed italic relative z-10">"{item.content}"</p>
+              
+              {(linkedGoal || linkedJira) && (
+                <div className="mt-auto pt-3 border-t border-white/5 relative z-10 space-y-2">
+                  {linkedGoal && (
+                    <div className="flex items-center gap-2 text-[8px] font-black text-primary/60 uppercase">
+                      <div className="w-1 h-1 rounded-full bg-primary" />
+                      OBJ: {linkedGoal.title}
+                    </div>
+                  )}
+                  {linkedJira && (
+                    <div className="flex items-center gap-2 text-[8px] font-black text-blue-400 uppercase">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="opacity-70"><path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" /></svg>
+                      JIRA: {linkedJira.external_key}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TasksTab({ 
+  items, 
+  objectives = [], 
+  onTaskClick, 
+  onAddTask,
+  onReorder,
+  onDelete,
+  jiraSubTab,
+  setJiraSubTab
+}: { 
+  items: any[], 
+  objectives: any[], 
+  onTaskClick: (task: any) => void, 
+  onAddTask: () => void,
+  onReorder: (newItems: any[]) => void,
+  onDelete: (id: string) => void,
+  jiraSubTab: 'talent' | 'hiring' | 'ux' | 'otras',
+  setJiraSubTab: (tab: 'talent' | 'hiring' | 'ux' | 'otras') => void
+}) {
+
+
+  const jiraTasks = items.filter(it => it.origin === 'jira');
+  
+  // Flatten AI tasks: include top-level AI tasks AND those nested inside Jira HUs
+  const allAiTasks = [
+    ...items.filter(it => it.origin !== 'jira'),
+    ...jiraTasks.flatMap(jt => jt.linkedAiTasks || [])
+  ];
+
+  // Use a safer unique key for deduplication (id or title+origin)
+  const aiTasks = Array.from(new Map(allAiTasks.map(t => [t.id || `${t.origin}-${t.title}`, t])).values());
+
+  const currentAiTasks = aiTasks.filter(task => categorizeItem(task, objectives, jiraTasks) === jiraSubTab);
+  
+  const talentCount = aiTasks.filter(t => categorizeItem(t, objectives, jiraTasks) === 'talent').length;
+  const hiringCount = aiTasks.filter(t => categorizeItem(t, objectives, jiraTasks) === 'hiring').length;
+  const uxCount = aiTasks.filter(t => categorizeItem(t, objectives, jiraTasks) === 'ux').length;
+  const otrasCount = aiTasks.filter(t => categorizeItem(t, objectives, jiraTasks) === 'otras').length;
+
+  const getPriorityTextColor = (priority: string) => {
+    switch(priority?.toLowerCase()) {
+      case 'high':
+      case 'highest':
+      case 'alta': return 'text-red-500 font-black';
+      case 'medium':
+      case 'media': return 'text-blue-400 font-black';
+      case 'low':
+      case 'lowest':
+      case 'baja': return 'text-white/20 font-black';
+      default: return 'text-white/40 font-black';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    const s = status?.toLowerCase() || '';
+    if (s.includes('done') || s.includes('finalizado') || s.includes('finalizada')) return 'bg-green-500/10 text-green-500 border-green-500/20';
+    if (s.includes('progress') || s.includes('curso') || s.includes('revisión')) return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    return 'bg-white/5 text-white/40 border-white/10';
+  };
+
+  return (
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+      {/* ─── SECTION 1: ANÁLISIS DE FUENTES ─────────────────────────── */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between border-b border-white/5 pb-4">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-lg border border-primary/20">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z" /></svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">TAREAS DEL ANÁLISIS</h3>
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mt-0.5">Identificadas por Nexión en tus fuentes</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+            <button 
+              onClick={() => setJiraSubTab('talent')}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                jiraSubTab === 'talent' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              TALENT ({talentCount})
+            </button>
+            <button 
+              onClick={() => setJiraSubTab('hiring')}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                jiraSubTab === 'hiring' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              HIRING ({hiringCount})
+            </button>
+            <button 
+              onClick={() => setJiraSubTab('ux')}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                jiraSubTab === 'ux' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              UX TEAM ({uxCount})
+            </button>
+            <button 
+              onClick={() => setJiraSubTab('otras')}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                jiraSubTab === 'otras' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              OTRAS ({otrasCount})
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {currentAiTasks.map((task, i) => {
+            const isDone = task.status?.toLowerCase().includes('done') || task.status?.toLowerCase().includes('finalizada');
+            const linkedObjective = objectives.find(o => o.id === task.goal_id);
+            const parentJiraHU = jiraTasks.find(j => j.external_key === task.linked_jira_key);
+            const linkedSubtask = parentJiraHU?.subtasks?.find((s: any) => s.id === task.linked_jira_subtask_id);
+
+            return (
+              <div 
+                key={task.id || i}
+                onClick={() => onTaskClick(task)}
+                className={`bg-card rounded-[2.5rem] border p-7 flex flex-col gap-6 hover:border-primary/40 transition-all cursor-pointer group/task relative overflow-hidden ${
+                  isDone ? 'border-green-500/20 opacity-60' : 'border-white/10'
+                }`}
+              >
+                {/* Header: Status + Priority */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                      isDone ? 'bg-green-500 border-green-500 text-white' : 'border-white/20 group-hover/task:border-primary/50'
+                    }`}>
+                      {isDone && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                    <span className={`text-[11px] font-black tracking-[0.2em] uppercase ${isDone ? 'text-green-500' : 'text-white/40'}`}>
+                      {isDone ? 'COMPLETADA' : task.status || 'PENDIENTE'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {task.priority && (
+                      <span className={`text-[11px] font-black tracking-widest uppercase ${getPriorityTextColor(task.priority)}`}>
+                        {task.priority}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Body: Title */}
+                <div className="space-y-4">
+                  <h4 className={`text-lg font-black text-white group-hover/task:text-primary transition-colors leading-tight ${isDone ? 'line-through text-white/40' : ''}`}>
+                    {task.title}
+                  </h4>
+
+                  {/* Hierarchical Connections */}
+                  <div className="grid grid-cols-1 gap-3 pt-4 border-t border-white/5">
+                    {/* OBJETIVO & KEY RESULT */}
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Objetivo Estratégico</span>
+                      <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-3 py-2 rounded-xl border ${
+                        linkedObjective ? 'bg-primary/10 text-primary border-primary/20' : 'bg-white/5 text-white/20 border-white/5 border-dashed'
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${linkedObjective ? 'bg-primary animate-pulse' : 'bg-white/20'}`} />
+                        {linkedObjective ? linkedObjective.title : 'Sin objetivo vinculado'}
+                      </div>
+                      {linkedObjective && (
+                        <div className="flex flex-col gap-1 ml-3.5 mt-1">
+                           <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em]">Key Result</span>
+                           <span className="text-[10px] font-bold text-white/40 italic">
+                             {linkedObjective.key_result || "Medir impacto de la iniciativa en Q2"}
+                           </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* JIRA LINK & SUBTASK */}
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Ejecución en Jira</span>
+                      <div className="flex flex-col gap-2">
+                        <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-3 py-2 rounded-xl border ${
+                          task.linked_jira_key ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-white/5 text-white/20 border-white/5 border-dashed'
+                        }`}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="opacity-70"><path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" /></svg>
+                          {task.linked_jira_key ? task.linked_jira_key : 'Sin historia de usuario'}
+                        </div>
+                        {linkedSubtask ? (
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest px-3 py-2 rounded-xl bg-blue-500/5 border border-blue-500/10 ml-4">
+                            ↳ SUB: {linkedSubtask.title}
+                          </div>
+                        ) : task.linked_jira_key && (
+                          <div className="text-[9px] font-bold text-white/20 italic ml-4">
+                            Esperando vinculación a subtarea...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer: Due Date */}
+                  <div className="flex items-center justify-between pt-4 border-t border-white/5 mt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Vencimiento:</span>
+                      <span className={`text-[11px] font-bold ${task.due_date ? 'text-white/60' : 'text-white/10 italic'}`}>
+                        {task.due_date ? `📅 ${new Date(task.due_date).toLocaleDateString()}` : 'Sin fecha asignada'}
+                      </span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/20 group-hover/task:bg-primary/20 group-hover/task:text-primary transition-all">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+                    </div>
+                  </div>
+                </div>
               </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getSourceIcon(type: string) {
+  if (type === 'sheet') return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" />
+    </svg>
+  );
+  if (type === 'doc') return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" /><polyline points="13 2 13 9 20 9" />
+    </svg>
+  );
+}
+
+
+function InsightsTab({ items, objectives = [], jiraTasks = [], team, setTeam }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void }) {
+  const filteredItems = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+        <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">INSIGHTS DEL DÍA</h3>
+        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+          {['talent', 'hiring', 'ux', 'otras'].map((t) => (
+            <button 
+              key={t}
+              onClick={() => setTeam(t as any)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                team === t ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              {t === 'ux' ? 'UX TEAM' : t.toUpperCase()} ({items.filter(it => categorizeItem(it, objectives, jiraTasks) === t).length})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredItems.map((item, i) => {
+          const linkedGoal = objectives.find(o => o.id === item.goal_id);
+          const linkedJira = jiraTasks.find(j => j.external_key === item.linked_jira_key);
+          return (
+            <div key={i} className="bg-card rounded-2xl border border-white/10 p-6 flex flex-col gap-4 hover:border-primary/30 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest">
+                  {item.category || "INSIGHT"}
+                </span>
+              </div>
+              <p className="text-sm text-white/80 font-medium leading-relaxed">{item.description || item.title}</p>
+              
+              {(linkedGoal || linkedJira) && (
+                <div className="mt-2 pt-3 border-t border-white/5 space-y-2">
+                  {linkedGoal && (
+                    <div className="flex items-center gap-2 text-[9px] font-bold text-primary/60 uppercase">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      OBJ: {linkedGoal.title}
+                    </div>
+                  )}
+                  {linkedJira && (
+                    <div className="flex items-center gap-2 text-[9px] font-bold text-blue-400 uppercase">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z"/></svg>
+                      JIRA: {linkedJira.external_key}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter ${
-              item.priority === "critica" ? "bg-red-100 text-red-600" : 
-              item.priority === "alta" ? "bg-orange-100 text-orange-600" : "bg-blue-100 text-blue-600"
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MetricsTab({ items, objectives = [], team, setTeam }: { items: any[], objectives: any[], team: string, setTeam: (t: any) => void }) {
+  const filteredItems = items.filter(it => categorizeItem(it, objectives) === team);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+        <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">KPIs Y MÉTRICAS</h3>
+        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+          {['talent', 'hiring', 'ux', 'otras'].map((t) => (
+            <button 
+              key={t}
+              onClick={() => setTeam(t as any)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                team === t ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              {t === 'ux' ? 'UX TEAM' : t.toUpperCase()} ({items.filter(it => categorizeItem(it, objectives) === t).length})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {filteredItems.map((item, i) => {
+          const linkedGoal = objectives.find(o => o.id === item.goal_id);
+          return (
+            <div key={i} className="bg-card rounded-2xl border border-white/10 p-6 flex flex-col gap-4 hover:border-primary/40 transition-all group">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-1">{item.title}</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-white group-hover:text-primary transition-colors">{item.value}</span>
+                  {item.change && (
+                    <span className={`text-[10px] font-bold ${item.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
+                      {item.change}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {linkedGoal && (
+                <div className="mt-auto pt-3 border-t border-white/5">
+                  <div className="flex items-center gap-2 text-[8px] font-black text-primary/60 uppercase">
+                    <div className="w-1 h-1 rounded-full bg-primary" />
+                    OBJ: {linkedGoal.title}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AlertsTab({ items, objectives = [], jiraTasks = [], team, setTeam }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void }) {
+  const filteredItems = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+        <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">ALERTAS DETECTADAS</h3>
+        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+          {['talent', 'hiring', 'ux', 'otras'].map((t) => (
+            <button 
+              key={t}
+              onClick={() => setTeam(t as any)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                team === t ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              {t === 'ux' ? 'UX TEAM' : t.toUpperCase()} ({items.filter(it => categorizeItem(it, objectives, jiraTasks) === t).length})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredItems.map((item, i) => {
+          const linkedGoal = objectives.find(o => o.id === item.goal_id);
+          const linkedJira = jiraTasks.find(j => j.external_key === item.linked_jira_key);
+          const isCritical = item.priority === 'critica' || item.priority === 'alta';
+          
+          return (
+            <div key={i} className={`bg-card rounded-2xl border p-6 flex flex-col gap-4 hover:shadow-lg transition-all ${
+              isCritical ? 'border-red-500/30' : 'border-white/10'
             }`}>
-              {item.priority}
-            </span>
-          </div>
-          <p className="text-sm text-white/60 leading-relaxed italic">"{item.content}"</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function TasksTab({ items }: { items: any[] }) {
-  return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {items.map((item, i) => (
-        <div key={i} className="bg-card rounded-2xl border border-white/20 p-4 flex items-center gap-4 hover:shadow-soft transition-all group">
-          <div className={`w-2 h-10 rounded-full ${
-            item.priority === "alta" ? "bg-red-400" : 
-            item.priority === "media" ? "bg-orange-400" : "bg-blue-400"
-          }`} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">{item.category}</span>
-              <span className="text-white/10">·</span>
-              <span className={`text-[10px] font-bold uppercase ${
-                item.priority === "alta" ? "text-red-500" : 
-                item.priority === "media" ? "text-orange-500" : "text-blue-500"
-              }`}>{item.priority}</span>
+              <div className="flex items-center justify-between">
+                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                  isCritical ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'
+                }`}>
+                  {item.priority || 'ALERTA'}
+                </span>
+                <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                  {item.fecha_registro || item.fecha?.split('T')[0] || ''}
+                </span>
+              </div>
+              <h4 className="text-base font-bold text-white leading-tight">{item.title}</h4>
+              <p className="text-sm text-white/50 leading-relaxed">{item.description}</p>
+              
+              {(linkedGoal || linkedJira) && (
+                <div className="mt-auto pt-3 border-t border-white/5 space-y-2">
+                  {linkedGoal && (
+                    <div className="flex items-center gap-2 text-[8px] font-black text-primary/60 uppercase">
+                      <div className="w-1 h-1 rounded-full bg-primary" />
+                      OBJ: {linkedGoal.title}
+                    </div>
+                  )}
+                  {linkedJira && (
+                    <div className="flex items-center gap-2 text-[8px] font-black text-blue-400 uppercase">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="opacity-70"><path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" /></svg>
+                      JIRA: {linkedJira.external_key}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <h4 className="text-sm font-bold text-white truncate">{item.title}</h4>
-          </div>
-          <button className="w-8 h-8 rounded-full border-2 border-white/20 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-all group-hover:scale-110">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-transparent group-hover:text-primary transition-colors">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function InsightsTab({ items }: { items: any[] }) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {items.map((item, i) => (
-        <div key={i} className="bg-card rounded-3xl border border-white/20 p-6 shadow-soft hover:shadow-hard transition-all group">
-          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm border border-purple-100">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" />
-              <path d="M2 17l10 5 10-5" />
-              <path d="M2 12l10 5 10-5" />
-            </svg>
-          </div>
-          <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-2 block">{item.category}</span>
-          <h4 className="text-base font-bold text-white mb-3">{item.title}</h4>
-          <p className="text-sm text-white/50 leading-relaxed">{item.description}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function MetricsTab({ items }: { items: any[] }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {items.map((item, i) => (
-        <div key={i} className="bg-card rounded-3xl border border-white/20 p-6 shadow-soft hover:shadow-hard transition-all">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-xs font-bold text-white/40 uppercase tracking-widest truncate max-w-[120px]">{item.title}</h4>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${
-              item.status === "critica" ? "bg-red-500/100/10 text-red-600" : "bg-green-500/10 text-green-600"
-            }`}>
-              {item.change}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-black text-white">{item.value}</span>
-          </div>
-          <div className="mt-4 h-1.5 w-full bg-card/5 rounded-full overflow-hidden">
-            <div 
-              className={`h-full rounded-full ${item.status === "critica" ? "bg-red-400" : "bg-primary"}`} 
-              style={{ width: "65%" }} 
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AlertsTab({ items }: { items: any[] }) {
-  return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {items.map((item, i) => (
-        <div key={i} className={`rounded-3xl border p-6 flex items-start gap-5 transition-all ${
-          item.priority === "critica" ? "bg-red-500/100/10 border-red-100" : "bg-amber-500/10 border-amber-100"
-        }`}>
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${
-            item.priority === "critica" ? "bg-red-500/100/100 text-white" : "bg-amber-500/100 text-white"
-          }`}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`text-[10px] font-black uppercase tracking-widest ${
-                item.priority === "critica" ? "text-red-600" : "text-amber-600"
-              }`}>ALERTA {item.priority}</span>
-            </div>
-            <h4 className="text-lg font-bold text-white mb-2">{item.title}</h4>
-            <p className={`text-sm leading-relaxed ${
-              item.priority === "critica" ? "text-red-700/70" : "text-amber-700/70"
-            }`}>{item.description}</p>
-          </div>
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -319,42 +702,304 @@ export default function DayTodayPage() {
   const [formatFilter, setFormatFilter] = useState<string>("all");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [driveSyncing, setDriveSyncing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
+  const [structuredTasks, setStructuredTasks] = useState<any[]>([]);
+  const [objectives, setObjectives] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [jiraSubTab, setJiraSubTab] = useState<'talent' | 'hiring' | 'ux' | 'otras'>('talent');
+
+  const fetchProfiles = async () => {
+    const { data } = await supabase.from("profiles").select("*");
+    if (data) setProfiles(data);
+  };
+
+  const fetchObjectives = async () => {
+    const { data } = await supabase.from("workspace_objectives").select("*");
+    if (data) setObjectives(data);
+  };
+
+  const loadStructuredTasks = async (wsId: string, wsData?: any) => {
+    // Ensure we have objectives for matching
+    const { data: currentObjectives } = await supabase.from("workspace_objectives").select("*").eq("workspace_id", wsId);
+    const activeObjectives = currentObjectives || [];
+    if (activeObjectives.length > 0) setObjectives(activeObjectives);
+
+    const result = await getTasks(wsId);
+    let localTasks = result.success ? (result.data || []) : [];
+
+    // Jira sync if config exists
+    if (wsData?.jira_config) {
+      const jql = 'assignee = "60cd00d4dae5670068abf978" AND statusCategory = "In Progress" AND (project in ("HIRING", "TALENT", "UTU") OR customfield_10001 ~ "Hiring" OR customfield_10001 ~ "Talent")';
+      const jiraResult = await fetchJiraIssues(wsData.jira_config, jql);
+      
+      if (jiraResult.success) {
+        // Step 1: Collect all subtask keys to fetch full details
+        const subtaskKeys: string[] = [];
+        jiraResult.issues.forEach((issue: any) => {
+          (issue.fields?.subtasks || []).forEach((st: any) => {
+            if (st?.key) subtaskKeys.push(st.key);
+          });
+        });
+
+        // Step 2: Fetch full details for all subtasks in one batch
+        let fullSubtasksMap: Record<string, any> = {};
+        if (subtaskKeys.length > 0) {
+          const subtasksJql = `key in (${subtaskKeys.join(',')})`;
+          const subtasksResult = await fetchJiraIssues(wsData.jira_config, subtasksJql);
+          if (subtasksResult.success) {
+            subtasksResult.issues.forEach((si: any) => {
+              fullSubtasksMap[si.key] = si;
+            });
+          }
+        }
+
+        const jiraTasks = jiraResult.issues
+          .filter((issue: any) => !issue.fields?.issuetype?.subtask)
+          .map((issue: any) => {
+          const jiraTitle = issue.fields?.summary;
+          const jiraTeam = issue.fields?.customfield_10001?.value || 
+                          issue.fields?.customfield_10001?.name || 
+                          (typeof issue.fields?.customfield_10001 === 'string' ? issue.fields?.customfield_10001 : "");
+          
+          // Auto-link logic (Advanced Scoring)
+          let linkedGoalId = null;
+          let matchedTeam = jiraTeam;
+          let bestScore = 0;
+
+          if (activeObjectives.length > 0) {
+            const normalizedJiraTitle = jiraTitle?.toLowerCase() || "";
+            const stopWords = ['para', 'esta', 'con', 'del', 'las', 'los', 'una', 'uno', 'entregar', 'hacer', 'crear'];
+            
+            for (const obj of activeObjectives) {
+              let currentScore = 0;
+              const objTitle = obj.title.toLowerCase();
+              
+              if (normalizedJiraTitle.includes(objTitle) || objTitle.includes(normalizedJiraTitle)) {
+                currentScore += 100;
+              }
+
+              const objKeywords = objTitle.split(' ').filter((w: string) => w.length > 3 && !stopWords.includes(w));
+              const jiraKeywords = normalizedJiraTitle.split(' ').filter((w: string) => w.length > 3 && !stopWords.includes(w));
+              
+              const matches = objKeywords.filter((kw: string) => jiraKeywords.includes(kw));
+              currentScore += (matches.length * 10);
+
+              if (currentScore > bestScore && currentScore > 5) {
+                bestScore = currentScore;
+                linkedGoalId = obj.id;
+                matchedTeam = obj.team || jiraTeam;
+              }
+            }
+          }
+
+          const jiraHistory = (issue.changelog?.histories || []).flatMap((h: any) => 
+            h.items.map((item: any) => ({
+              id: `${h.id}-${item.field}`,
+              type: "history",
+              user: h.author?.displayName || "Jira User",
+              text: `cambió ${item.field} de "${item.fromString || 'vacío'}" a "${item.toString || 'vacío'}"`,
+              timestamp: h.created,
+              isJira: true
+            }))
+          );
+
+          return {
+            id: `jira-${issue.id}`,
+            workspace_id: wsId,
+            title: jiraTitle || "Sin título",
+            description: issue.fields?.description || "",
+            status: issue.fields?.status?.name || "Sin estado",
+            priority: issue.fields?.priority?.name || 'Medium',
+            origin: 'jira',
+            external_key: issue.key,
+            isParent: true,
+            assignee: issue.fields?.assignee,
+            reporter: issue.fields?.reporter,
+            assignee_id: issue.fields?.assignee?.accountId,
+            reporter_id: issue.fields?.reporter?.accountId,
+            due_date: issue.fields?.duedate ? issue.fields.duedate : null,
+            created_at: issue.fields?.created,
+            updated_at: issue.fields?.updated,
+            subtasks: (issue.fields?.subtasks || []).map((st: any) => {
+              // Merge basic subtask with full details if available
+              const fullInfo = fullSubtasksMap[st.key];
+              return {
+                id: st?.id,
+                key: st?.key,
+                title: fullInfo?.fields?.summary || st?.fields?.summary || "",
+                status: fullInfo?.fields?.status?.name || st?.fields?.status?.name || "Todo",
+                priority: fullInfo?.fields?.priority?.name || st?.fields?.priority?.name || "Medium",
+                assignee_id: fullInfo?.fields?.assignee?.accountId || st?.fields?.assignee?.accountId || "",
+                assignee_name: fullInfo?.fields?.assignee?.displayName || st?.fields?.assignee?.displayName || ""
+              };
+            }),
+            labels: issue.fields?.labels || [],
+            team: matchedTeam,
+            goal_id: linkedGoalId,
+            comments: issue.fields?.comment?.comments || [],
+            activity: jiraHistory
+          };
+        });
+
+        // Hierarchy linking: Map AI tasks to their Jira parents
+        const linkedTasks = localTasks.map(lt => {
+          if (lt.linked_jira_key) {
+            return { ...lt, isLinkedChild: true };
+          }
+          return lt;
+        });
+
+        const hierarchicalJiraTasks = jiraTasks.map(jt => ({
+          ...jt,
+          linkedAiTasks: linkedTasks.filter(lt => lt.linked_jira_key === jt.external_key)
+        }));
+
+        // In the final list, only show top-level items:
+        // 1. Hierarchical Jira HUs (with their AI children inside)
+        // 2. Local AI/Manual tasks that ARE NOT linked to any Jira HU
+        const finalTasks = [
+          ...hierarchicalJiraTasks,
+          ...linkedTasks.filter(lt => !lt.isLinkedChild)
+        ];
+
+        setStructuredTasks(finalTasks);
+      } else {
+        setStructuredTasks(localTasks);
+      }
+    } else {
+      setStructuredTasks(localTasks);
+    }
+  };
+
+  const handleReorderTasks = async (newTasks: any[]) => {
+    setStructuredTasks(newTasks);
+    await reorderTasks(newTasks.map(t => t.id));
+  };
+
+  const handleDeleteTaskAction = async (id: string) => {
+    const { error } = await supabase.from("task_proposals").delete().eq("id", id);
+    if (!error && workspaceId) {
+      loadStructuredTasks(workspaceId);
+    }
+  };
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
+  
+  // Time calculation states (8am-6pm workday)
+  const [timeMetrics, setTimeMetrics] = useState<{
+    totalWorkdayHours: number;
+    meetingHours: number;
+    availableHours: number;
+    meetingPercentage: number;
+    availablePercentage: number;
+  }>({
+    totalWorkdayHours: 10, // 8am-6pm = 10 hours
+    meetingHours: 0,
+    availableHours: 10,
+    meetingPercentage: 0,
+    availablePercentage: 100,
+  });
+  
+  // Alerts state
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  // Calculate time metrics based on calendar events (8am-6pm workday)
+  const calculateTimeMetrics = useCallback((events: any[]) => {
+    const WORKDAY_START = 8; // 8am
+    const WORKDAY_END = 18; // 6pm
+    const TOTAL_WORKDAY_HOURS = WORKDAY_END - WORKDAY_START; // 10 hours
+    
+    let totalMeetingMinutes = 0;
+    
+    events.forEach(event => {
+      if (event.start?.dateTime && event.end?.dateTime) {
+        const start = new Date(event.start.dateTime);
+        const end = new Date(event.end.dateTime);
+        
+        // Only count meetings that overlap with workday
+        const eventStartHour = start.getHours() + start.getMinutes() / 60;
+        const eventEndHour = end.getHours() + end.getMinutes() / 60;
+        
+        // Skip all-day events for time calculation
+        if (eventStartHour === 0 && eventEndHour === 24) return;
+        
+        const meetingStart = Math.max(eventStartHour, WORKDAY_START);
+        const meetingEnd = Math.min(eventEndHour, WORKDAY_END);
+        
+        if (meetingEnd > meetingStart) {
+          totalMeetingMinutes += (meetingEnd - meetingStart) * 60;
+        }
+      }
+    });
+    
+    const meetingHours = Math.round(totalMeetingMinutes / 60 * 10) / 10;
+    const availableHours = Math.round((TOTAL_WORKDAY_HOURS - meetingHours) * 10) / 10;
+    const meetingPercentage = Math.round((meetingHours / TOTAL_WORKDAY_HOURS) * 100);
+    const availablePercentage = 100 - meetingPercentage;
+    
+    return {
+      totalWorkdayHours: TOTAL_WORKDAY_HOURS,
+      meetingHours,
+      availableHours: Math.max(0, availableHours),
+      meetingPercentage,
+      availablePercentage: Math.max(0, availablePercentage),
+    };
+  }, []);
+
+  // Fetch alerts for the day
+  const fetchAlerts = useCallback(async (wsId: string, dateStr: string) => {
+    try {
+      // Fetch from task_proposals table where priority is high/critical or status indicates alert
+      const { data, error } = await supabase
+        .from("task_proposals")
+        .select("*")
+        .eq("workspace_id", wsId)
+        .or("priority.eq.High,priority.eq.Highest,status.eq.Blocked,status.eq.Critical");
+      
+      if (!error && data) {
+        setAlerts(data.filter(a => a.priority === 'High' || a.priority === 'Highest').slice(0, 5));
+      }
+    } catch (err) {
+      console.error("Error fetching alerts:", err);
+    }
+  }, []);
 
   // Map a raw DB row to the UI Source shape
-  const mapDbSource = (s: any): Source => {
+const mapDbSource = (s: any): Source => {
     const isGoogle = s.source_origin === "google";
-
+const isSlack = s.source_origin === "slack";
+    
     const url: string = s.original_url || "";
     let fmt = "DOC";
-    if (url.includes("spreadsheets")) fmt = "SHEET";
+    if (isSlack) fmt = "SLACK";
+    else if (url.includes("spreadsheets")) fmt = "SHEET";
     else if (url.includes(".pdf")) fmt = "PDF";
     else if (url.includes("docs.google")) fmt = "DOC";
     else if (url.includes("presentation")) fmt = "SLIDE";
     else if (url.includes(".docx")) fmt = "DOCX";
 
     let label: SourceType = "FUENTE EXTERNA";
-    if (isGoogle) {
+    const isGemini = s.title?.toLowerCase().includes("gemini");
+    if (isSlack) {
+      label = "SLACK" as SourceType;
+    } else if (isGoogle) {
       if (fmt === "SHEET") label = "DOCUMENTO" as SourceType;
-      else if (fmt === "DOC" || fmt === "DOCX") label = "NOTAS DE GEMINI" as SourceType;
-      else label = "DOCUMENTO" as SourceType;
+      else if (fmt === "DOC" || fmt === "DOCX") {
+        label = isGemini ? "NOTAS DE GEMINI" as SourceType : "DOCUMENTO" as SourceType;
+      } else label = "DOCUMENTO" as SourceType;
+    } else if (isGemini) {
+      label = "NOTAS DE GEMINI" as SourceType;
     }
 
-    // Enhancement: specific display label for the tag
-    const displayTag = isGoogle ? (
-      fmt === "SHEET" ? "GOOGLE SHEET" :
-      fmt === "PDF" ? "PDF" :
-      fmt === "SLIDE" ? "GOOGLE SLIDE" :
-      fmt === "DOC" || fmt === "DOCX" ? "GOOGLE DOC" :
-      "DOCUMENTO"
-    ) : label;
+    const displayTag = isSlack ? "SLACK" : label;
 
     return {
       id: s.id,
@@ -369,8 +1014,13 @@ export default function DayTodayPage() {
       externalSourceId: s.external_source_id,
       mimeType: s.metadata?.mimeType || null,
       origin: s.source_origin,
-      description: s.metadata?.description || "",
-      icon: (
+      description: s.metadata?.preview || s.metadata?.description || (s.metadata?.messages ? `${s.metadata.messages.length} mensajes` : ""),
+      metadata: s.metadata || {},
+      icon: isSlack ? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#E01E5A">
+          <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.522 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.166 0a2.528 2.528 0 0 1 2.522 2.522v6.312zM15.166 18.956a2.528 2.528 0 0 1 2.522 2.522A2.528 2.528 0 0 1 15.166 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.166 17.688a2.527 2.527 0 0 1-2.52-2.52 2.526 2.526 0 0 1 2.52-2.522h6.312A2.527 2.527 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.522h-6.312z"/>
+        </svg>
+      ) : (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2-2h12a2 2 0 0 0 2-2V8z" />
           <polyline points="14 2 14 8 20 8" />
@@ -393,6 +1043,7 @@ export default function DayTodayPage() {
     try {
       setLoading(true);
       setIsRetrying(true);
+      setIsSyncing(true);
       setSyncError(null);
       
       // Clear data to show fresh loading state
@@ -417,6 +1068,10 @@ export default function DayTodayPage() {
       }
       const wsId = wsResult.data.id;
       setWorkspaceId(wsId);
+      loadStructuredTasks(wsId, wsResult.data);
+      fetchProfiles();
+      // NOTE: Objetivos removidos de la carga inicial del tab Hoy
+      // Se cargan solo si es necesario para otras pestañas
 
       // 2. Load existing summary
       const y = forDate.getFullYear();
@@ -467,10 +1122,18 @@ export default function DayTodayPage() {
       
       if (calendarResult.success && calendarResult.events) {
         setCalendarEvents(calendarResult.events);
+        // Calculate time metrics based on meetings
+        const metrics = calculateTimeMetrics(calendarResult.events);
+        setTimeMetrics(metrics);
       } else if (!calendarResult.success && calendarResult.error) {
         // If it's a 401/403 or token error, we want the global banner to show
         setSyncError(calendarResult.error);
         console.error("Calendar Sync Error:", calendarResult.error);
+      }
+
+      // 5. Fetch alerts for the day
+      if (wsId) {
+        await fetchAlerts(wsId, dateStr);
       }
 
       // 5. Auto-sync Drive files for the selected date
@@ -549,6 +1212,7 @@ export default function DayTodayPage() {
       if (fetchId === currentFetchIdRef.current) {
         setLoading(false);
         setIsRetrying(false);
+        setIsSyncing(false);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -596,11 +1260,41 @@ export default function DayTodayPage() {
       const d = String(selectedDate.getDate()).padStart(2, "0");
       const dateStr = `${y}-${m}-${d}`;
 
-      // 1. Run the analysis
+      // 1. Fetch contents for all checked sources to provide context to Gemini
+      setIsAnalyzing(true);
+      const sourcesWithContent = await Promise.all(checkedSources.map(async (s) => {
+        let content = "";
+        
+        if ((s.origin === 'google' || s.source_origin === 'google') && s.externalSourceId) {
+          // Fetch from Google Drive
+          const driveContent = await fetchGoogleFileContent(s.externalSourceId as string, s.mimeType as string);
+          content = driveContent || "";
+        } else if (s.isManual && s.description) {
+          // Manual notes already have content in description
+          content = s.description;
+        }
+
+        return {
+          id: s.id,
+          name: s.name,
+          type: s.type,
+          format: s.format,
+          content: content
+        };
+      }));
+
+      // 1. Run the analysis with full content and user context
       const result = await analyzeDay({
         date: dateStr,
         meetings: calendarEvents,
-        sources: checkedSources,
+        sources: sourcesWithContent,
+        userName: userFullName,
+        objectives: objectives,
+        jiraContext: structuredTasks.filter(t => t.origin === 'jira').map(jt => ({
+          key: jt.external_key,
+          title: jt.title,
+          subtasks: jt.subtasks?.map((st: any) => ({ id: st.id, title: st.title }))
+        }))
       });
 
       if (!result.success) {
@@ -673,13 +1367,30 @@ export default function DayTodayPage() {
     }
   };
 
+  const handleEditTask = (task: any) => {
+    setEditingTask(task);
+    setTaskDrawerOpen(true);
+  };
+
+  const handleAddTask = () => {
+    setEditingTask(null);
+    setTaskDrawerOpen(true);
+  };
+
+  const handleSaveTask = async (taskData: any) => {
+    // Optimistic refresh
+    await fetchData(selectedDate);
+    setTaskDrawerOpen(false);
+  };
+
   const filteredSources = sources.filter((s) => {
-    const typeOk = typeFilter === "all" || s.type === typeFilter;
-    const fmtOk = formatFilter === "all" || s.format === formatFilter;
-    return typeOk && fmtOk;
+    const isSlack = s.origin === "slack";
+    const isGeminiNote = s.type === "NOTAS DE GEMINI";
+    const isGeminiTitle = s.name?.toLowerCase().includes("gemini");
+    return isSlack || isGeminiNote || isGeminiTitle;
   });
 
-  const checkedCount = sources.filter((s) => s.checked).length;
+  const checkedCount = filteredSources.filter((s) => s.checked).length;
 
   if (loading) {
     return (
@@ -709,6 +1420,18 @@ export default function DayTodayPage() {
           <DayNavigator value={selectedDate} onChange={handleDateChange} />
 
           <button
+            onClick={() => fetchData(selectedDate)}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white/80 border-2 border-white/5 hover:border-primary/30 transition-all bg-card"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={isSyncing ? "animate-spin" : ""}>
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.04 6.67 2.87L21 8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            SINCRONIZAR
+          </button>
+
+          <button
             onClick={handleAnalyzeDay}
             disabled={isAnalyzing}
             className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-[12px] font-black tracking-widest text-white shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-1 active:translate-y-0 transition-all disabled:opacity-20 disabled:grayscale disabled:hover:translate-y-0 ${isAnalyzing ? "animate-pulse shadow-primary/50 ring-4 ring-primary/10" : ""}`}
@@ -735,13 +1458,13 @@ export default function DayTodayPage() {
       <div className="flex gap-6 border-b border-white/20 mb-8 overflow-x-auto no-scrollbar">
         {[
           { id: "hoy", label: "Hoy" },
-          // { id: "resumen-del-analisis", label: "Resumen del Análisis", show: summaryData?.summary_text },
           { id: "fuentes", label: "Fuentes" },
-          { id: "feedback", label: "Feedback", count: summaryData?.feedback_count || summaryData?.feedback?.length },
+          { id: "resumen-del-analisis", label: "Resumen del Análisis", show: summaryData?.summary_text },
           { id: "tasks", label: "Tareas", count: summaryData?.tasks_count || summaryData?.tasks?.length },
           { id: "insights", label: "Insights", count: summaryData?.insights_count || summaryData?.insights?.length },
           { id: "metrics", label: "Métricas", count: summaryData?.metrics_count || summaryData?.metrics?.length },
           { id: "alerts", label: "Alertas", count: summaryData?.alerts_count || summaryData?.alerts?.length },
+          { id: "feedback", label: "Feedback", count: summaryData?.feedback_count || summaryData?.feedback?.length },
         ].filter(t => t.id === "hoy" || t.id === "fuentes" || ("show" in t && t.show) || (t.count && t.count > 0)).map((tab) => (
           <button
             key={tab.id}
@@ -798,7 +1521,6 @@ export default function DayTodayPage() {
              syncError.toLowerCase().includes("unauthorized") ? (
                <button 
                 onClick={() => {
-                  console.log("Redirecting to login with force=true");
                   window.location.href = "/auth/login?force=true&reconnect=true";
                 }}
                 className="px-6 py-2.5 bg-amber-600 text-white text-[11px] font-black tracking-wider rounded-xl hover:bg-amber-700 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-600/30 uppercase whitespace-nowrap flex items-center gap-2"
@@ -889,7 +1611,112 @@ export default function DayTodayPage() {
             </div>
           )}
 
-          {/* Quick Stats Grid Removed as per request (Plan de Acción context) */}
+          {/* Productivity Card - Time Metrics */}
+          <div className="bg-card rounded-[2.5rem] border border-white/10 p-6 shadow-soft">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Mi Día</h3>
+                  <p className="text-[10px] text-white/40 font-medium">Jornada: 8:00 AM - 6:00 PM</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => fetchData(selectedDate)}
+                disabled={loading}
+                className="p-2 text-white/30 hover:text-primary transition-colors bg-card/5 rounded-lg border border-white/10 hover:border-primary/30"
+                title="Actualizar datos"
+              >
+                <svg 
+                  className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                >
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                  <polyline points="21 3 21 8 16 8" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Time Progress Bar */}
+            <div className="space-y-4">
+              <div className="relative h-3 bg-white/5 rounded-full overflow-hidden">
+                <div 
+                  className="absolute left-0 top-0 h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full transition-all duration-700"
+                  style={{ width: `${timeMetrics.meetingPercentage}%` }}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-black text-white font-mono">{timeMetrics.totalWorkdayHours}h</p>
+                  <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mt-1">Jornada</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-black text-red-400 font-mono">{timeMetrics.meetingHours}h</p>
+                  <p className="text-[9px] font-bold text-red-400/60 uppercase tracking-widest mt-1">Reuniones</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-black text-green-400 font-mono">{timeMetrics.availableHours}h</p>
+                  <p className="text-[9px] font-bold text-green-400/60 uppercase tracking-widest mt-1">Disponible</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                <span className="text-[10px] font-bold text-white/40">
+                  {timeMetrics.meetingPercentage}% en reuniones · {timeMetrics.availablePercentage}% para trabajo
+                </span>
+                {timeMetrics.meetingHours === 0 && (
+                  <span className="text-[9px] font-black text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">
+                    ✓ Día libre de reuniones
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Alerts Section */}
+          {alerts.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-red-500/10 flex items-center justify-center animate-pulse">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </div>
+                <h3 className="text-[11px] font-black tracking-[0.2em] text-red-400 uppercase">Alertas Importantes</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+                  {alerts.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {alerts.map((alert, idx) => (
+                  <div key={idx} className="bg-card border border-red-500/20 rounded-xl p-4 flex items-start gap-3 hover:border-red-500/40 transition-all">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0 animate-pulse" />
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-white">{alert.title}</p>
+                      {alert.description && (
+                        <p className="text-xs text-white/50 mt-1">{alert.description}</p>
+                      )}
+                    </div>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg uppercase ${
+                      alert.priority === 'Highest' ? 'bg-red-500/20 text-red-500' : 'bg-amber-500/20 text-amber-500'
+                    }`}>
+                      {alert.priority}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+
 
           {/* Meetings Section */}
           <div className="space-y-4">
@@ -900,7 +1727,10 @@ export default function DayTodayPage() {
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
                 </div>
-                <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/40 uppercase">Tu Agenda (Google Calendar)</h3>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  <span className="text-[10px] font-black tracking-widest text-white/40 uppercase">Calendario Hoy</span>
+                </div>
                 {calendarEvents.length > 0 && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                     {calendarEvents.length}
@@ -1020,43 +1850,249 @@ export default function DayTodayPage() {
             )}
           </div>
 
-          {/* Future Tasks Placeholder */}
+          {/* Today's Tasks - Real pending tasks */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-card/5 flex items-center justify-center text-white/30">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                </svg>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2" /><polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
+                <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase">Tareas Pendientes Hoy</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  {structuredTasks.filter(t => {
+                    const isDone = t.status?.toLowerCase().includes('done') || t.status?.toLowerCase().includes('finalizada');
+                    const isDueToday = t.due_date && new Date(t.due_date).toDateString() === selectedDate.toDateString();
+                    const isInProgress = t.status?.toLowerCase().includes('progress') || t.status?.toLowerCase().includes('curso');
+                    return !isDone && (isDueToday || isInProgress);
+                  }).length}
+                </span>
               </div>
-              <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/40 uppercase">Próximas Tareas</h3>
+              
+              <button 
+                onClick={() => setTaskDrawerOpen(true)}
+                className="px-4 py-1.5 bg-card border border-white/20 text-white/60 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all flex items-center gap-2"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                AÑADIR
+              </button>
             </div>
             
-            {summaryData?.tasks && summaryData.tasks.length > 0 ? (
-              <div className="space-y-3">
-                {summaryData.tasks.slice(0, 3).map((task: any, idx: number) => (
-                  <div key={idx} className="bg-card rounded-2xl border border-white/10 p-4 shadow-sm hover:shadow-soft transition-all flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-full border-2 border-navy/5 flex items-center justify-center text-white/20 group-hover:border-primary/20 group-hover:text-primary transition-colors">
-                        {idx + 1}
-                      </div>
-                      <p className="text-sm font-bold text-white/80">{task.title}</p>
+            {(() => {
+              const today = new Date();
+              today.setHours(0,0,0,0);
+              
+              const pendingTasks = structuredTasks.filter((task: any) => {
+                const isDone = task.status?.toLowerCase().includes('done') || task.status?.toLowerCase().includes('finalizada');
+                if (isDone) return false;
+                
+                const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
+                const isInProgress = task.status?.toLowerCase().includes('progress') || task.status?.toLowerCase().includes('curso');
+                const isOverdue = task.due_date && new Date(task.due_date) < today && !isDone;
+                
+                return isDueToday || isInProgress || isOverdue;
+              });
+
+              if (pendingTasks.length === 0) {
+                return (
+                  <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-white/10 p-8 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center mx-auto mb-4">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                      </svg>
                     </div>
-                    <span className={`text-[9px] font-black tracking-widest px-2 py-1 rounded-lg uppercase ${
-                      task.priority === 'alta' ? 'bg-red-500/100/10 text-red-500' : 
-                      task.priority === 'media' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'
-                    }`}>
-                      {task.priority}
-                    </span>
+                    <p className="text-sm text-white/40 font-medium">¡Sin tareas pendientes para hoy!</p>
+                    <p className="text-xs text-white/20 mt-1">Aprovecha tu tiempo disponible para avanzar en proyectos largos.</p>
                   </div>
-                ))}
-                {summaryData.tasks.length > 3 && (
-                  <button 
-                    onClick={() => setActiveTab("tasks")}
-                    className="w-full py-2 text-[10px] font-bold text-white/30 hover:text-primary transition-colors uppercase tracking-widest"
-                  >
-                    Ver todas las tareas ({summaryData.tasks.length})
-                  </button>
-                )}
+                );
+              }
+
+              return (
+                <div className="space-y-2">
+                  {pendingTasks.slice(0, 8).map((task: any) => {
+                    const isOverdue = task.due_date && new Date(task.due_date) < today && !(task.status?.toLowerCase().includes('done'));
+                    const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
+                    
+                    return (
+                      <div 
+                        key={task.id}
+                        onClick={() => handleEditTask(task)}
+                        className={`bg-card rounded-2xl border p-4 hover:border-primary/30 transition-all cursor-pointer group ${
+                          isOverdue ? 'border-red-500/30 bg-red-500/5' : 'border-white/10'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              task.origin === 'jira' ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/10 text-primary'
+                            }`}>
+                              {task.origin === 'jira' ? (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" />
+                                </svg>
+                              ) : (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-bold truncate ${isOverdue ? 'text-red-400' : 'text-white'}`}>{task.title}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {task.origin === 'jira' && (
+                                  <span className="text-[8px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded uppercase tracking-widest">
+                                    {task.external_key}
+                                  </span>
+                                )}
+                                {task.due_date && (
+                                  <span className={`text-[9px] font-medium ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-white/30'}`}>
+                                    📅 {new Date(task.due_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${
+                              task.priority === 'High' || task.priority === 'Highest' ? 'bg-red-500/10 text-red-500' : 
+                              task.priority === 'Medium' ? 'bg-amber-500/10 text-amber-500' : 'bg-white/5 text-white/20'
+                            }`}>
+                              {task.priority || 'Low'}
+                            </span>
+                            <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${
+                              task.status?.toLowerCase().includes('progress') ? 'bg-blue-500/10 text-blue-400' : 'bg-white/5 text-white/20'
+                            }`}>
+                              {task.status || 'Pendiente'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {pendingTasks.length > 8 && (
+                    <p className="text-center text-xs text-white/30 font-medium pt-2">
+                      +{pendingTasks.length - 8} tareas más...
+                    </p>
+                  )}
+                </div>
+                );
+            })()}
+          </div>
+        </div>
+      )}
+                        </div>
+                        <div>
+                          <p className={`text-sm font-bold ${task.origin === 'jira' ? 'text-white' : 'text-white/80'}`}>{task.title}</p>
+                          {task.goal_id && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <div className="w-1 h-1 rounded-full bg-primary" />
+                              <span className="text-[9px] font-black text-primary uppercase tracking-widest opacity-80">
+                                {objectives.find(o => o.id === task.goal_id)?.title || "Objetivo Vinculado"}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {task.origin === 'jira' ? (
+                              <span className="flex items-center gap-1.5 text-[9px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded uppercase tracking-widest border border-blue-500/20">
+                                ESTRATÉGICO · {task.external_key}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold text-white/20 uppercase tracking-tighter">Tarea del día (IA)</span>
+                            )}
+                            {task.due_date && (
+                              <span className="text-[9px] font-bold text-primary/60">📅 {new Date(task.due_date).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`text-[9px] font-black tracking-widest px-2 py-1 rounded-lg uppercase ${
+                        task.priority === 'High' || task.priority === 'Highest' ? 'bg-red-500/100/10 text-red-500' : 
+                        task.priority === 'Medium' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'
+                      }`}>
+                        {task.priority || 'Low'}
+                      </span>
+                    </div>
+
+                    {/* Integrated Hierarchy: AI Tasks Linked to this Jira HU */}
+                    {task.origin === 'jira' && task.linkedAiTasks && task.linkedAiTasks.length > 0 && (
+                      <div className="ml-10 space-y-3 mt-4 border-l-2 border-primary/20 pl-6 py-2">
+                        {task.linkedAiTasks.map((aiTask: any) => (
+                          <div 
+                            key={aiTask.id} 
+                            onClick={(e) => { e.stopPropagation(); onTaskClick(aiTask); }}
+                            className="bg-primary/5 rounded-2xl border border-primary/10 p-4 hover:border-primary/30 transition-all cursor-pointer group/ai"
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex-1">
+                                <p className="text-sm font-black text-white group-hover/ai:text-primary transition-colors">{aiTask.title}</p>
+                                {aiTask.linked_jira_subtask_id && (
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <span className="text-[8px] font-black text-primary/40 uppercase tracking-widest">Le pega a:</span>
+                                    <span className="text-[9px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded">
+                                      {task.subtasks?.find((s: any) => s.id === aiTask.linked_jira_subtask_id)?.title || "Subtarea General"}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              <span className={`text-[8px] font-black tracking-widest px-2 py-1 rounded-lg uppercase ${
+                                aiTask.status?.toLowerCase().includes('done') ? 'bg-green-500/10 text-green-500' : 'bg-primary/20 text-primary'
+                              }`}>
+                                {aiTask.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Native Jira Activities (Show only if no AI tasks or as collapsed) */}
+                    {task.origin === 'jira' && task.subtasks && task.subtasks.length > 0 && (!task.linkedAiTasks || task.linkedAiTasks.length === 0) && (
+                      <div className="ml-10 space-y-2 border-l-2 border-primary/10 pl-4 py-2 mt-2">
+                        <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mb-2 block">Actividades Operativas ({task.subtasks.length})</span>
+                        {task.subtasks.slice(0, 3).map((sub: any) => (
+                          <div key={sub.id} className="flex items-center justify-between group py-1">
+                            <div className="flex items-center gap-3">
+                              <div className="w-1.5 h-1.5 rounded-full bg-primary/40 group-hover:bg-primary transition-all" />
+                              <p className="text-xs font-medium text-white/40 group-hover:text-white/70 transition-colors">{sub.title}</p>
+                            </div>
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">{sub.status}</span>
+                          </div>
+                        ))}
+                        {task.subtasks.length > 3 && (
+                          <p className="text-[10px] font-bold text-primary/40 pl-4">+ {task.subtasks.length - 3} actividades más</p>
+                        )}
+                      </div>
+       )}
+
+                {/* AI Suggestions (Lighter style) */}
+                {summaryData?.tasks?.map((task: any, idx: number) => {
+                  // Only show if not already promoting to structured (optional logic here)
+                  return (
+                    <div 
+                      key={`suggest-${idx}`} 
+                      className="bg-card/50 rounded-2xl border border-dashed border-navy/10 p-4 hover:border-primary/20 hover:bg-card transition-all flex items-center justify-between group cursor-help"
+                      title="Sugerencia de IA"
+                    >
+                      <div className="flex items-center gap-4 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <div className="w-8 h-8 rounded-full border border-dashed border-navy/20 flex items-center justify-center text-white/30">
+                          {idx + 1}
+                        </div>
+                        <p className="text-sm font-medium text-white/60">{task.title}</p>
+                      </div>
+                      <button 
+                        onClick={() => handleEditTask({ ...task, isSuggestion: true })}
+                        className="text-[9px] font-black tracking-widest px-3 py-1.5 rounded-lg border border-primary/20 text-primary opacity-0 group-hover:opacity-100 hover:bg-primary hover:text-white transition-all"
+                      >
+                        REVISAR
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-navy/5 p-8 text-center">
@@ -1273,56 +2309,106 @@ export default function DayTodayPage() {
       )}
 
       {/* ── TABS: DYNAMIC CONTENT ── */}
-      {/* TODO: Re-enable ResumenDelAnalisisTab when ready */}
 
-      {activeTab === "feedback" && summaryData?.feedback && (
+      {activeTab === "resumen-del-analisis" && summaryData && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            Feedback de Hoy
-            <span className="text-xs font-medium px-2 py-1 bg-card/5 rounded-lg text-white/40">{summaryData.feedback.length} items</span>
-          </h2>
-          <FeedbackTab items={summaryData.feedback} />
+          <ResumenDelAnalisisTab data={{
+            summary_text: summaryData.summary_text || "Resumen del día basado en las fuentes analizadas.",
+            hallazgos_clave: {
+              decisiones: [
+                "Priorizar la implementación del módulo de fidelización",
+                "Acelerar la aprobación del presupuesto Q4",
+                "Iniciar diálogos con SteelCore para cierre de alianza"
+              ],
+              riesgos: [
+                "Retrasos en certificación de seguridad pueden afectar timeline de producción",
+                "Presupuesto Q4 aún sin confirmar; requiere aprobación directiva",
+                "Falta de confirmación en propuesta de diseño móvil"
+              ],
+              oportunidades: [
+                "Expansión de mercado LATAM mediante alianza SteelCore",
+                "Mejora de métricas de fidelización con nuevo módulo",
+                "Optimización de costos operacionales con nueva estructura presupuestaria"
+              ]
+            },
+            proximos_pasos: [
+              {
+                id: 1,
+                texto: "Completar actualización de certificados SSL del cluster de producción",
+                prioridad: "critica"
+              },
+              {
+                id: 2,
+                texto: "Revisar y aprobar propuesta de diseño para panel móvil con stakeholders",
+                prioridad: "media"
+              },
+              {
+                id: 3,
+                texto: "Confirmar términos finales de exclusividad con SteelCore",
+                prioridad: "media"
+              },
+              {
+                id: 4,
+                texto: "Definir y validar KPIs para módulo de fidelización",
+                prioridad: "baja"
+              }
+            ]
+          }} />
         </div>
       )}
+      {activeTab === "feedback" && summaryData?.feedback && (
+        <FeedbackTab 
+          items={summaryData.feedback} 
+          objectives={objectives}
+          jiraTasks={structuredTasks.filter((it: any) => it.origin === 'jira')}
+          team={jiraSubTab}
+          setTeam={setJiraSubTab}
+        />
+      )}
 
-      {activeTab === "tasks" && summaryData?.tasks && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            Tareas Detectadas
-            <span className="text-xs font-medium px-2 py-1 bg-card/5 rounded-lg text-white/40">{summaryData.tasks.length} items</span>
-          </h2>
-          <TasksTab items={summaryData.tasks} />
-        </div>
+      {activeTab === "tasks" && (
+        <TasksTab 
+          items={[
+            ...(structuredTasks || []),
+            ...(summaryData?.tasks || [])
+          ]} 
+          objectives={objectives}
+          onTaskClick={handleEditTask}
+          onAddTask={handleAddTask}
+          onReorder={handleReorderTasks}
+          onDelete={handleDeleteTaskAction}
+          jiraSubTab={jiraSubTab}
+          setJiraSubTab={setJiraSubTab}
+        />
       )}
 
       {activeTab === "insights" && summaryData?.insights && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            Insights y Hallazgos
-            <span className="text-xs font-medium px-2 py-1 bg-card/5 rounded-lg text-white/40">{summaryData.insights.length} items</span>
-          </h2>
-          <InsightsTab items={summaryData.insights} />
-        </div>
+        <InsightsTab 
+          items={summaryData.insights} 
+          objectives={objectives}
+          jiraTasks={structuredTasks.filter((it: any) => it.origin === 'jira')}
+          team={jiraSubTab}
+          setTeam={setJiraSubTab}
+        />
       )}
 
       {activeTab === "metrics" && summaryData?.metrics && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            Métricas de Rendimiento
-            <span className="text-xs font-medium px-2 py-1 bg-card/5 rounded-lg text-white/40">{summaryData.metrics.length} items</span>
-          </h2>
-          <MetricsTab items={summaryData.metrics} />
-        </div>
+        <MetricsTab 
+          items={summaryData.metrics} 
+          objectives={objectives}
+          team={jiraSubTab}
+          setTeam={setJiraSubTab}
+        />
       )}
 
       {activeTab === "alerts" && summaryData?.alerts && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            Alertas y Riesgos
-            <span className="text-xs font-medium px-2 py-1 bg-card/5 rounded-lg text-white/40">{summaryData.alerts.length} items</span>
-          </h2>
-          <AlertsTab items={summaryData.alerts} />
-        </div>
+        <AlertsTab 
+          items={summaryData.alerts} 
+          objectives={objectives}
+          jiraTasks={structuredTasks.filter((it: any) => it.origin === 'jira')}
+          team={jiraSubTab}
+          setTeam={setJiraSubTab}
+        />
       )}
 
       <AddSourceDrawer 
@@ -1333,6 +2419,21 @@ export default function DayTodayPage() {
           fetchData(selectedDate);
         }}
         sourceDate={selectedDate}
+      />
+
+      <TaskDrawer 
+        open={taskDrawerOpen}
+        onClose={() => setTaskDrawerOpen(false)}
+        task={editingTask}
+        workspaceId={workspaceId || ""}
+        objectives={objectives}
+        profiles={profiles}
+        currentUserProfileId={user?.id}
+        jiraTasks={structuredTasks.filter(t => t.origin === 'jira')}
+        onSave={() => {
+          if (workspaceId) loadStructuredTasks(workspaceId);
+          setTaskDrawerOpen(false);
+        }}
       />
 
       <ConfirmModal
