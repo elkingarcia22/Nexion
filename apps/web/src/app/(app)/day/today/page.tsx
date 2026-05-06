@@ -2105,6 +2105,13 @@ const mapDbSource = (s: any): Source => {
               console.log('[TAREAS HOY] structuredTasks:', structuredTasks.map((t: any) => ({ id: t.id, title: t.title, status: t.status, type: t.type })));
 
               const pendingTasksByStatus = structuredTasks.filter((task: any) => {
+                // EXCLUDE OBJECTIVES - they should not appear in "Tareas Pendientes"
+                const isObjective = task.title?.toLowerCase().startsWith('objetivo:');
+                if (isObjective) {
+                  console.log(`[TAREAS HOY] EXCLUDED (is objective):`, task.title);
+                  return false;
+                }
+
                 const isDone = task.status?.toLowerCase().includes('done') || task.status?.toLowerCase().includes('finalizada');
                 if (isDone) return false;
 
