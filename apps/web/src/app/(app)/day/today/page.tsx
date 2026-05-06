@@ -2101,6 +2101,9 @@ const mapDbSource = (s: any): Source => {
               const today = new Date();
               today.setHours(0,0,0,0);
 
+              console.log('[TAREAS HOY] structuredTasks total:', structuredTasks.length);
+              console.log('[TAREAS HOY] structuredTasks:', structuredTasks.map((t: any) => ({ id: t.id, title: t.title, status: t.status, type: t.type })));
+
               const pendingTasksByStatus = structuredTasks.filter((task: any) => {
                 const isDone = task.status?.toLowerCase().includes('done') || task.status?.toLowerCase().includes('finalizada');
                 if (isDone) return false;
@@ -2111,20 +2114,27 @@ const mapDbSource = (s: any): Source => {
                 const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
                 const isOverdue = task.due_date && new Date(task.due_date) < today && !isDone;
 
-                return isPending || isInProgress || isDueToday || isOverdue;
+                const result = isPending || isInProgress || isDueToday || isOverdue;
+                if (result) {
+                  console.log(`[TAREAS HOY] Task passed filter:`, task.title, 'isPending:', isPending, 'isInProgress:', isInProgress, 'isDueToday:', isDueToday, 'isOverdue:', isOverdue);
+                }
+                return result;
               });
 
+              console.log('[TAREAS HOY] After status filter:', pendingTasksByStatus.length, 'items');
+
               const tasksByTeam = pendingTasksByStatus.filter((task: any) => {
-                return categorizeItem(task, objectives, structuredTasks.filter((t: any) => t.origin === 'jira')) === jiraSubTab;
+                const category = categorizeItem(task, objectives, structuredTasks.filter((t: any) => t.origin === 'jira'));
+                console.log(`[TAREAS HOY] Task "${task.title}" categorized as:`, category, 'looking for:', jiraSubTab);
+                return category === jiraSubTab;
               });
 
               const pendingTasks = responsableFilter === "todos"
                 ? tasksByTeam
                 : tasksByTeam.filter((task: any) => getResponsable(task) === responsableFilter);
 
-              console.log('[Filter] Pending by status:', pendingTasksByStatus.length, pendingTasksByStatus);
-              console.log('[Filter] Pending by team:', tasksByTeam.length, 'team filter:', jiraSubTab);
-              console.log('[Filter] Final pending tasks:', pendingTasks.length, pendingTasks);
+              console.log('[TAREAS HOY] After team filter:', tasksByTeam.length, 'items, with team:', jiraSubTab);
+              console.log('[TAREAS HOY] Final pending tasks:', pendingTasks.length, pendingTasks);
 
               if (pendingTasks.length === 0) {
                 return (
