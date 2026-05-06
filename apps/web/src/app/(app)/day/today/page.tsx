@@ -1250,9 +1250,16 @@ const mapDbSource = (s: any): Source => {
         const driveResult = await fetchGoogleDriveFiles("all", dateStr);
 
         if (driveResult.success && driveResult.files && driveResult.files.length > 0) {
-          // FILTER: Only Gemini notes - title must contain "Notas de Gemini"
+          // FILTER: Only Gemini notes - title must contain "Notas de Gemini" or "Notes by Gemini" or just "Gemini"
           const geminiNotesOnly = driveResult.files.filter((f: any) => {
-            const hasGeminiInTitle = f.name?.toLowerCase().includes("notas de gemini");
+            const titleLower = f.name?.toLowerCase() || "";
+            const hasGeminiInTitle =
+              titleLower.includes("notas de gemini") ||
+              titleLower.includes("notes by gemini") ||
+              titleLower.includes("gemini notes") ||
+              titleLower.includes("notes by gemini") ||
+              (titleLower.includes("gemini") && titleLower.includes("note"));
+            console.log("[GEMINI SYNC] Checking file:", f.name, "- hasGemini:", hasGeminiInTitle);
             return hasGeminiInTitle;
           });
 
