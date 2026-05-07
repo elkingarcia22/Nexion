@@ -110,7 +110,6 @@ export async function getTasks(workspaceId: string, date?: string) {
         timestamp: c.created_at
       }))
   }));
-  });
 
   return { success: true, data: nestedTasks };
 }
