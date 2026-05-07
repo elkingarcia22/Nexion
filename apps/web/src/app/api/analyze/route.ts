@@ -55,8 +55,10 @@ export async function POST(request: Request) {
          - OTROS: Extrae métricas, insights, alertas y feedback.
 
       REGLAS CRÍTICAS:
+      - CRÍTICO: TODO CAMPO "category" DEBE tener un valor (Talent/Hiring/UX/Other). NUNCA null o vacío.
+      - CRÍTICO: TODO CAMPO "responsible" DEBE tener un nombre. Si no está claro, usa "${userName}". NUNCA null o vacío.
       - Si detectas una tarea para ${userName}, asígnale prioridad ALTA.
-      - Si una tarea es para otra persona, incluye su nombre en el título.
+      - Si una tarea es para otra persona, incluye su nombre en el título Y en el campo "responsible".
       - Vincula SIEMPRE que sea posible a los IDs de Objetivos y Jira proporcionados.
 
       ESTRUCTURA DE RESPUESTA (Responde ÚNICAMENTE en JSON):
@@ -146,8 +148,9 @@ export async function POST(request: Request) {
     }
 
     let aiResponseText = data.candidates[0].content.parts[0].text;
-    console.log("AI Response:", aiResponseText);
-    
+    console.log("✅ Raw AI Response from Gemini:");
+    console.log(aiResponseText);
+
     // Clean markdown if present
     if (aiResponseText.includes("```json")) {
       aiResponseText = aiResponseText.split("```json")[1].split("```")[0].trim();
@@ -156,6 +159,35 @@ export async function POST(request: Request) {
     }
 
     const result = JSON.parse(aiResponseText);
+
+    // DEBUG: Log the parsed result and check for team/responsible fields
+    console.log("\n🔍 === PARSED RESULT STRUCTURE ===");
+    console.log("Tasks count:", result.tasks?.length || 0);
+    if (result.tasks && result.tasks.length > 0) {
+      console.log("\n📋 Sample task structure:");
+      const sampleTask = result.tasks[0];
+      console.log("Fields in task:", Object.keys(sampleTask));
+      console.log("Sample task:", JSON.stringify(sampleTask, null, 2));
+
+      console.log("\n🎯 Key fields check:");
+      console.log("  - category:", sampleTask.category);
+      console.log("  - responsible:", sampleTask.responsible);
+      console.log("  - title:", sampleTask.title);
+      console.log("  - priority:", sampleTask.priority);
+    }
+    console.log("===================================\n");
+
+    // SAFETY: Ensure category and responsible are always filled
+    if (result.tasks && Array.isArray(result.tasks)) {
+      result.tasks = result.tasks.map((task: any) => ({
+        ...task,
+        category: task.category || "Other",
+        responsible: task.responsible || userName || "Usuario",
+      }));
+
+      console.log("✅ AFTER SAFETY CHECK - Sample task:");
+      console.log(JSON.stringify(result.tasks[0], null, 2));
+    }
 
     return NextResponse.json(result);
   } catch (error: any) {

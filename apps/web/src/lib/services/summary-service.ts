@@ -188,7 +188,13 @@ export async function saveDayAnalysis(
     // 2. Save individual tasks to task_proposals table
     if (analysis.tasks && analysis.tasks.length > 0) {
       console.log(`\n📋 Processing ${analysis.tasks.length} tasks for insertion...`);
-      console.log("   Sample Gemini task before mapping:", JSON.stringify(analysis.tasks[0], null, 2));
+      console.log("🔍 FULL Sample Gemini task BEFORE extraction:");
+      console.log(JSON.stringify(analysis.tasks[0], null, 2));
+      console.log("📌 Task fields available:", Object.keys(analysis.tasks[0]));
+      console.log("   - category:", analysis.tasks[0].category);
+      console.log("   - responsible:", analysis.tasks[0].responsible);
+      console.log("   - team:", analysis.tasks[0].team);
+      console.log("   - title:", analysis.tasks[0].title);
 
       // First, fetch existing auto-generated tasks for this date to delete only those
       console.log(`🔍 Checking for existing auto-generated tasks for date: ${date}`);
