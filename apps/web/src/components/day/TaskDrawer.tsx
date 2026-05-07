@@ -363,7 +363,7 @@ export function TaskDrawer({
         description: parseJiraDescription(task.description),
         priority: isJira ? mapJiraPriority(task.priority) : (task.priority || "medium"),
         status: isJira ? mapJiraStatus(task.status) : (task.status || "pendiente"),
-        assignee_id: task.assignee_id || "",
+        assignee_id: task.assignee_id || task.responsible || "",
         reporter_id: task.reporter_id || "",
         due_date: task.due_date ? (task.due_date.includes('T') ? task.due_date.split('T')[0] : task.due_date) : "",
         team: task.team || "",
