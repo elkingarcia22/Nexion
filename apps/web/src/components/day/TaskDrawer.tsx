@@ -538,7 +538,8 @@ export function TaskDrawer({
   const assigneeOptions = useMemo(() => {
     const base = profiles.map(p => ({ value: p.id, label: p.full_name }));
     if (formData.assignee_id && !profiles.find(p => p.id === formData.assignee_id)) {
-      base.unshift({ value: formData.assignee_id, label: task?.assignee?.displayName || "Jira Assignee" });
+      const label = task?.assignee?.displayName || task?.responsible || "Unknown";
+      base.unshift({ value: formData.assignee_id, label });
     } else if (!formData.assignee_id) {
       base.unshift({ value: "", label: "Sin asignar" });
     }
