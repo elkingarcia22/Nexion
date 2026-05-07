@@ -463,12 +463,13 @@ export default function TasksPage() {
       {isDrawerOpen && (
         <TaskDrawer
           task={selectedTask}
-          isOpen={isDrawerOpen}
+          open={isDrawerOpen}
           onClose={() => {
             setIsDrawerOpen(false);
             setSelectedTask(null);
           }}
           onSave={handleSaveTask}
+          workspaceId={workspaceId || ''}
         />
       )}
 

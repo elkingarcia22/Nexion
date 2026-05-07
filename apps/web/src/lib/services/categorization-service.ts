@@ -17,13 +17,16 @@ export const categorizeItem = (item: any, objectives: any[] = [], jiraTasks: any
 
   const fullContext = `${combinedText} ${goalContext} ${jiraContext}`;
 
+  // Hiring detection
+  if (fullContext.includes("hiring") || fullContext.includes("utu") || fullContext.includes("talent-os") ||
+      fullContext.includes("recruit") || fullContext.includes("contratación") || fullContext.includes("reclutamiento")) return 'hiring';
+
+  // Talent detection
   if ((fullContext.includes("talent") || fullContext.includes("culture") || fullContext.includes("growth") ||
        fullContext.includes("nom 035") || fullContext.includes("nom-035")) &&
       !fullContext.includes("hiring") && !fullContext.includes("utu") && !fullContext.includes("talent-os")) return 'talent';
 
-  if (fullContext.includes("hiring") || fullContext.includes("utu") || fullContext.includes("talent-os") || fullContext.includes("recruit") ||
-      fullContext.includes("contratación") || fullContext.includes("reclutamiento")) return 'hiring';
-
+  // UX detection
   if (fullContext.includes("ux") || fullContext.includes("design") || fullContext.includes("diseño") || fullContext.includes("triada") ||
       fullContext.includes("ux_team")) return 'ux';
 

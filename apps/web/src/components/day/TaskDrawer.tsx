@@ -695,7 +695,7 @@ export function TaskDrawer({
       
       <div className={`fixed inset-y-0 right-0 z-[100] w-full max-w-[1400px] bg-[#0A0C14] shadow-2xl transition-transform duration-500 ease-out flex flex-col border-l border-white/5 ${open ? "translate-x-0" : "translate-x-full"}`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-[#161927]/50">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-[#161927]/50 gap-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-[10px] font-black tracking-widest text-white/40">
               <LayoutIcon />
@@ -704,25 +704,19 @@ export function TaskDrawer({
               <span className="text-primary font-black">NEX-{task?.id?.slice(0, 4).toUpperCase() || "NUEVA"}</span>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button className="p-2 hover:bg-[#161927]/5 rounded-md text-white/40 transition-colors">
-              <ShareIcon />
-            </button>
-            <div className="relative group/menu">
-              <button className="p-2 hover:bg-[#161927]/5 rounded-md text-white/40 transition-colors">
-                <MoreIcon />
-              </button>
-              <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-white/5 rounded-xl shadow-xl opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all z-[120]">
-                <button 
-                  onClick={handleDeleteTask}
-                  className="w-full px-4 py-2 text-left text-xs font-black text-red-500 hover:bg-red-500/100/10 transition-colors flex items-center gap-2"
-                >
-                  <TrashIcon /> ELIMINAR TAREA
-                </button>
-              </div>
-            </div>
-            <div className="w-[1px] h-4 bg-[#161927]/10 mx-1" />
-            <button 
+
+          {/* Status Selector in Header */}
+          <div className="w-48">
+            <CustomSelect
+              value={formData.status || 'todo'}
+              onChange={(val) => setFormData(prev => ({ ...prev, status: val }))}
+              options={STATUSES.map(s => ({ value: s.value, label: s.label }))}
+              placeholder="Estado"
+            />
+          </div>
+
+          <div className="flex items-center gap-1 ml-auto">
+            <button
               onClick={onClose}
               className="p-2 hover:bg-[#161927]/5 rounded-md text-white/40 transition-colors"
             >
@@ -1159,32 +1153,72 @@ export function TaskDrawer({
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-5 border-t border-white/5 bg-card flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
-          <button 
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-xl border border-white/5 text-[10px] font-black text-white/40 hover:bg-card transition-all uppercase tracking-widest"
-          >
-            DESCARTAR
-          </button>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={handleSave}
-              disabled={!formData.title.trim() || submitting}
-              className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-[12px] font-black tracking-[0.15em] text-white shadow-xl shadow-primary/30 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-30 disabled:hover:translate-y-0`}
-              style={{ background: "linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%)" }}
-            >
-              {submitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  GUARDANDO...
-                </>
-              ) : (
-                <>
-                  <CheckCircleIcon />
-                  {task ? 'GUARDAR CAMBIOS' : 'CREAR TAREA'}
-                </>
+        <div className="px-8 py-5 border-t border-white/5 bg-card shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+          {/* Main Actions - Left and Right Groups */}
+          <div className="flex items-center justify-between">
+            {/* Left Side: Delete Button */}
+            {task?.id && (
+              <button
+                onClick={handleDeleteTask}
+                disabled={submitting}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[9px] font-black tracking-widest text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all disabled:opacity-50 hover:border-red-500/40"
+              >
+                <TrashIcon className="w-3 h-3" />
+                ELIMINAR TAREA
+              </button>
+            )}
+
+            {/* Right Side: Action Buttons */}
+            <div className="flex items-center gap-3">
+              {/* Tertiary Action: Discard */}
+              <button
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl border border-white/10 text-[10px] font-black text-white/50 hover:bg-white/5 hover:text-white/70 transition-all uppercase tracking-widest"
+              >
+                DESCARTAR
+              </button>
+
+              {/* Secondary Action: Save Changes */}
+              <button
+                onClick={handleSave}
+                disabled={!formData.title.trim() || submitting}
+                className="px-6 py-2.5 rounded-xl border border-white/20 text-[10px] font-black tracking-widest text-white bg-white/5 hover:bg-white/10 transition-all disabled:opacity-30"
+              >
+                {submitting ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin inline mr-2" />
+                    GUARDANDO...
+                  </>
+                ) : (
+                  <>GUARDAR CAMBIOS</>
+                )}
+              </button>
+
+              {/* Primary Action: Mark as Complete */}
+              {formData.status?.toLowerCase() !== 'done' && (
+                <button
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, status: 'done' }));
+                    handleSave();
+                  }}
+                  disabled={!formData.title.trim() || submitting}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest text-white shadow-lg shadow-green-500/20 hover:shadow-green-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-30 disabled:hover:translate-y-0"
+                  style={{ background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)" }}
+                >
+                  {submitting ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      MARCANDO...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircleIcon />
+                      MARCAR COMPLETADA
+                    </>
+                  )}
+                </button>
               )}
-            </button>
+            </div>
           </div>
         </div>
       </div>
