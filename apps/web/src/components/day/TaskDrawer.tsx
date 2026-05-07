@@ -318,6 +318,7 @@ export function TaskDrawer({
     assignee_id: "",
     reporter_id: "",
     due_date: "",
+    created_at: "",
     team: "",
     labels: [] as string[],
     subtasks: [] as any[],
@@ -378,6 +379,7 @@ export function TaskDrawer({
         assignee_id: task.assignee_id || task.responsible || "",
         reporter_id: task.reporter_id || "",
         due_date: task.due_date ? (task.due_date.includes('T') ? task.due_date.split('T')[0] : task.due_date) : "",
+        created_at: task.created_at ? (task.created_at.includes('T') ? task.created_at.split('T')[0] : task.created_at) : "",
         team: task.team || "",
         labels: task.labels || [],
         subtasks: (task.subtasks || []).map((sub: any) => {
@@ -406,6 +408,7 @@ export function TaskDrawer({
         assignee_id: "",
         reporter_id: "",
         due_date: "",
+        created_at: new Date().toISOString().split('T')[0],
         team: "",
         labels: [],
         subtasks: [],
@@ -1067,10 +1070,19 @@ export function TaskDrawer({
 
               <div className="space-y-3">
                 <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
+                  <CalendarIcon /> Fecha de Creación
+                </label>
+                <div className="px-4 py-3 bg-[#161927]/50 rounded-2xl border border-white/5 text-sm text-white/60">
+                  {formData.created_at ? new Date(formData.created_at).toLocaleDateString('es-ES') : 'No disponible'}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
                   <CalendarIcon /> Fecha de Vencimiento
                 </label>
-                <DatePicker 
-                  value={formData.due_date ? new Date(formData.due_date) : new Date()} 
+                <DatePicker
+                  value={formData.due_date ? new Date(formData.due_date) : new Date()}
                   onChange={(date) => setFormData(prev => ({ ...prev, due_date: date.toISOString().split('T')[0] }))}
                   allowFuture={true}
                 />

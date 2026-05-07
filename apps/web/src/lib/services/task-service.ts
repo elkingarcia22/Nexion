@@ -116,15 +116,28 @@ export async function getTasks(workspaceId: string, date?: string) {
     return null;
   };
 
+  // Normalize status: DB legacy default is 'pendiente' (Spanish). Map to English canonical values.
+  const normalizeStatus = (rawStatus: string | null | undefined, proposalStatus: string | null | undefined): string => {
+    const s = (rawStatus || '').toLowerCase().trim();
+    if (!s || s === 'pendiente' || s === 'pending_review') return proposalStatus || 'pending_review';
+    if (s === 'en progreso' || s === 'in_progress') return 'in_progress';
+    if (s === 'completado' || s === 'done') return 'done';
+    if (s === 'bloqueado' || s === 'blocked') return 'blocked';
+    if (s === 'todo' || s === 'backlog' || s === 'review') return s;
+    return proposalStatus || 'pending_review';
+  };
+
   // Nest subtasks and comments into parents
   const nestedTasks = parents.map((p: any) => ({
     ...p,
     // Mark origin as 'local' for database tasks (vs 'jira')
     origin: p.origin || 'local',
-    // Map status: use proposal_status if status is not set (database compatibility)
-    status: p.status || p.proposal_status || 'pending_review',
+    // Normalize status: 'pendiente' (Spanish DB default) → 'pending_review'
+    status: normalizeStatus(p.status, p.proposal_status),
     // Map priority to English format
     priority: mapPriority(p.priority),
+    // Use due_date if available, fallback to suggested_date for backward compatibility
+    due_date: p.due_date || (p.suggested_date ? new Date(p.suggested_date).toISOString() : undefined),
     // Extract responsible: column → metadata → title extraction
     responsible: p.responsible || p.metadata?.responsable || extractFromTitle(p.title, 'responsible'),
     // Extract team: column → metadata → title extraction
@@ -141,11 +154,15 @@ export async function getTasks(workspaceId: string, date?: string) {
       }))
   }));
 
-  console.log('🔧 DEBUG getTasks - mapping details:');
-  console.log('   Sample parent task:', parents[0]);
-  console.log('   Mapped result:', nestedTasks[0]);
-  console.log('   Responsible values found:', nestedTasks.map((t: any) => t.responsible).filter(Boolean).slice(0, 5));
-  console.log('   Team values found:', nestedTasks.map((t: any) => t.team).filter(Boolean).slice(0, 5));
+  console.log('🔧 DEBUG getTasks - pipeline verification:');
+  console.log(`   DB rows: ${allTasks.length}, parents: ${parents.length}, subtasks: ${children.length}`);
+  console.log('   due_date coverage:', nestedTasks.filter((t: any) => t.due_date).length, '/', nestedTasks.length);
+  console.log('   due_date samples:', nestedTasks.slice(0, 3).map((t: any) => ({ title: t.title?.slice(0, 30), due_date: t.due_date })));
+  console.log('   status samples:', nestedTasks.slice(0, 5).map((t: any) => ({ title: t.title?.slice(0, 25), status: t.status })));
+  console.log('   jira_key coverage:', nestedTasks.filter((t: any) => t.linked_jira_key).length, 'tasks linked');
+  console.log('   goal_id coverage:', nestedTasks.filter((t: any) => t.goal_id).length, 'tasks linked to objectives');
+  console.log('   Responsible values:', nestedTasks.map((t: any) => t.responsible).filter(Boolean).slice(0, 5));
+  console.log('   Team values:', nestedTasks.map((t: any) => t.team).filter(Boolean).slice(0, 5));
 
   return { success: true, data: nestedTasks };
 }

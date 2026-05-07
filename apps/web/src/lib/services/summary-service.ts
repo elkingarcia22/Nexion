@@ -312,7 +312,19 @@ export async function saveDayAnalysis(
         teamValue = teamValue?.trim() || null;
         responsibleValue = responsibleValue?.trim() || null;
 
-        console.log(`   Task: "${task.title?.substring(0, 40)}..." | category: "${task.category}" | responsible: "${task.responsible}" → team: "${teamValue}", responsible: "${responsibleValue}"`);
+        // Validate goal_id: only save if Gemini returned a real UUID (FK safety)
+        const validGoalId = (task.goal_id &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(task.goal_id)))
+          ? task.goal_id
+          : null;
+
+        // Convert AI due_date (YYYY-MM-DD) to ISO string for TIMESTAMPTZ column
+        // Use T12:00:00 to avoid midnight UTC timezone shift issues
+        const dueDateIso = task.due_date
+          ? new Date(task.due_date + 'T12:00:00').toISOString()
+          : null;
+
+        console.log(`   Task: "${task.title?.substring(0, 40)}..." | team: "${teamValue}" | responsible: "${responsibleValue}" | due_date: "${task.due_date}" → "${dueDateIso}" | jira: "${task.linked_jira_key || null}" | goal: "${validGoalId}"`);
 
         return {
           workspace_id: workspaceId,
@@ -321,9 +333,13 @@ export async function saveDayAnalysis(
           priority: mappedPriority,
           status: "pending_review",
           suggested_date: date,
+          due_date: dueDateIso,
           proposal_status: "pending_review",
           team: teamValue,
           responsible: responsibleValue,
+          goal_id: validGoalId,
+          linked_jira_key: task.linked_jira_key || null,
+          linked_jira_subtask_id: task.linked_jira_subtask_id || null,
           metadata: {
             auto_generated: true,
             team: teamValue,

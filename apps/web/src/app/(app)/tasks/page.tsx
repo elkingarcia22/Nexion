@@ -1,12 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getTasks, createOrUpdateTask, deleteTask } from '@/lib/services/task-service';
 import { getOrCreateWorkspace } from '@/lib/services/workspace-service';
 import { categorizeItem, getResponsable } from '@/lib/services/categorization-service';
 import { TaskDrawer } from '@/components/day/TaskDrawer';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
+import { Badge } from '@/components/ui/Badge';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 
 interface Task {
   id?: string;
@@ -36,6 +40,70 @@ interface Task {
 const TEAMS = ['Todas', 'Talent', 'Hiring', 'UX', 'Otras'];
 const STATUS_OPTIONS = ['Todas', 'Pendientes', 'En progreso', 'Completadas', 'Bloqueadas'];
 
+// Custom Select Component
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  placeholder = "Selecciona...",
+  className = ""
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: string[];
+  placeholder?: string;
+  className?: string;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between px-4 py-3 bg-[#161927]/50 border border-white/5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white hover:border-primary/40 transition-all text-left whitespace-nowrap"
+      >
+        <span className="truncate">{value || placeholder}</span>
+        <svg
+          className={`w-3 h-3 text-white/20 transition-transform ml-2 flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-[calc(100%+4px)] left-0 z-[150] bg-[#161927] border border-white/10 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150 min-w-max">
+          {options.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => {
+                onChange(opt);
+                setIsOpen(false);
+              }}
+              className={`w-full px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
+                value === opt ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
@@ -50,6 +118,32 @@ export default function TasksPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [responsableList, setResponsableList] = useState<string[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [dueDateRange, setDueDateRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [createdDateRange, setCreatedDateRange] = useState<{ start: Date; end: Date } | null>(null);
+
+  // Helper functions for filter counts
+  const getTeamCount = (team: string): number => {
+    if (team === 'Todas') return tasks.length;
+    const teamMap: Record<string, string> = {
+      'Talent': 'talent',
+      'Hiring': 'hiring',
+      'UX': 'ux',
+      'Otras': 'otras'
+    };
+    return tasks.filter(t => categorizeItem(t) === teamMap[team]).length;
+  };
+
+  const getStatusCount = (status: string): number => {
+    if (status === 'Todas') return tasks.length;
+    const statusMap: Record<string, string[]> = {
+      'Pendientes': ['todo', 'backlog', 'pending_review'],
+      'En progreso': ['in_progress', 'review'],
+      'Completadas': ['done'],
+      'Bloqueadas': ['blocked']
+    };
+    const validStatuses = statusMap[status] || [];
+    return tasks.filter(t => validStatuses.includes((t.status || '').toLowerCase())).length;
+  };
 
   // Get workspace and load tasks
   useEffect(() => {
@@ -164,6 +258,28 @@ export default function TasksPage() {
       });
     }
 
+    // Filtro por fecha de finalización (due_date)
+    if (dueDateRange) {
+      const s = dueDateRange.start.toISOString().split('T')[0];
+      const e = dueDateRange.end.toISOString().split('T')[0];
+      filtered = filtered.filter(t => {
+        if (!t.due_date) return false; // si hay filtro activo, excluir sin fecha
+        const d = t.due_date.split('T')[0];
+        return d >= s && d <= e;
+      });
+    }
+
+    // Filtro por fecha de creación (created_at)
+    if (createdDateRange) {
+      const s = createdDateRange.start.toISOString().split('T')[0];
+      const e = createdDateRange.end.toISOString().split('T')[0];
+      filtered = filtered.filter(t => {
+        if (!t.created_at) return true;
+        const d = t.created_at.split('T')[0];
+        return d >= s && d <= e;
+      });
+    }
+
     // Search filter
     if (searchQuery) {
       filtered = filtered.filter(t =>
@@ -172,7 +288,7 @@ export default function TasksPage() {
     }
 
     setFilteredTasks(filtered);
-  }, [tasks, selectedTeam, selectedStatus, selectedResponsable, searchQuery]);
+  }, [tasks, selectedTeam, selectedStatus, selectedResponsable, searchQuery, dueDateRange, createdDateRange]);
 
   // Calculate KPIs
   const kpis = {
@@ -313,67 +429,88 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-card rounded-2xl border border-white/10 p-6 space-y-6">
-        {/* Team Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto">
-          {TEAMS.map(team => (
-            <button
-              key={team}
-              onClick={() => setSelectedTeam(team)}
-              className={`px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
-                selectedTeam === team
-                  ? 'bg-primary text-white'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10'
-              }`}
-            >
-              {team}
-            </button>
-          ))}
-        </div>
+      {/* Filters - Compact */}
+      <div className="bg-card rounded-2xl border border-white/10 p-4 space-y-3">
+        {/* Row 1: Main filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Equipo Dropdown */}
+          <CustomSelect
+            value={selectedTeam}
+            onChange={setSelectedTeam}
+            options={TEAMS}
+            placeholder="Equipo"
+          />
 
-        {/* Status and Responsable */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Status Chips */}
-          <div className="col-span-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              {STATUS_OPTIONS.map(status => (
-                <button
-                  key={status}
-                  onClick={() => setSelectedStatus(status)}
-                  className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                    selectedStatus === status
-                      ? 'bg-primary text-white'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10'
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Estado Dropdown */}
+          <CustomSelect
+            value={selectedStatus}
+            onChange={setSelectedStatus}
+            options={STATUS_OPTIONS}
+            placeholder="Estado"
+          />
 
-          {/* Responsable Selector */}
-          <select
+          {/* Responsable Dropdown */}
+          <CustomSelect
             value={selectedResponsable}
-            onChange={(e) => setSelectedResponsable(e.target.value)}
-            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/40"
-          >
-            <option value="">Todos los responsables</option>
-            {responsableList.map(resp => (
-              <option key={resp} value={resp}>{resp}</option>
-            ))}
-          </select>
+            onChange={setSelectedResponsable}
+            options={['', ...responsableList]}
+            placeholder="Responsable"
+          />
+
+          {/* Filtro por fecha de creación */}
+          <DateRangePicker
+            value={createdDateRange}
+            onChange={setCreatedDateRange}
+            label="Creación"
+          />
+
+          {/* Filtro por fecha de finalización */}
+          <DateRangePicker
+            value={dueDateRange}
+            onChange={setDueDateRange}
+            label="Vencimiento"
+            allowFuture={true}
+          />
+
+          {/* Clear button */}
+          {(selectedTeam !== 'Todas' || selectedStatus !== 'Todas' || selectedResponsable || searchQuery ||
+            dueDateRange || createdDateRange) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedTeam('Todas');
+                setSelectedStatus('Todas');
+                setSelectedResponsable('');
+                setSearchQuery('');
+                setDueDateRange(null);
+                setCreatedDateRange(null);
+              }}
+            >
+              Limpiar
+            </Button>
+          )}
+
+          {/* Results counter */}
+          <span className="ml-auto text-xs font-semibold text-white/60">
+            {filteredTasks.length} resultados
+          </span>
         </div>
 
-        {/* Search */}
-        <input
-          type="text"
-          placeholder="Buscar por título..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 text-sm focus:outline-none focus:border-primary/40"
-        />
+        {/* Row 2: Search */}
+        <div className="relative">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-3 top-3 text-primary pointer-events-none">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <Input
+            type="text"
+            placeholder="Buscar por título..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-[#161927]/50 border border-white/5 text-white placeholder-white/40"
+          />
+        </div>
       </div>
 
       {/* Tasks Grid */}
