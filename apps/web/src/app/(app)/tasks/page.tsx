@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getTasks, createOrUpdateTask, deleteTask } from '@/lib/services/task-service';
 import { getOrCreateWorkspace } from '@/lib/services/workspace-service';
+import { categorizeItem, getResponsable } from '@/lib/services/categorization-service';
 import { TaskDrawer } from '@/components/day/TaskDrawer';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
@@ -125,9 +126,16 @@ export default function TasksPage() {
   useEffect(() => {
     let filtered = tasks;
 
-    // Team filter
+    // Team filter - use categorizeItem for dynamic categorization
     if (selectedTeam !== 'Todas') {
-      filtered = filtered.filter(t => t.team === selectedTeam);
+      const teamMap: Record<string, string> = {
+        'Talent': 'talent',
+        'Hiring': 'hiring',
+        'UX': 'ux',
+        'Otras': 'otras'
+      };
+      const selectedTeamLower = teamMap[selectedTeam] || selectedTeam.toLowerCase();
+      filtered = filtered.filter(t => categorizeItem(t) === selectedTeamLower);
     }
 
     // Status filter
@@ -408,9 +416,9 @@ export default function TasksPage() {
               </h3>
 
               <div className="flex items-center gap-2 mb-4 flex-wrap">
-                {task.team && (
-                  <span className="text-xs bg-white/10 text-white/80 px-2 py-1 rounded">
-                    {task.team}
+                {(categorizeItem(task) !== 'otras') && (
+                  <span className="text-xs bg-white/10 text-white/80 px-2 py-1 rounded capitalize">
+                    {categorizeItem(task)}
                   </span>
                 )}
               </div>
