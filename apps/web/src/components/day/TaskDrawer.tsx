@@ -340,17 +340,6 @@ export function TaskDrawer({
 
   useEffect(() => {
     if (task) {
-      console.log("[TaskDrawer] Recibió tarea:", {
-        id: task.id,
-        title: task.title,
-        origin: task.origin,
-        description: task.description ? task.description.substring(0, 50) : "VACÍO",
-        priority: task.priority,
-        status: task.status,
-        assignee_id: task.assignee_id,
-        allKeys: Object.keys(task).slice(0, 20)
-      });
-
       const isJira = task.origin === 'jira';
       
       // Parse Jira comments into activity format

@@ -798,35 +798,6 @@ export default function DayTodayPage() {
 
     const result = await getTasks(wsId);
     let localTasks = result.success ? (result.data || []) : [];
-
-    console.log("[loadStructuredTasks] getTasks result:", {
-      success: result.success,
-      taskCount: localTasks.length,
-      firstTask: localTasks[0] ? {
-        id: localTasks[0].id,
-        title: localTasks[0].title,
-        status: localTasks[0].status,
-        proposal_status: localTasks[0].proposal_status,
-        due_date: localTasks[0].due_date,
-        suggested_date: localTasks[0].suggested_date,
-        goal_id: localTasks[0].goal_id,
-        metadata: localTasks[0].metadata,
-        origin: localTasks[0].origin
-      } : null,
-      allStatuses: localTasks.map(t => ({ id: t.id, status: t.status, proposal_status: t.proposal_status, suggested_date: t.suggested_date }))
-    });
-
-    console.log("[loadStructuredTasks] getTasks result:", {
-      success: result.success,
-      taskCount: localTasks.length,
-      firstTask: localTasks[0] ? {
-        id: localTasks[0].id,
-        title: localTasks[0].title,
-        status: localTasks[0].status,
-        proposal_status: localTasks[0].proposal_status,
-        due_date: localTasks[0].due_date,
-        suggested_date: localTasks[0].suggested_date,
-        goal_id: localTasks[0].goal_id,
         metadata: localTasks[0].metadata,
         origin: localTasks[0].origin
       } : null,
@@ -1298,7 +1269,6 @@ const mapDbSource = (s: any): Source => {
               titleLower.includes("gemini notes") ||
               titleLower.includes("notes by gemini") ||
               (titleLower.includes("gemini") && titleLower.includes("note"));
-            console.log("[GEMINI SYNC] Checking file:", f.name, "- hasGemini:", hasGeminiInTitle);
             return hasGeminiInTitle;
           });
 
@@ -2193,29 +2163,16 @@ const mapDbSource = (s: any): Source => {
               const today = new Date();
               today.setHours(0,0,0,0);
 
-              console.log("[TAREAS HOY] structuredTasks loaded:", structuredTasks.length, "tasks");
-              if (structuredTasks.length > 0) {
-                console.log("[TAREAS HOY] Sample task:", {
-                  title: structuredTasks[0].title,
-                  status: structuredTasks[0].status,
-                  goal_id: structuredTasks[0].goal_id,
-                  metadata: structuredTasks[0].metadata,
-                  origin: structuredTasks[0].origin
-                });
-              }
-
               const pendingTasksByStatus = structuredTasks.filter((task: any) => {
                 // EXCLUDE OBJECTIVES - they should not appear in "Tareas Pendientes"
                 // Objectives either start with "Objetivo:" or have a goal_id set
                 const isObjective = task.title?.toLowerCase().startsWith('objetivo:') || task.goal_id;
                 if (isObjective) {
-                  console.log("[TAREAS HOY] Excluding objective:", task.title);
                   return false;
                 }
 
                 const isDone = task.status?.toLowerCase().includes('done') || task.status?.toLowerCase().includes('finalizada');
                 if (isDone) {
-                  console.log("[TAREAS HOY] Task is done:", task.title);
                   return false;
                 }
 
@@ -2226,28 +2183,18 @@ const mapDbSource = (s: any): Source => {
                 const isOverdue = task.due_date && new Date(task.due_date) < today && !isDone;
 
                 const passes = isPending || isInProgress || isDueToday || isOverdue;
-                if (passes) {
-                  console.log("[TAREAS HOY] Task passed status filter:", task.title, { isPending, isInProgress, isDueToday, isOverdue, status: task.status });
-                }
                 return passes;
               });
-
-              console.log("[TAREAS HOY] After status filter:", pendingTasksByStatus.length, "tasks");
 
               const tasksByTeam = pendingTasksByStatus.filter((task: any) => {
                 const category = categorizeItem(task, objectives, structuredTasks.filter((t: any) => t.origin === 'jira'));
                 const matches = category === jiraSubTab;
-                console.log("[TAREAS HOY] Task team filter:", task.title, { category, jiraSubTab, matches });
                 return matches;
               });
-
-              console.log("[TAREAS HOY] After team filter:", tasksByTeam.length, "tasks, looking for team:", jiraSubTab);
 
               const pendingTasks = responsableFilter === "todos"
                 ? tasksByTeam
                 : tasksByTeam.filter((task: any) => getResponsable(task) === responsableFilter);
-
-              console.log("[TAREAS HOY] Final tasks:", pendingTasks.length, "with responsable filter:", responsableFilter);
 
               if (pendingTasks.length === 0) {
                 return (
