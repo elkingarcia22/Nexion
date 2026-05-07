@@ -94,10 +94,16 @@ export default function TasksPage() {
           });
           setTasks(result.data);
 
-          // Extract unique responsables
+          // Extract unique responsables (handle multiple separated by " | ")
           const responsables = new Set<string>();
           result.data.forEach((task: Task) => {
-            if (task.responsible) responsables.add(task.responsible);
+            if (task.responsible) {
+              // Split by " | " to handle multiple responsables
+              const respList = task.responsible.split(" | ").map(r => r.trim());
+              respList.forEach(r => {
+                if (r && r.length > 0) responsables.add(r);
+              });
+            }
             if (task.assignee_id && task.assignee_id !== 'me') responsables.add(task.assignee_id);
           });
           console.log('👥 Extracted responsables:', Array.from(responsables));
@@ -136,11 +142,18 @@ export default function TasksPage() {
       filtered = filtered.filter(t => validStatuses.includes((t.status || '').toLowerCase()));
     }
 
-    // Responsable filter
+    // Responsable filter - handle multiple responsables separated by " | "
     if (selectedResponsable) {
-      filtered = filtered.filter(
-        t => t.responsible === selectedResponsable || t.assignee_id === selectedResponsable
-      );
+      filtered = filtered.filter(t => {
+        // Check if selected responsable is in the responsible list
+        if (t.responsible) {
+          const responsibles = t.responsible.split(" | ").map(r => r.trim());
+          if (responsibles.includes(selectedResponsable)) return true;
+        }
+        // Also check assignee_id for compatibility
+        if (t.assignee_id === selectedResponsable) return true;
+        return false;
+      });
     }
 
     // Search filter

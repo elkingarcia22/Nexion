@@ -229,6 +229,45 @@ export async function saveDayAnalysis(
         }
       }
 
+      // Helper to extract team from title if not found in Gemini response
+      const extractTeamFromTitle = (title: string): string | null => {
+        if (!title) return null;
+
+        // Pattern: "Team Something" in parentheses → (Team TalentOS)
+        const teamMatch = title.match(/\(Team\s+([A-Za-z0-9]+)\)/i);
+        if (teamMatch) return teamMatch[1];
+
+        // Pattern: "Equipo: Something"
+        const equipoMatch = title.match(/Equipo:\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i);
+        if (equipoMatch) return equipoMatch[1];
+
+        return null;
+      };
+
+      // Helper to extract all people names mentioned in title
+      const extractAllResponsiblesFromTitle = (title: string): string[] => {
+        if (!title) return [];
+
+        const names: Set<string> = new Set();
+
+        // Pattern: "(con Nombre Apellido)" or "(con Nombre Apellido, Otro Nombre)"
+        const conMatches = title.match(/\(con\s+([^)]+)\)/i);
+        if (conMatches) {
+          const people = conMatches[1].split(',').map(p => p.trim());
+          people.forEach(p => {
+            if (p && p.length > 0) names.add(p);
+          });
+        }
+
+        // Pattern: "Nombre Apellido:" at the start (e.g., "Elkin Garcia: Task")
+        const startMatch = title.match(/^([A-Z][a-z]+ (?:[A-Z][a-z]+ )*[A-Z][a-z]+)\s*:/);
+        if (startMatch) {
+          names.add(startMatch[1]);
+        }
+
+        return Array.from(names);
+      };
+
       // Then insert new tasks
       const tasksToInsert = analysis.tasks.map((task: any) => {
         // Map Spanish priority values from Gemini to English
@@ -244,6 +283,30 @@ export async function saveDayAnalysis(
         // Gemini sends: category (for team), responsible (for person)
         let teamValue = task.category || task.team || task.equipo || task.grupo || "";
         let responsibleValue = task.responsible || task.responsable || task.assignee_name || task.assigned_to || "";
+
+        // If category is "Other", try to extract team from title
+        if (!teamValue || teamValue === "Other") {
+          const titleTeam = extractTeamFromTitle(task.title);
+          if (titleTeam) {
+            teamValue = titleTeam;
+          }
+        }
+
+        // Extract ALL people mentioned in the title and combine with Gemini's responsible
+        const titleResponsibles = extractAllResponsiblesFromTitle(task.title);
+        const allResponsibles = new Set<string>();
+
+        if (responsibleValue) allResponsibles.add(responsibleValue);
+        if (titleResponsibles.length > 0) {
+          titleResponsibles.forEach(r => allResponsibles.add(r));
+        }
+
+        // Store all responsibles separated by " | " for multi-person filtering
+        const allResponsiblesArray = Array.from(allResponsibles);
+        if (allResponsiblesArray.length > 0) {
+          responsibleValue = allResponsiblesArray.join(" | ");
+          console.log(`   All responsibles combined: "${responsibleValue}"`);
+        }
 
         // Trim whitespace and convert empty strings to null for database
         teamValue = teamValue?.trim() || null;

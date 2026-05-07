@@ -89,7 +89,7 @@ export async function getTasks(workspaceId: string, date?: string) {
   };
 
   // Extract team and responsible from title if missing
-  // Handles patterns like "Anderson Silva: Task Title" or "Equipo: Engineering"
+  // Handles patterns like "Anderson Silva: Task Title" or "Equipo: Engineering" or "(Team TalentOS)"
   const extractFromTitle = (title: string, type: 'responsible' | 'team') => {
     if (!title) return null;
 
@@ -99,10 +99,18 @@ export async function getTasks(workspaceId: string, date?: string) {
       return nameMatch[1];
     }
 
-    // Pattern: "Equipo: Name" → extract team
-    const teamMatch = title.match(/^Equipo:\s*(.+?)(?:\s*[-–]|$)/i);
-    if (type === 'team' && teamMatch) {
-      return teamMatch[1].trim();
+    if (type === 'team') {
+      // Pattern: "(Team TeamName)" → extract team
+      const teamParenMatch = title.match(/\(Team\s+([A-Za-z0-9]+)\)/i);
+      if (teamParenMatch) {
+        return teamParenMatch[1].trim();
+      }
+
+      // Pattern: "Equipo: TeamName" → extract team (1-2 words max for team name)
+      const equipoMatch = title.match(/^Equipo:\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i);
+      if (equipoMatch) {
+        return equipoMatch[1].trim();
+      }
     }
 
     return null;
@@ -113,6 +121,8 @@ export async function getTasks(workspaceId: string, date?: string) {
     ...p,
     // Mark origin as 'local' for database tasks (vs 'jira')
     origin: p.origin || 'local',
+    // Map status: use proposal_status if status is not set (database compatibility)
+    status: p.status || p.proposal_status || 'pending_review',
     // Map priority to English format
     priority: mapPriority(p.priority),
     // Extract responsible: column → metadata → title extraction
