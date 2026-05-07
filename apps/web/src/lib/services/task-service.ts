@@ -81,6 +81,8 @@ export async function getTasks(workspaceId: string, date?: string) {
   // Nest subtasks and comments into parents
   const nestedTasks = parents.map((p: any) => ({
     ...p,
+    // Mark origin as 'local' for database tasks (vs 'jira')
+    origin: p.origin || 'local',
     // Extract responsible from metadata if present (for Gemini analysis tasks)
     responsible: p.metadata?.responsable || p.responsible,
     // Extract team from metadata if present
