@@ -162,8 +162,14 @@ export function DateRangePicker({ value, onChange, label, allowFuture = false }:
       {/* Dropdown calendar */}
       {open && (
         <div
-          className="absolute left-0 bottom-[calc(100%+8px)] z-50 w-72 rounded-2xl border border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl"
-          style={{ background: "rgba(22, 25, 39, 0.95)" }}
+          className="fixed z-[9999] w-72 rounded-2xl border border-white/10 shadow-2xl overflow-hidden backdrop-blur-xl"
+          style={{
+            background: "rgba(22, 25, 39, 0.95)",
+            bottom: "auto",
+            left: ref.current?.getBoundingClientRect().left || 0,
+            top: (ref.current?.getBoundingClientRect().top || 0) - 8,
+            transform: "translateY(-100%)"
+          }}
         >
           {/* Header */}
           <div
