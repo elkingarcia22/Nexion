@@ -192,24 +192,35 @@ export async function saveDayAnalysis(
       }
 
       // Then insert new tasks
-      const tasksToInsert = analysis.tasks.map((task: any) => ({
-        workspace_id: workspaceId,
-        title: task.title || task.name || "Tarea sin título",
-        description: task.description || "",
-        priority: task.priority?.toLowerCase() === "high" ? "high" : "medium",
-        status: "pending_review",
-        suggested_date: date,
-        proposal_status: "pending_review",
-        metadata: {
-          auto_generated: true,
-          team: task.team || task.equipo,
-          responsable: task.responsable || task.assignee,
-          analysis_date: new Date().toISOString(),
-          ...task.metadata
-        },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }));
+      const tasksToInsert = analysis.tasks.map((task: any) => {
+        // Map Spanish priority values from Gemini to English
+        const priority = task.priority?.toLowerCase();
+        let mappedPriority = "medium";
+        if (priority === "alta" || priority === "highest" || priority === "high") {
+          mappedPriority = "high";
+        } else if (priority === "baja" || priority === "lowest" || priority === "low") {
+          mappedPriority = "low";
+        }
+
+        return {
+          workspace_id: workspaceId,
+          title: task.title || task.name || "Tarea sin título",
+          description: task.description || "",
+          priority: mappedPriority,
+          status: "pending_review",
+          suggested_date: date,
+          proposal_status: "pending_review",
+          metadata: {
+            auto_generated: true,
+            team: task.team || task.equipo,
+            responsable: task.responsable || task.assignee,
+            analysis_date: new Date().toISOString(),
+            ...task.metadata
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      });
 
       const { error: insertError } = await supabase
         .from("task_proposals")
