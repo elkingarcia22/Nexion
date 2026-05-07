@@ -1572,8 +1572,39 @@ const mapDbSource = (s: any): Source => {
     }
   };
 
-  const handleEditTask = (task: any) => {
-    setEditingTask(task);
+  const handleEditTask = async (task: any) => {
+    // Enrich task with full details if it's incomplete
+    let enrichedTask = { ...task };
+
+    // If it's a Jira task and missing subtasks, fetch them from structuredTasks
+    if (task.origin === 'jira' && task.external_key && !task.subtasks) {
+      const fullTask = structuredTasks.find((t: any) => t.external_key === task.external_key);
+      if (fullTask && fullTask.subtasks) {
+        enrichedTask.subtasks = fullTask.subtasks;
+      }
+    }
+
+    // Ensure all expected fields exist with defaults
+    enrichedTask = {
+      id: enrichedTask.id,
+      title: enrichedTask.title || "",
+      description: enrichedTask.description || "",
+      priority: enrichedTask.priority || "medium",
+      status: enrichedTask.status || "pendiente",
+      assignee_id: enrichedTask.assignee_id || "",
+      reporter_id: enrichedTask.reporter_id || "",
+      due_date: enrichedTask.due_date || "",
+      team: enrichedTask.team || "",
+      labels: enrichedTask.labels || [],
+      subtasks: enrichedTask.subtasks || [],
+      activity: enrichedTask.activity || [],
+      goal_id: enrichedTask.goal_id || "",
+      linked_jira_key: enrichedTask.linked_jira_key || "",
+      linked_jira_subtask_id: enrichedTask.linked_jira_subtask_id || "",
+      ...enrichedTask // Preserve all other fields
+    };
+
+    setEditingTask(enrichedTask);
     setTaskDrawerOpen(true);
   };
 
