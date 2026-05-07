@@ -189,6 +189,7 @@ export async function saveDayAnalysis(
         title: task.title || task.name || "Tarea sin título",
         description: task.description || "",
         priority: task.priority?.toLowerCase() === "high" ? "high" : "medium",
+        status: "pending_review",
         suggested_date: date,
         proposal_status: "pending_review",
         metadata: {

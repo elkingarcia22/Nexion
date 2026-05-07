@@ -197,30 +197,35 @@ const getResponsable = (item: any): string => {
   return item.responsible || item.assignee_name || item.assignee?.displayName || "Sin asignar";
 };
 
-const ResponsablePills = ({ items, filter, setFilter }: {
+const ResponsableSelector = ({ items, filter, setFilter, forceShow = false }: {
   items: any[];
   filter: string;
   setFilter: (v: string) => void;
+  forceShow?: boolean;
 }) => {
   const responsables = ["todos", ...Array.from(new Set(items.map(getResponsable).filter(Boolean)))];
-  if (responsables.length <= 2) return null; // Only "todos" + 1 person = don't show
+  if (responsables.length <= 2 && !forceShow) return null; // Only "todos" + 1 person = don't show (unless forceShow)
 
   return (
-    <div className="flex items-center gap-2 flex-wrap mt-3">
-      <span className="text-[9px] font-black tracking-widest text-white/30 uppercase">Responsable:</span>
-      <div className="flex items-center gap-1 flex-wrap">
+    <div className="flex items-center gap-2">
+      <label className="text-[9px] font-black tracking-widest text-white/40 uppercase whitespace-nowrap">Responsable:</label>
+      <select
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-white/5 border border-white/10 text-white/80 hover:border-primary/40 hover:bg-white/8 focus:border-primary/60 focus:bg-white/10 focus:outline-none transition-all cursor-pointer appearance-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' opacity='0.6' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right 8px center',
+          paddingRight: '28px'
+        }}
+      >
         {responsables.map((r) => (
-          <button
-            key={r}
-            onClick={() => setFilter(r)}
-            className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
-              filter === r ? 'bg-primary text-white shadow-lg' : 'bg-white/5 text-white/40 hover:text-white/60 border border-white/5'
-            }`}
-          >
-            {r === "todos" ? "TODOS" : r} {r !== "todos" && `(${items.filter(it => getResponsable(it) === r).length})`}
-          </button>
+          <option key={r} value={r}>
+            {r === "todos" ? "TODOS" : r} ({items.filter(it => getResponsable(it) === r).length})
+          </option>
         ))}
-      </div>
+      </select>
     </div>
   );
 };
@@ -252,7 +257,7 @@ function FeedbackTab({ items, objectives = [], jiraTasks = [], team, setTeam, re
         </div>
       </div>
 
-      <ResponsablePills items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+      <ResponsableSelector items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} forceShow={true} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredItems.map((item, i) => {
@@ -418,7 +423,7 @@ function TasksTab({
           </div>
         </div>
 
-        <ResponsablePills items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+        <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} forceShow={true} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentAiTasks.map((task, i) => {
@@ -577,7 +582,7 @@ function InsightsTab({ items, objectives = [], jiraTasks = [], team, setTeam, re
         </div>
       </div>
 
-      <ResponsablePills items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+      <ResponsableSelector items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} forceShow={true} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item, i) => {
@@ -696,7 +701,7 @@ function AlertsTab({ items, objectives = [], jiraTasks = [], team, setTeam, resp
         </div>
       </div>
 
-      <ResponsablePills items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+      <ResponsableSelector items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} forceShow={true} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item, i) => {
@@ -793,6 +798,40 @@ export default function DayTodayPage() {
 
     const result = await getTasks(wsId);
     let localTasks = result.success ? (result.data || []) : [];
+
+    console.log("[loadStructuredTasks] getTasks result:", {
+      success: result.success,
+      taskCount: localTasks.length,
+      firstTask: localTasks[0] ? {
+        id: localTasks[0].id,
+        title: localTasks[0].title,
+        status: localTasks[0].status,
+        proposal_status: localTasks[0].proposal_status,
+        due_date: localTasks[0].due_date,
+        suggested_date: localTasks[0].suggested_date,
+        goal_id: localTasks[0].goal_id,
+        metadata: localTasks[0].metadata,
+        origin: localTasks[0].origin
+      } : null,
+      allStatuses: localTasks.map(t => ({ id: t.id, status: t.status, proposal_status: t.proposal_status, suggested_date: t.suggested_date }))
+    });
+
+    console.log("[loadStructuredTasks] getTasks result:", {
+      success: result.success,
+      taskCount: localTasks.length,
+      firstTask: localTasks[0] ? {
+        id: localTasks[0].id,
+        title: localTasks[0].title,
+        status: localTasks[0].status,
+        proposal_status: localTasks[0].proposal_status,
+        due_date: localTasks[0].due_date,
+        suggested_date: localTasks[0].suggested_date,
+        goal_id: localTasks[0].goal_id,
+        metadata: localTasks[0].metadata,
+        origin: localTasks[0].origin
+      } : null,
+      allStatuses: localTasks.map(t => ({ id: t.id, status: t.status, proposal_status: t.proposal_status, suggested_date: t.suggested_date }))
+    });
 
     // Jira sync if config exists
     if (wsData?.jira_config) {
@@ -1439,7 +1478,7 @@ const mapDbSource = (s: any): Source => {
       });
 
       console.log("[ANALYZE DAY] Gemini response:", { success: result.success, tasksCount: result.tasks?.length, insightsCount: result.insights?.length });
-      if (result.tasks?.length > 0) {
+      if (result.tasks && result.tasks.length > 0) {
         console.log("[ANALYZE DAY] First task sample:", result.tasks[0]);
       }
 
@@ -1571,13 +1610,11 @@ const mapDbSource = (s: any): Source => {
     // Fuentes externas include: Slack, Google Drive (DOCUMENTO/SHEET/SLIDE), and manually added external URLs
     const isGeminiNote = s.type === "NOTAS DE GEMINI";
 
-    // For SHEET: exclude if they have externalSourceId (auto-synced from Drive)
-    // Only show SHEET that were manually linked
-    const isSheetAutoSynced = s.type === "SHEET" && s.externalSourceId;
-    const isSheetManuallyAdded = s.type === "SHEET" && !s.externalSourceId;
+    // For external sources: exclude auto-synced from Drive, only show manually linked
+    const isAutoSynced = s.externalSourceId;
+    const isManuallyAdded = !s.externalSourceId;
 
-    const isOtherExternalSource = ["SLACK", "DOCUMENTO", "SLIDE", "FUENTE EXTERNA"].includes(s.type);
-    const isExternalSource = isSheetManuallyAdded || isOtherExternalSource;
+    const isExternalSource = (s.type === "FUENTE EXTERNA" || s.type === "DOCUMENTO") && isManuallyAdded;
 
     return isGeminiNote || isExternalSource;
   });
@@ -2053,7 +2090,9 @@ const mapDbSource = (s: any): Source => {
                     <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2" /><polyline points="12 6 12 12 16 14" />
                   </svg>
                 </div>
-                <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase">Tareas Pendientes Hoy</h3>
+                <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase">
+                  Tareas Pendientes {isToday ? "Hoy" : selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).replace(/^\w/, c => c.toUpperCase())}
+                </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
                   {structuredTasks.filter(t => {
                     const isDone = t.status?.toLowerCase().includes('done') || t.status?.toLowerCase().includes('finalizada');
@@ -2131,21 +2170,25 @@ const mapDbSource = (s: any): Source => {
                 // Objectives either start with "Objetivo:" or have a goal_id set
                 const isObjective = task.title?.toLowerCase().startsWith('objetivo:') || task.goal_id;
                 if (isObjective) {
+                  console.log("[TAREAS HOY] Excluding objective:", task.title);
                   return false;
                 }
 
                 const isDone = task.status?.toLowerCase().includes('done') || task.status?.toLowerCase().includes('finalizada');
-                if (isDone) return false;
+                if (isDone) {
+                  console.log("[TAREAS HOY] Task is done:", task.title);
+                  return false;
+                }
 
                 // Show all pending/in-progress tasks, not just those due today
-                const isPending = task.status?.toLowerCase().includes('pend') || task.status?.toLowerCase().includes('pendiente') || task.status?.toLowerCase().includes('todo');
+                const isPending = task.status?.toLowerCase().includes('pend') || task.status?.toLowerCase().includes('pendiente') || task.status?.toLowerCase().includes('todo') || task.status?.toLowerCase().includes('pending_review');
                 const isInProgress = task.status?.toLowerCase().includes('progress') || task.status?.toLowerCase().includes('curso');
                 const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
                 const isOverdue = task.due_date && new Date(task.due_date) < today && !isDone;
 
                 const passes = isPending || isInProgress || isDueToday || isOverdue;
                 if (passes) {
-                  console.log("[TAREAS HOY] Task passed status filter:", task.title, { isPending, isInProgress, isDueToday, isOverdue });
+                  console.log("[TAREAS HOY] Task passed status filter:", task.title, { isPending, isInProgress, isDueToday, isOverdue, status: task.status });
                 }
                 return passes;
               });
@@ -2170,7 +2213,7 @@ const mapDbSource = (s: any): Source => {
               if (pendingTasks.length === 0) {
                 return (
                   <div>
-                    <ResponsablePills items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+                    <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
                     <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-white/10 p-8 text-center mt-4">
                       <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center mx-auto mb-4">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
@@ -2187,7 +2230,7 @@ const mapDbSource = (s: any): Source => {
 
               return (
                 <div className="space-y-4">
-                  <ResponsablePills items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+                  <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
                   <div className="space-y-2">
                     {pendingTasks.slice(0, 8).map((task: any) => {
                       const isOverdue = task.due_date && new Date(task.due_date) < today && !(task.status?.toLowerCase().includes('done'));
