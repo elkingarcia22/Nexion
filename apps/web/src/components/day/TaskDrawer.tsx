@@ -340,17 +340,6 @@ export function TaskDrawer({
 
   useEffect(() => {
     if (task) {
-      console.log("[TaskDrawer] Task received:", {
-        id: task.id,
-        title: task.title,
-        priority: task.priority,
-        responsible: task.responsible,
-        assignee_id: task.assignee_id,
-        team: task.team,
-        origin: task.origin,
-        from_analysis: task.from_analysis,
-        metadata: task.metadata
-      });
 
       const isJira = task.origin === 'jira';
 
