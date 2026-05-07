@@ -358,13 +358,17 @@ export function TaskDrawer({
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
 
-      const finalPriority = isJira ? mapJiraPriority(task.priority) : (task.priority || "medium");
-      console.log("[TaskDrawer] Setting priority:", {
-        raw: task.priority,
-        final: finalPriority,
-        isJira,
-        title: task.title
-      });
+      // Map Spanish priority values to English
+      const mapSpanishPriority = (priority: any): string => {
+        if (!priority) return "medium";
+        const p = String(priority).toLowerCase();
+        if (p === "alta" || p === "highest" || p === "high") return "high";
+        if (p === "media" || p === "medium") return "medium";
+        if (p === "baja" || p === "lowest" || p === "low") return "low";
+        return "medium";
+      };
+
+      const finalPriority = isJira ? mapJiraPriority(task.priority) : mapSpanishPriority(task.priority);
 
       setFormData({
         title: task.title || "",
