@@ -78,11 +78,23 @@ export async function getTasks(workspaceId: string, date?: string) {
   const parents = allTasks.filter((t: any) => !t.parent_id);
   const children = allTasks.filter((t: any) => t.parent_id);
 
+  // Map Spanish priority values to English (Gemini returns Spanish)
+  const mapPriority = (priority: any): string => {
+    if (!priority) return "medium";
+    const p = String(priority).toLowerCase();
+    if (p === "alta" || p === "highest" || p === "high") return "high";
+    if (p === "media" || p === "medium") return "medium";
+    if (p === "baja" || p === "lowest" || p === "low") return "low";
+    return "medium";
+  };
+
   // Nest subtasks and comments into parents
   const nestedTasks = parents.map((p: any) => ({
     ...p,
     // Mark origin as 'local' for database tasks (vs 'jira')
     origin: p.origin || 'local',
+    // Map priority to English format
+    priority: mapPriority(p.priority),
     // Extract responsible from metadata if present (for Gemini analysis tasks)
     responsible: p.metadata?.responsable || p.responsible,
     // Extract team from metadata if present
