@@ -340,6 +340,17 @@ export function TaskDrawer({
 
   useEffect(() => {
     if (task) {
+      console.log("[TaskDrawer] Recibió tarea:", {
+        id: task.id,
+        title: task.title,
+        origin: task.origin,
+        description: task.description ? task.description.substring(0, 50) : "VACÍO",
+        priority: task.priority,
+        status: task.status,
+        assignee_id: task.assignee_id,
+        allKeys: Object.keys(task).slice(0, 20)
+      });
+
       const isJira = task.origin === 'jira';
       
       // Parse Jira comments into activity format
@@ -723,6 +734,14 @@ export function TaskDrawer({
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar border-r border-white/5">
             {/* Title Section */}
             <div className="space-y-4">
+              {/* Analysis Task Badge */}
+              {task?.from_analysis && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M12 2v20m-7-7h14M5 9a7 7 0 1 0 14 0"/></svg>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-500/80">Propuesta del Análisis</span>
+                </div>
+              )}
+
               <input
                 type="text"
                 value={formData.title}
@@ -730,7 +749,7 @@ export function TaskDrawer({
                 placeholder="Título de la tarea"
                 className="w-full text-4xl font-black text-white placeholder:text-white/5 border-none focus:ring-0 p-0 bg-transparent leading-tight"
               />
-              
+
               <div className="flex gap-2">
                 <button className="flex items-center gap-2 px-3 py-1.5 bg-[#161927]/5 hover:bg-[#161927]/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-white/60 transition-all">
                   <PlusIcon />

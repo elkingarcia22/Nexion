@@ -1573,10 +1573,8 @@ const mapDbSource = (s: any): Source => {
   };
 
   const handleEditTask = async (task: any) => {
-    // Enrich task with full details if it's incomplete
-    let enrichedTask = { ...task };
-
     // If it's a Jira task and missing subtasks, fetch them from structuredTasks
+    let enrichedTask = { ...task };
     if (task.origin === 'jira' && task.external_key && !task.subtasks) {
       const fullTask = structuredTasks.find((t: any) => t.external_key === task.external_key);
       if (fullTask && fullTask.subtasks) {
@@ -1584,23 +1582,33 @@ const mapDbSource = (s: any): Source => {
       }
     }
 
-    // Ensure all expected fields exist with defaults
+    // Mark if this task comes from analysis (no ID means it's from Gemini)
+    enrichedTask.from_analysis = !enrichedTask.id;
+
+    // Enrich with calculated team and responsible
+    const jiraTasks = structuredTasks.filter((t: any) => t.origin === 'jira');
+    const calculatedTeam = categorizeItem(enrichedTask, objectives, jiraTasks);
+    const responsableName = getResponsable(enrichedTask);
+
+    // Ensure all expected fields exist with defaults (use what analysis already provides)
     enrichedTask = {
       id: enrichedTask.id,
       title: enrichedTask.title || "",
       description: enrichedTask.description || "",
       priority: enrichedTask.priority || "medium",
       status: enrichedTask.status || "pendiente",
-      assignee_id: enrichedTask.assignee_id || "",
+      assignee_id: enrichedTask.assignee_id || responsableName,
       reporter_id: enrichedTask.reporter_id || "",
       due_date: enrichedTask.due_date || "",
-      team: enrichedTask.team || "",
+      team: enrichedTask.team || calculatedTeam,
+      responsible: enrichedTask.responsible || responsableName,
       labels: enrichedTask.labels || [],
       subtasks: enrichedTask.subtasks || [],
       activity: enrichedTask.activity || [],
       goal_id: enrichedTask.goal_id || "",
       linked_jira_key: enrichedTask.linked_jira_key || "",
       linked_jira_subtask_id: enrichedTask.linked_jira_subtask_id || "",
+      from_analysis: enrichedTask.from_analysis,
       ...enrichedTask // Preserve all other fields
     };
 

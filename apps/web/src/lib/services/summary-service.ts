@@ -49,6 +49,14 @@ export async function getDaySummary(
 
     if (summaryData) {
       const kpi = summaryData.kpi_data || {};
+
+      // Map Gemini response fields to frontend field names
+      const mapGeminiTask = (task: any) => ({
+        ...task,
+        assignee_name: task.responsible,  // Gemini sends "responsible", map to assignee_name
+        team: task.category,               // Gemini sends "category", map to team
+      });
+
       return {
         success: true,
         data: {
@@ -60,7 +68,7 @@ export async function getDaySummary(
           feedback_count: summaryData.feedback_count || 0,
           focus_text: summaryData.focus_text,
           summary_text: summaryData.summary_text,
-          tasks: kpi.tasks || [],
+          tasks: (kpi.tasks || []).map(mapGeminiTask),
           insights: kpi.insights || [],
           metrics: kpi.metrics || [],
           alerts: kpi.alerts || [],
