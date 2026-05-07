@@ -88,6 +88,26 @@ export async function getTasks(workspaceId: string, date?: string) {
     return "medium";
   };
 
+  // Extract team and responsible from title if missing
+  // Handles patterns like "Anderson Silva: Task Title" or "Equipo: Engineering"
+  const extractFromTitle = (title: string, type: 'responsible' | 'team') => {
+    if (!title) return null;
+
+    // Pattern: "Name: Rest of title" → extract responsible
+    const nameMatch = title.match(/^([A-Z][a-z]+ (?:[A-Z][a-z]+ )*[A-Z][a-z]+)\s*:/);
+    if (type === 'responsible' && nameMatch) {
+      return nameMatch[1];
+    }
+
+    // Pattern: "Equipo: Name" → extract team
+    const teamMatch = title.match(/^Equipo:\s*(.+?)(?:\s*[-–]|$)/i);
+    if (type === 'team' && teamMatch) {
+      return teamMatch[1].trim();
+    }
+
+    return null;
+  };
+
   // Nest subtasks and comments into parents
   const nestedTasks = parents.map((p: any) => ({
     ...p,
@@ -95,10 +115,10 @@ export async function getTasks(workspaceId: string, date?: string) {
     origin: p.origin || 'local',
     // Map priority to English format
     priority: mapPriority(p.priority),
-    // Extract responsible from metadata if present (for Gemini analysis tasks)
-    responsible: p.metadata?.responsable || p.responsible,
-    // Extract team from metadata if present
-    team: p.team || p.metadata?.team,
+    // Extract responsible: column → metadata → title extraction
+    responsible: p.responsible || p.metadata?.responsable || extractFromTitle(p.title, 'responsible'),
+    // Extract team: column → metadata → title extraction
+    team: p.team || p.metadata?.team || extractFromTitle(p.title, 'team'),
     subtasks: children.filter((c: any) => c.parent_id === p.id),
     activity: (allComments || [])
       .filter((c: any) => c.task_id === p.id)
@@ -110,6 +130,12 @@ export async function getTasks(workspaceId: string, date?: string) {
         timestamp: c.created_at
       }))
   }));
+
+  console.log('🔧 DEBUG getTasks - mapping details:');
+  console.log('   Sample parent task:', parents[0]);
+  console.log('   Mapped result:', nestedTasks[0]);
+  console.log('   Responsible values found:', nestedTasks.map((t: any) => t.responsible).filter(Boolean).slice(0, 5));
+  console.log('   Team values found:', nestedTasks.map((t: any) => t.team).filter(Boolean).slice(0, 5));
 
   return { success: true, data: nestedTasks };
 }

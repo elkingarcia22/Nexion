@@ -234,6 +234,17 @@ export async function saveDayAnalysis(
           mappedPriority = "low";
         }
 
+        // Extract team and responsible from Gemini response
+        // Gemini sends: category (for team), responsible (for person)
+        let teamValue = task.category || task.team || task.equipo || task.grupo || "";
+        let responsibleValue = task.responsible || task.responsable || task.assignee_name || task.assigned_to || "";
+
+        // Trim whitespace and convert empty strings to null for database
+        teamValue = teamValue?.trim() || null;
+        responsibleValue = responsibleValue?.trim() || null;
+
+        console.log(`   Task: "${task.title?.substring(0, 40)}..." | category: "${task.category}" | responsible: "${task.responsible}" → team: "${teamValue}", responsible: "${responsibleValue}"`);
+
         return {
           workspace_id: workspaceId,
           title: task.title || task.name || "Tarea sin título",
@@ -242,10 +253,12 @@ export async function saveDayAnalysis(
           status: "pending_review",
           suggested_date: date,
           proposal_status: "pending_review",
+          team: teamValue,
+          responsible: responsibleValue,
           metadata: {
             auto_generated: true,
-            team: task.category || task.team || task.equipo,
-            responsable: task.responsible || task.responsable || task.assignee,
+            team: teamValue,
+            responsable: responsibleValue,
             analysis_date: new Date().toISOString(),
             ...task.metadata
           },
