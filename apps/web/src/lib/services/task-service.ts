@@ -81,6 +81,10 @@ export async function getTasks(workspaceId: string, date?: string) {
   // Nest subtasks and comments into parents
   const nestedTasks = parents.map((p: any) => ({
     ...p,
+    // Extract responsible from metadata if present (for Gemini analysis tasks)
+    responsible: p.metadata?.responsable || p.responsible,
+    // Extract team from metadata if present
+    team: p.team || p.metadata?.team,
     subtasks: children.filter((c: any) => c.parent_id === p.id),
     activity: (allComments || [])
       .filter((c: any) => c.task_id === p.id)

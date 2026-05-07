@@ -194,7 +194,11 @@ const categorizeItem = (item: any, objectives: any[] = [], jiraTasks: any[] = []
 };
 
 const getResponsable = (item: any): string => {
-  return item.responsible || item.assignee_name || item.assignee?.displayName || "Sin asignar";
+  return item.responsible ||
+         item.assignee_name ||
+         item.metadata?.responsable ||
+         item.assignee?.displayName ||
+         "Sin asignar";
 };
 
 const ResponsableSelector = ({ items, filter, setFilter, forceShow = false }: {
