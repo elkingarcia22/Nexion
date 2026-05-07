@@ -105,6 +105,7 @@ const CustomSelect = ({
 };
 
 export default function TasksPage() {
+  console.log('📋 TasksPage rendering...');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);

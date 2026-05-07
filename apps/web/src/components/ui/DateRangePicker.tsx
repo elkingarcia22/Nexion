@@ -83,6 +83,8 @@ export function DateRangePicker({ value, onChange, label, allowFuture = false }:
     else setViewMonth((m) => m + 1);
   };
 
+  const [endSelection, setEndSelection] = useState<Date | null>(null);
+
   const handleDayClick = (d: Date) => {
     const isFuture = d > new Date() && !isToday(d);
     if (isFuture && !allowFuture) return;
@@ -90,17 +92,29 @@ export function DateRangePicker({ value, onChange, label, allowFuture = false }:
     if (!tempSelection) {
       // First click: set start
       setTempSelection(d);
+      setEndSelection(null);
     } else {
-      // Second click: set end (with auto-swap)
+      // Second click: set end
       let start = tempSelection;
       let end = d;
       if (end < start) {
         [start, end] = [end, start];
       }
-      onChange({ start, end });
-      setTempSelection(null);
-      setOpen(false);
+      setTempSelection(start);
+      setEndSelection(end);
     }
+  };
+
+  const handleApply = () => {
+    if (!tempSelection) return;
+
+    const start = tempSelection;
+    const end = endSelection || tempSelection;
+
+    onChange({ start, end });
+    setTempSelection(null);
+    setEndSelection(null);
+    setOpen(false);
   };
 
   const handleClear = () => {
@@ -196,7 +210,10 @@ export function DateRangePicker({ value, onChange, label, allowFuture = false }:
               const isFuture = day > new Date() && !isToday(day);
               const isDisabled = isFuture && !allowFuture;
               const isStartSelection = tempSelection ? isSameDay(day, tempSelection) : false;
+              const isTempEndSelection = endSelection ? isSameDay(day, endSelection) : false;
               const isEndSelection = value ? (isSameDay(day, value.start) || isSameDay(day, value.end)) : false;
+              const tempRange = tempSelection && endSelection ? { start: tempSelection, end: endSelection } : null;
+              const isInTempRange = tempRange && !isStartSelection && !isTempEndSelection && isDateInRange(day, tempRange);
               const isInRange = value && !isStartSelection && !isEndSelection && isDateInRange(day, value);
               const today = isToday(day);
 
@@ -207,11 +224,13 @@ export function DateRangePicker({ value, onChange, label, allowFuture = false }:
                   disabled={isDisabled}
                   className={`
                     h-9 w-full flex items-center justify-center rounded-xl text-sm font-medium transition-all
-                    ${isEndSelection
+                    ${isTempEndSelection
+                      ? "text-white shadow-md"
+                      : isEndSelection
                       ? "text-white shadow-md"
                       : isStartSelection
                       ? "text-white shadow-md border border-primary/50"
-                      : isInRange
+                      : isInTempRange || isInRange
                       ? "text-primary bg-primary/15"
                       : today
                       ? "text-primary font-bold border border-primary/30 bg-primary/5"
@@ -220,7 +239,7 @@ export function DateRangePicker({ value, onChange, label, allowFuture = false }:
                       : "text-white/70 hover:bg-primary/8 hover:text-primary"
                     }
                   `}
-                  style={isEndSelection ? { background: "linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%)" } : {}}
+                  style={isTempEndSelection || isEndSelection ? { background: "linear-gradient(135deg, #1a6bff 0%, #2ec6ff 100%)" } : {}}
                 >
                   {day.getDate()}
                 </button>
@@ -229,7 +248,7 @@ export function DateRangePicker({ value, onChange, label, allowFuture = false }:
           </div>
 
           {/* Footer */}
-          <div className="border-t border-white/10 px-3 py-2.5 flex justify-between items-center">
+          <div className="border-t border-white/10 px-3 py-2.5 flex justify-between items-center gap-2">
             <div className="flex gap-2">
               <button
                 onClick={handleToday}
@@ -244,11 +263,29 @@ export function DateRangePicker({ value, onChange, label, allowFuture = false }:
                 Limpiar
               </button>
             </div>
-            {value && (
-              <span className="text-[10px] text-white/30 font-medium">
-                {value.start.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })} – {value.end.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })}
-              </span>
-            )}
+            <div className="flex items-center gap-2 ml-auto">
+              {(tempSelection || value) && (
+                <span className="text-[10px] text-white/30 font-medium">
+                  {tempSelection && (
+                    <>
+                      {tempSelection.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                      {endSelection && ` – ${endSelection.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })}`}
+                    </>
+                  )}
+                  {!tempSelection && value && (
+                    `${value.start.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })} – ${value.end.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })}`
+                  )}
+                </span>
+              )}
+              {tempSelection && (
+                <button
+                  onClick={handleApply}
+                  className="px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 transition-all"
+                >
+                  Aplicar
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
