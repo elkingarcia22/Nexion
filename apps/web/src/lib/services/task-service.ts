@@ -89,12 +89,19 @@ export async function getTasks(workspaceId: string, date?: string) {
   };
 
   // Nest subtasks and comments into parents
-  const nestedTasks = parents.map((p: any) => ({
+  const nestedTasks = parents.map((p: any) => {
+    const mappedPriority = mapPriority(p.priority);
+    console.log("[getTasks] Task priority mapping:", {
+      original: p.priority,
+      mapped: mappedPriority,
+      title: p.title
+    });
+    return {
     ...p,
     // Mark origin as 'local' for database tasks (vs 'jira')
     origin: p.origin || 'local',
     // Map priority to English format
-    priority: mapPriority(p.priority),
+    priority: mappedPriority,
     // Extract responsible from metadata if present (for Gemini analysis tasks)
     responsible: p.metadata?.responsable || p.responsible,
     // Extract team from metadata if present
@@ -109,7 +116,8 @@ export async function getTasks(workspaceId: string, date?: string) {
         text: c.content,
         timestamp: c.created_at
       }))
-  }));
+    };
+  });
 
   return { success: true, data: nestedTasks };
 }

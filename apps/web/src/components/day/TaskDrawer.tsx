@@ -358,10 +358,18 @@ export function TaskDrawer({
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
 
+      const finalPriority = isJira ? mapJiraPriority(task.priority) : (task.priority || "medium");
+      console.log("[TaskDrawer] Setting priority:", {
+        raw: task.priority,
+        final: finalPriority,
+        isJira,
+        title: task.title
+      });
+
       setFormData({
         title: task.title || "",
         description: parseJiraDescription(task.description),
-        priority: isJira ? mapJiraPriority(task.priority) : (task.priority || "medium"),
+        priority: finalPriority,
         status: isJira ? mapJiraStatus(task.status) : (task.status || "pendiente"),
         assignee_id: task.assignee_id || task.responsible || "",
         reporter_id: task.reporter_id || "",
