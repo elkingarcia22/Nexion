@@ -798,11 +798,6 @@ export default function DayTodayPage() {
 
     const result = await getTasks(wsId);
     let localTasks = result.success ? (result.data || []) : [];
-        metadata: localTasks[0].metadata,
-        origin: localTasks[0].origin
-      } : null,
-      allStatuses: localTasks.map(t => ({ id: t.id, status: t.status, proposal_status: t.proposal_status, suggested_date: t.suggested_date }))
-    });
 
     // Jira sync if config exists
     if (wsData?.jira_config) {
