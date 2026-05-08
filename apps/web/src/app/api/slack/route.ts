@@ -29,6 +29,24 @@ export async function GET(request: Request) {
       return NextResponse.json(data);
     }
 
+    if (action === "my-channels") {
+      const response = await fetch("https://slack.com/api/users.conversations", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${SLACK_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          types: "public_channel,private_channel",
+          limit: 200,
+          exclude_archived: true,
+        }),
+      });
+
+      const data = await response.json();
+      return NextResponse.json(data);
+    }
+
     if (action === "channel-history") {
       const channelId = searchParams.get("channelId");
       const oldest = searchParams.get("oldest");

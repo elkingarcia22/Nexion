@@ -19,6 +19,8 @@ export async function POST(request: Request) {
     const nextDay = nextDayDate.toISOString().split('T')[0];
 
     const prompt = `
+      🔴 REGLA ABSOLUTA: TODO el contenido de la respuesta debe estar 100% EN ESPAÑOL. NUNCA uses inglés. NUNCA. Títulos, descripciones, resúmenes, valores de campos — TODO en español. Si una fuente está en inglés, tradúcela al español en tu análisis.
+
       Eres un Asistente de Inteligencia Operativa llamado Nexión. 
       Tu misión es realizar un análisis jerárquico y profundo de la actividad del usuario para el día ${date}.
 
@@ -40,19 +42,19 @@ export async function POST(request: Request) {
       --- FIN FUENTE ---
       `).join('\n')}
 
-      LOGICA DE ANÁLISIS (PASO A PASO POR CADA FUENTE):
-      1. CONTEXTO: ¿De qué trata este documento/reunión?
+      LÓGICA DE ANÁLISIS (PASO A PASO POR CADA FUENTE):
+      1. CONTEXTO: ¿De qué trata este documento o reunión?
       2. VINCULACIÓN: 
-         - ¿A qué OBJETIVO (goal_id) de la lista estratégica le pega?
+         - ¿A qué OBJETIVO (goal_id) de la lista estratégica le aporta?
          - ¿A qué HISTORIA DE USUARIO (linked_jira_key) de Jira está asociado?
          - ¿A qué SUBTAREA (linked_jira_subtask_id) específica de esa HU se refiere?
-3. EXTRACCIÓN DE ELEMENTOS:
+      3. EXTRACCIÓN DE ELEMENTOS:
           - RESPONSABLE: ¿Para quién es esta tarea? Si es para ti (${userName}), usa "${userName}". Si es para otra persona (ej: "Juan va a hacer esto", "María necesita entregar"), extrae el nombre.
           - TAREAS: Extrae todas las acciones (especialmente las de ${userName}).
-         - FECHAS Y VENCIMIENTO (due_date): 
-            * REGLA 1: Si en la fuente se menciona explícitamente "mañana" o compromisos para el día siguiente (ej: "mañana entrego esto", "mañana lo ajusto"), el vencimiento (due_date) DEBE ser el día actual: ${date}.
-            * REGLA 2: Si NO hay ninguna detección de fecha específica o mención de "mañana", el vencimiento por defecto DEBE ser el día siguiente: ${nextDay}.
-         - OTROS: Extrae métricas, insights, alertas y feedback.
+          - FECHAS Y VENCIMIENTO (due_date): 
+             * REGLA 1: Si en la fuente se menciona explícitamente "mañana" o compromisos para el día siguiente (ej: "mañana entrego esto", "mañana lo ajusto"), el vencimiento (due_date) DEBE ser el día actual: ${date}.
+             * REGLA 2: Si NO hay ninguna detección de fecha específica o mención de "mañana", el vencimiento por defecto DEBE ser el día siguiente: ${nextDay}.
+          - OTROS: Extrae métricas, insights, alertas y feedback.
 
       REGLAS CRÍTICAS:
       - CRÍTICO: TODO CAMPO "category" DEBE tener un valor (Talent/Hiring/UX/Other). NUNCA null o vacío.
@@ -60,12 +62,13 @@ export async function POST(request: Request) {
       - Si detectas una tarea para ${userName}, asígnale prioridad ALTA.
       - Si una tarea es para otra persona, incluye su nombre en el título Y en el campo "responsible".
       - Vincula SIEMPRE que sea posible a los IDs de Objetivos y Jira proporcionados.
+      - 🔴 RECUERDA: TODOS los textos (title, description, summary, content) deben estar en ESPAÑOL.
 
-      ESTRUCTURA DE RESPUESTA (Responde ÚNICAMENTE en JSON):
+      ESTRUCTURA DE RESPUESTA (Responde ÚNICAMENTE en JSON — TODOS los textos en español):
       {
-        "summary": "Resumen ejecutivo del día.",
+        "summary": "Resumen ejecutivo del día en español.",
         "tasks": [{ 
-          "title": "...", 
+          "title": "Descripción de la tarea en español", 
           "priority": "alta/media/baja", 
           "category": "Talent/Hiring/UX/Other",
           "responsible": "Nombre de la persona responsable (${userName} si es para ti)",
@@ -75,15 +78,15 @@ export async function POST(request: Request) {
           "due_date": "YYYY-MM-DD o null"
         }],
         "insights": [{
-          "title": "...",
-          "description": "...",
+          "title": "Título del insight en español",
+          "description": "Descripción del insight en español",
           "category": "Talent/Hiring/UX/Other",
           "responsible": "Nombre del responsable o null",
           "goal_id": "...",
           "linked_jira_key": "..."
         }],
         "metrics": [{
-          "title": "...",
+          "title": "Nombre de la métrica en español",
           "value": "...",
           "change": "...",
           "status": "alta/media/baja",
@@ -92,8 +95,8 @@ export async function POST(request: Request) {
           "goal_id": "..."
         }],
         "alerts": [{
-          "title": "...",
-          "description": "...",
+          "title": "Título de la alerta en español",
+          "description": "Descripción de la alerta en español",
           "priority": "critica/alta/media",
           "category": "Talent/Hiring/UX/Other",
           "responsible": "Nombre del responsable o null",
@@ -101,8 +104,8 @@ export async function POST(request: Request) {
           "linked_jira_key": "..."
         }],
         "feedback": [{
-          "title": "...",
-          "content": "...",
+          "title": "Título del feedback en español",
+          "content": "Contenido del feedback en español",
           "type": "producto/laboral/personal",
           "category": "Talent/Hiring/UX/Other",
           "responsible": "Nombre del responsable o null",

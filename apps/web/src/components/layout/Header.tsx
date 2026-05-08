@@ -9,8 +9,10 @@ export function Header() {
   const [searchFocus, setSearchFocus] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
+      const session = data?.session;
       if (session?.user) {
+        setUser(session.user);
         setUser(session.user);
       }
       setLoading(false);

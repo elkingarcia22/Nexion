@@ -14,8 +14,10 @@ export default function Login() {
     const force = searchParams.get("force") === "true";
 
     if (!force) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
+        const session = data?.session;
         if (session?.user) {
+          setUser(session.user);
           setUser(session.user);
           router.push("/");
         }

@@ -57,6 +57,42 @@ function CallbackContent() {
           console.log("DEBUG: Refresh token saved to storage");
         }
 
+        // 4.5. Ensure profile exists for this user
+        if (session?.user) {
+          try {
+            const { error: profileError } = await supabase.rpc('ensure_profile_exists', { user_id: session.user.id });
+            if (profileError) {
+              console.warn("Could not ensure profile exists:", profileError);
+              // Try to create profile directly
+              const { data: ws } = await supabase.from('workspaces').insert({
+                name: session.user.user_metadata?.full_name || 'Mi Workspace',
+                slug: 'workspace-' + session.user.id.replace(/-/g, ''),
+                status: 'active'
+              }).select().single();
+              
+              if (ws) {
+                await supabase.from('profiles').upsert({
+                  id: session.user.id,
+                  workspace_id: ws.id,
+                  email: session.user.email,
+                  full_name: session.user.user_metadata?.full_name || '',
+                  role: 'owner',
+                  is_active: true
+                });
+              }
+            } else {
+              // Update profile with latest info
+              await supabase.from('profiles').update({
+                email: session.user.email,
+                full_name: session.user.user_metadata?.full_name || '',
+                updated_at: new Date().toISOString()
+              }).eq('id', session.user.id);
+            }
+          } catch (profileErr) {
+            console.warn("Profile creation error:", profileErr);
+          }
+        }
+
         // 4. Force a small wait to ensure storage is committed and Supabase state is stable
         await new Promise(resolve => setTimeout(resolve, 800));
 

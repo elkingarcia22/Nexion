@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { createOrUpdateTask } from "@/lib/services/task-service";
+import { fetchJiraIssues } from "@/lib/services/jira-service";
 import { DatePicker } from "../ui/DatePicker";
 
 /* ─── Custom Components ─────────────────────────────────────── */
@@ -73,6 +74,238 @@ const CustomSelect = ({
               {opt.label}
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Grouped Objective Select ──────────────────────────────────── */
+
+const GroupedObjectiveSelect = ({
+  value,
+  onChange,
+  objectives,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  objectives: any[];
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedObj = objectives.find(o => o.id === value);
+  const talentObjs = objectives.filter(o => o.team === "Talent");
+  const hiringObjs = objectives.filter(o => o.team === "Hiring");
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-[#161927]/50 border border-white/5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white hover:border-primary/40 transition-all text-left"
+      >
+        <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+          <TargetIcon />
+          <span className="truncate">{selectedObj ? selectedObj.title : "Ninguno"}</span>
+        </div>
+        <svg
+          className={`w-3 h-3 text-white/20 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[150] bg-[#161927] border border-white/10 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+          <button
+            onClick={() => { onChange(""); setIsOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
+              value === "" ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            Ninguno
+          </button>
+
+          {talentObjs.length > 0 && (
+            <>
+              <div className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-blue-400 bg-blue-500/5 border-y border-white/5">
+                TALENT
+              </div>
+              {talentObjs.map(obj => (
+                <button
+                  key={obj.id}
+                  onClick={() => { onChange(obj.id); setIsOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
+                    value === obj.id ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  {obj.title}
+                </button>
+              ))}
+            </>
+          )}
+
+          {hiringObjs.length > 0 && (
+            <>
+              <div className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/5 border-y border-white/5">
+                HIRING
+              </div>
+              {hiringObjs.map(obj => (
+                <button
+                  key={obj.id}
+                  onClick={() => { onChange(obj.id); setIsOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
+                    value === obj.id ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  {obj.title}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Grouped Jira Select ──────────────────────────────────────── */
+
+const GroupedJiraSelect = ({
+  value,
+  onChange,
+  jiraTasks,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  jiraTasks: any[];
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedJt = jiraTasks.find(jt => jt.external_key === value);
+
+  const getTeam = (jt: any): string => {
+    const t = (jt.team || jt.project || "").toLowerCase();
+    const title = (jt.title || "").toLowerCase();
+    const context = `${t} ${title}`;
+    if ((context.includes("talent") || context.includes("culture") || context.includes("growth")) &&
+        !context.includes("hiring") && !context.includes("utu") && !context.includes("talent-os")) return "talent";
+    if (context.includes("hiring") || context.includes("utu") || context.includes("talent-os") ||
+        context.includes("recruit") || context.includes("contratación") || context.includes("reclutamiento")) return "hiring";
+    return "otras";
+  };
+
+  const talentJiras = jiraTasks.filter(jt => getTeam(jt) === "talent");
+  const hiringJiras = jiraTasks.filter(jt => getTeam(jt) === "hiring");
+  const otrasJiras = jiraTasks.filter(jt => getTeam(jt) === "otras");
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-[#161927]/50 border border-white/5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white hover:border-primary/40 transition-all text-left"
+      >
+        <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400"><path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z"/></svg>
+          <span className="truncate">{selectedJt ? `${selectedJt.external_key}: ${selectedJt.title}` : "Sin vincular"}</span>
+        </div>
+        <svg
+          className={`w-3 h-3 text-white/20 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[150] bg-[#161927] border border-white/10 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+          <button
+            onClick={() => { onChange(""); setIsOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
+              value === "" ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            Sin vincular
+          </button>
+
+          {talentJiras.length > 0 && (
+            <>
+              <div className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-blue-400 bg-blue-500/5 border-y border-white/5">
+                TALENT
+              </div>
+              {talentJiras.map(jt => (
+                <button
+                  key={jt.external_key}
+                  onClick={() => { onChange(jt.external_key); setIsOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
+                    value === jt.external_key ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  {jt.external_key}: {jt.title}
+                </button>
+              ))}
+            </>
+          )}
+
+          {hiringJiras.length > 0 && (
+            <>
+              <div className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/5 border-y border-white/5">
+                HIRING
+              </div>
+              {hiringJiras.map(jt => (
+                <button
+                  key={jt.external_key}
+                  onClick={() => { onChange(jt.external_key); setIsOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
+                    value === jt.external_key ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  {jt.external_key}: {jt.title}
+                </button>
+              ))}
+            </>
+          )}
+
+          {otrasJiras.length > 0 && (
+            <>
+              <div className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-white/50 bg-white/5 border-y border-white/5">
+                OTRAS
+              </div>
+              {otrasJiras.map(jt => (
+                <button
+                  key={jt.external_key}
+                  onClick={() => { onChange(jt.external_key); setIsOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
+                    value === jt.external_key ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  {jt.external_key}: {jt.title}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -338,6 +571,39 @@ export function TaskDrawer({
   const [newLabel, setNewLabel] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [draggedSubtaskId, setDraggedSubtaskId] = useState<number | null>(null);
+  const [localJiraTasks, setLocalJiraTasks] = useState<any[]>(jiraTasks);
+
+  const resolvedJiraTasks = jiraTasks.length > 0 ? jiraTasks : localJiraTasks;
+
+  useEffect(() => {
+    if (jiraTasks.length === 0 && workspaceId) {
+      (async () => {
+        try {
+          const { data: ws } = await supabase.from("workspaces").select("jira_config").eq("id", workspaceId).single();
+          if (ws?.jira_config) {
+            const jql = 'assignee = currentUser() AND statusCategory != Done AND (project in ("HIRING", "TALENT", "UTU") OR customfield_10001 ~ "Hiring" OR customfield_10001 ~ "Talent") ORDER BY updated DESC';
+            const result = await fetchJiraIssues(ws.jira_config, jql);
+            if (result.success && result.issues) {
+              setLocalJiraTasks(
+                result.issues
+                  .filter((i: any) => !i.fields?.issuetype?.subtask)
+                  .map((i: any) => ({
+                    id: `jira-${i.id}`,
+                    external_key: i.key,
+                    title: i.fields?.summary || "",
+                    team: i.fields?.customfield_10001?.value || i.fields?.customfield_10001?.name || "",
+                    project: i.fields?.project?.name || "",
+                    origin: "jira",
+                  }))
+              );
+            }
+          }
+        } catch (e) {
+          console.warn("[TaskDrawer] could not load Jira tasks", e);
+        }
+      })();
+    }
+  }, [jiraTasks, workspaceId]);
 
   useEffect(() => {
     if (task) {
@@ -1027,7 +1293,7 @@ export function TaskDrawer({
                 <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
                   <TargetIcon /> Objetivo Relacionado
                 </label>
-                <CustomSelect
+                <GroupedObjectiveSelect
                   value={formData.goal_id}
                   onChange={(val) => {
                     const selectedObj = objectives.find(o => o.id === val);
@@ -1037,10 +1303,7 @@ export function TaskDrawer({
                       team: !prev.team && selectedObj ? selectedObj.team : prev.team
                     }));
                   }}
-                  options={[
-                    { value: "", label: "Ninguno" },
-                    ...objectives.map(obj => ({ value: obj.id, label: obj.title }))
-                  ]}
+                  objectives={objectives}
                 />
               </div>
 
@@ -1128,7 +1391,7 @@ export function TaskDrawer({
               
               <div className="space-y-3">
                 <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Historia de Usuario (HU)</label>
-                <CustomSelect
+                <GroupedJiraSelect
                   value={formData.linked_jira_key}
                   onChange={(val) => {
                     setFormData(prev => ({ 
@@ -1137,10 +1400,7 @@ export function TaskDrawer({
                       linked_jira_subtask_id: "" // Reset subtask when story changes
                     }));
                   }}
-                  options={[
-                    { value: "", label: "Sin vincular" },
-                    ...jiraTasks.map(jt => ({ value: jt.external_key, label: `${jt.external_key}: ${jt.title}` }))
-                  ]}
+                  jiraTasks={resolvedJiraTasks}
                 />
               </div>
 
@@ -1152,7 +1412,7 @@ export function TaskDrawer({
                     onChange={(val) => setFormData(prev => ({ ...prev, linked_jira_subtask_id: val }))}
                     options={[
                       { value: "", label: "General (Toda la HU)" },
-                      ...(jiraTasks.find(jt => jt.external_key === formData.linked_jira_key)?.subtasks || []).map((st: any) => ({ 
+                      ...(resolvedJiraTasks.find(jt => jt.external_key === formData.linked_jira_key)?.subtasks || []).map((st: any) => ({ 
                         value: st.id, 
                         label: st.title 
                       }))

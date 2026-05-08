@@ -7,6 +7,7 @@ import { getSourcesByDate, createSource, deleteSource, deleteSourcesByUrl, updat
 import { getOrCreateWorkspace } from "@/lib/services/workspace-service";
 import { fetchGoogleDriveFiles, fetchGoogleFileContent, DriveFile } from "@/lib/services/google-drive-service";
 import { fetchGoogleCalendarEvents, CalendarEvent } from "@/lib/services/google-calendar-service";
+import { syncSlackSourcesForDay, getSlackSourcesByWorkspace } from "@/lib/services/slack-service";
 import { analyzeDay } from "@/lib/services/analyze-service";
 import { DayNavigator } from "@/components/ui/DayNavigator";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -64,7 +65,7 @@ const tasks = [
   { id: 3, title: "Revisar propuesta de diseño para el panel móvil", tag: "DISEÑO", tagColor: "bg-purple-500/10 text-purple-700", date: "15 Oct, 2023", file: "Feedback_Cliente.txt", priority: "BAJA", priorityColor: "text-gray-400" },
 ];
 
-type SourceType = "FUENTE EXTERNA" | "NOTAS DE GEMINI" | "DOCUMENTO";
+type SourceType = "FUENTE EXTERNA" | "NOTAS DE GEMINI" | "DOCUMENTO" | "SLACK";
 
 interface Source {
   id: string | number;
@@ -162,6 +163,7 @@ const typeStyles: Record<SourceType, string> = {
   "FUENTE EXTERNA": "bg-orange-500/100/10 text-orange-600",
   "NOTAS DE GEMINI": "bg-purple-500/10 text-purple-600",
   "DOCUMENTO": "bg-primary/100/10 text-blue-600",
+  "SLACK": "bg-green-500/10 text-green-400",
 };
 
 /* ─── Shared Helpers ─────────────────────────────────────────── */
@@ -794,16 +796,10 @@ export default function DayTodayPage() {
   }, [profiles, user]);
   const userTaskCount = useMemo(() => {
     const name = userNameForMatch;
-    console.log('🔍 DEBUG userTaskCount:', { name, summaryTasks: summaryData?.tasks?.length, structuredLength: structuredTasks?.length });
     if (name === "Usuario") return 0;
     const allTasks = summaryData?.tasks || [];
-    const myTasks = allTasks.filter((t: any) => getResponsable(t) === name);
-    console.log('🔍 DEBUG myTasks count:', myTasks.length, 'sample:', myTasks.slice(0,2).map((t: any)=>({title:t.title?.substring(0,30), resp:getResponsable(t)})));
-    if (myTasks.length > 0) return myTasks.length;
-    const fromStructured = (structuredTasks || []).filter((t: any) => getResponsable(t) === name).length;
-    console.log('🔍 DEBUG fromStructured:', fromStructured);
-    return fromStructured;
-  }, [summaryData?.tasks, structuredTasks, userNameForMatch]);
+    return allTasks.filter((t: any) => getResponsable(t) === name).length;
+  }, [summaryData?.tasks, userNameForMatch]);
   
   const fetchProfiles = async () => {
     const { data } = await supabase.from("profiles").select("*");
@@ -1332,6 +1328,36 @@ const mapDbSource = (s: any): Source => {
       } finally {
         setDriveSyncing(false);
       }
+
+      // 6. Sync Slack messages for the day
+      if (fetchId !== currentFetchIdRef.current) return;
+
+      try {
+        console.log("[fetchData] Starting Slack sync for", dateStr);
+        const slackResult = await syncSlackSourcesForDay(wsId, forDate);
+        console.log("[fetchData] Slack sync result:", slackResult);
+
+        if (slackResult.success) {
+          const slackSourcesResult = await getSlackSourcesByWorkspace(wsId, forDate);
+          console.log("[fetchData] Slack sources from DB:", slackSourcesResult);
+
+          if (slackSourcesResult.success && slackSourcesResult.data && slackSourcesResult.data.length > 0) {
+            const slackSources: Source[] = slackSourcesResult.data.map((s: any) => mapDbSource(s));
+
+            setSources((prevSources) => {
+              const allIds = new Set(prevSources.map(s => s.id));
+              const newSlack = slackSources.filter(s => !allIds.has(s.id));
+              return [...prevSources, ...newSlack];
+            });
+          } else {
+            console.log("[fetchData] No Slack sources found in DB for this date");
+          }
+        } else {
+          console.warn("[fetchData] Slack sync failed:", slackResult.error);
+        }
+      } catch (slackError) {
+        console.error("[fetchData] Slack sync error:", slackError);
+      }
     } catch (err) {
       console.error("Error fetching data:", err);
       setSyncError("Error inesperado al cargar datos.");
@@ -1635,9 +1661,9 @@ const mapDbSource = (s: any): Source => {
       return true;
     }
 
-    // Default: show only Notas de Gemini + Fuentes Externas (manually added only)
-    // Fuentes externas include: Slack, Google Drive (DOCUMENTO/SHEET/SLIDE), and manually added external URLs
+    // Default: show Notas de Gemini + Slack sources + Fuentes Externas (manually added only)
     const isGeminiNote = s.type === "NOTAS DE GEMINI";
+    const isSlackSource = s.origin === "slack";
 
     // For external sources: exclude auto-synced from Drive, only show manually linked
     const isAutoSynced = s.externalSourceId;
@@ -1645,7 +1671,7 @@ const mapDbSource = (s: any): Source => {
 
     const isExternalSource = (s.type === "FUENTE EXTERNA" || s.type === "DOCUMENTO") && isManuallyAdded;
 
-    return isGeminiNote || isExternalSource;
+    return isGeminiNote || isExternalSource || isSlackSource;
   });
 
   const checkedCount = filteredSources.filter((s) => s.checked).length;
@@ -1678,13 +1704,13 @@ const mapDbSource = (s: any): Source => {
           <button
             onClick={() => fetchData(selectedDate)}
             disabled={isSyncing}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl text-white/80 border-2 border-white/5 hover:border-primary/30 transition-all bg-card"
+            className="p-3 rounded-2xl border-2 border-white/5 hover:border-primary/30 transition-all bg-card disabled:opacity-30"
+            title="Sincronizar"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={isSyncing ? "animate-spin" : ""}>
               <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1.04 6.67 2.87L21 8" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M21 3v5h-5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            SINCRONIZAR
           </button>
 
           <button
@@ -1716,7 +1742,7 @@ const mapDbSource = (s: any): Source => {
           { id: "hoy", label: "Hoy" },
           { id: "fuentes", label: "Fuentes" },
           { id: "resumen-del-analisis", label: "Resumen del Análisis", show: summaryData?.summary_text },
-          { id: "tasks", label: "Tareas", count: userTaskCount || summaryData?.tasks_count || 0 },
+          { id: "tasks", label: "Tareas", count: userTaskCount, show: summaryData?.tasks && summaryData.tasks.length > 0 },
           { id: "insights", label: "Insights", count: summaryData?.insights_count || summaryData?.insights?.length },
           { id: "metrics", label: "Métricas", count: summaryData?.metrics_count || summaryData?.metrics?.length },
           { id: "alerts", label: "Alertas", count: summaryData?.alerts_count || summaryData?.alerts?.length },
@@ -2054,7 +2080,7 @@ const mapDbSource = (s: any): Source => {
                   return (
                     <div key={event.id} className={`group relative bg-card rounded-3xl border p-5 shadow-soft hover:shadow-hard transition-all duration-500 hover:-translate-y-1.5 ${isNow ? 'border-primary/30 ring-4 ring-primary/5' : 'border-white/20'}`}>
                       {isNow && (
-                        <div className="absolute -top-2 -right-2 px-2 py-1 bg-red-500/100/100 text-white text-[9px] font-black rounded-lg shadow-lg z-10 animate-bounce">
+                        <div className="absolute -top-2 -right-2 px-2 py-1 bg-red-500 text-white text-[9px] font-black rounded-lg shadow-lg z-10 animate-bounce">
                           EN VIVO
                         </div>
                       )}
@@ -2117,207 +2143,187 @@ const mapDbSource = (s: any): Source => {
             )}
           </div>
 
-          {/* Today's Tasks - Real pending tasks */}
+          {/* Today's Tasks - grouped by: vencidas / hoy / backlog */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2" /><polyline points="12 6 12 12 16 14" />
-                  </svg>
-                </div>
-                <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase">
-                  Tareas Pendientes {isToday ? "Hoy" : selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).replace(/^\w/, c => c.toUpperCase())}
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  {structuredTasks.filter(t => {
-                    const isDone = t.status?.toLowerCase().includes('done') || t.status?.toLowerCase().includes('finalizada');
-                    const isDueToday = t.due_date && new Date(t.due_date).toDateString() === selectedDate.toDateString();
-                    const isInProgress = t.status?.toLowerCase().includes('progress') || t.status?.toLowerCase().includes('curso');
-                    return !isDone && (isDueToday || isInProgress);
-                  }).length}
-                </span>
-              </div>
-
-              <button
-                onClick={() => setTaskDrawerOpen(true)}
-                className="px-4 py-1.5 bg-card border border-white/20 text-white/60 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all flex items-center gap-2"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2" /><polyline points="12 6 12 12 16 14" />
                 </svg>
-                AÑADIR
-              </button>
+              </div>
+              <h3 className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase">
+                Tareas Pendientes
+              </h3>
             </div>
 
             {/* Team filters */}
             <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 w-fit">
-              <button
-                onClick={() => setJiraSubTab('talent')}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                  jiraSubTab === 'talent' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-                }`}
-              >
-                TALENT
-              </button>
-              <button
-                onClick={() => setJiraSubTab('hiring')}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                  jiraSubTab === 'hiring' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-                }`}
-              >
-                HIRING
-              </button>
-              <button
-                onClick={() => setJiraSubTab('ux')}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                  jiraSubTab === 'ux' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-                }`}
-              >
-                UX TEAM
-              </button>
-              <button
-                onClick={() => setJiraSubTab('otras')}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                  jiraSubTab === 'otras' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-                }`}
-              >
-                OTRAS
-              </button>
+              {(['talent', 'hiring', 'ux', 'otras'] as const).map(team => (
+                <button
+                  key={team}
+                  onClick={() => setJiraSubTab(team)}
+                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                    jiraSubTab === team ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                  }`}
+                >
+                  {team === 'ux' ? 'UX TEAM' : team.toUpperCase()}
+                </button>
+              ))}
             </div>
 
             {(() => {
               const today = new Date();
-              today.setHours(0,0,0,0);
+              today.setHours(0, 0, 0, 0);
 
-              const pendingTasksByStatus = structuredTasks.filter((task: any) => {
-                // EXCLUDE OBJECTIVES - they should not appear in "Tareas Pendientes"
-                // Objectives either start with "Objetivo:" or have a goal_id set
+              const jiraTasks = structuredTasks.filter((t: any) => t.origin === 'jira');
+
+              const userPendingTasks = structuredTasks.filter((task: any) => {
                 const isObjective = task.title?.toLowerCase().startsWith('objetivo:') || task.goal_id;
-                if (isObjective) {
-                  return false;
-                }
-
+                if (isObjective) return false;
                 const isDone = task.status?.toLowerCase().includes('done') || task.status?.toLowerCase().includes('finalizada');
-                if (isDone) {
-                  return false;
-                }
-
-                // Show all pending/in-progress tasks, not just those due today
-                const isPending = task.status?.toLowerCase().includes('pend') || task.status?.toLowerCase().includes('pendiente') || task.status?.toLowerCase().includes('todo') || task.status?.toLowerCase().includes('pending_review');
-                const isInProgress = task.status?.toLowerCase().includes('progress') || task.status?.toLowerCase().includes('curso');
-                const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
-                const isOverdue = task.due_date && new Date(task.due_date) < today && !isDone;
-
-                const passes = isPending || isInProgress || isDueToday || isOverdue;
-                return passes;
+                if (isDone) return false;
+                const matchesUser = getResponsable(task) === userNameForMatch;
+                return matchesUser;
               });
 
-              const tasksByTeam = pendingTasksByStatus.filter((task: any) => {
-                const category = categorizeItem(task, objectives, structuredTasks.filter((t: any) => t.origin === 'jira'));
-                const matches = category === jiraSubTab;
-                return matches;
+              const teamTasks = userPendingTasks.filter((task: any) => {
+                const category = categorizeItem(task, objectives, jiraTasks);
+                return category === jiraSubTab;
               });
 
-              const pendingTasks = responsableFilter === "todos"
-                ? tasksByTeam
-                : tasksByTeam.filter((task: any) => getResponsable(task) === responsableFilter);
+              const overdue = teamTasks.filter((t: any) => t.due_date && new Date(t.due_date) < today);
+              const dueToday = teamTasks.filter((t: any) => t.due_date && new Date(t.due_date).toDateString() === today.toDateString());
+              const backlog = teamTasks.filter((t: any) => !overdue.includes(t) && !dueToday.includes(t));
 
-              if (pendingTasks.length === 0) {
+              const renderTaskCard = (task: any) => {
+                const isOverdue = overdue.includes(task);
+                const isDueToday = dueToday.includes(task);
                 return (
-                  <div>
-        {responsableFilter === "todos" && (
-          <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
-        )}
-                    <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-white/10 p-8 text-center mt-4">
-                      <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center mx-auto mb-4">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                          <polyline points="22 4 12 14.01 9 11.01" />
-                        </svg>
+                  <div
+                    key={task.id}
+                    onClick={() => handleEditTask(task)}
+                    className={`bg-card rounded-2xl border p-4 hover:border-primary/30 transition-all cursor-pointer group ${
+                      isOverdue ? 'border-red-500/30 bg-red-500/5' : 'border-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          task.origin === 'jira' ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/10 text-primary'
+                        }`}>
+                          {task.origin === 'jira' ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" />
+                            </svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-bold truncate ${isOverdue ? 'text-red-400' : 'text-white'}`}>{task.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {task.origin === 'jira' && (
+                              <span className="text-[8px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded uppercase tracking-widest">
+                                {task.external_key}
+                              </span>
+                            )}
+                            {task.due_date && (
+                              <span className={`text-[9px] font-medium ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-white/30'}`}>
+                                📅 {new Date(task.due_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-sm text-white/40 font-medium">¡Sin tareas pendientes para hoy!</p>
-                      <p className="text-xs text-white/20 mt-1">Aprovecha tu tiempo disponible para avanzar en proyectos largos.</p>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${
+                          task.priority === 'High' || task.priority === 'Highest' ? 'bg-red-500/10 text-red-500' : 
+                          task.priority === 'Medium' ? 'bg-amber-500/10 text-amber-500' : 'bg-white/5 text-white/20'
+                        }`}>
+                          {task.priority || 'Low'}
+                        </span>
+                        <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${
+                          task.status?.toLowerCase().includes('progress') ? 'bg-blue-500/10 text-blue-400' : 'bg-white/5 text-white/20'
+                        }`}>
+                          {task.status || 'Pendiente'}
+                        </span>
+                      </div>
                     </div>
+                  </div>
+                );
+              };
+
+              if (teamTasks.length === 0) {
+                return (
+                  <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-white/10 p-8 text-center mt-4">
+                    <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center mx-auto mb-4">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-white/40 font-medium">¡Sin tareas pendientes!</p>
+                    <p className="text-xs text-white/20 mt-1">No tienes tareas asignadas en este equipo.</p>
                   </div>
                 );
               }
 
               return (
-                <div className="space-y-4">
-                  {responsableFilter === "todos" && (
-                    <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
-                  )}
-                  <div className="space-y-2">
-                    {pendingTasks.slice(0, 8).map((task: any) => {
-                      const isOverdue = task.due_date && new Date(task.due_date) < today && !(task.status?.toLowerCase().includes('done'));
-                      const isDueToday = task.due_date && new Date(task.due_date).toDateString() === selectedDate.toDateString();
-
-                      return (
-                        <div
-                          key={task.id}
-                          onClick={() => handleEditTask(task)}
-                          className={`bg-card rounded-2xl border p-4 hover:border-primary/30 transition-all cursor-pointer group ${
-                            isOverdue ? 'border-red-500/30 bg-red-500/5' : 'border-white/10'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3 flex-1">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              task.origin === 'jira' ? 'bg-blue-500/20 text-blue-400' : 'bg-primary/10 text-primary'
-                            }`}>
-                              {task.origin === 'jira' ? (
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" />
-                                </svg>
-                              ) : (
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                  <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-bold truncate ${isOverdue ? 'text-red-400' : 'text-white'}`}>{task.title}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                {task.origin === 'jira' && (
-                                  <span className="text-[8px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded uppercase tracking-widest">
-                                    {task.external_key}
-                                  </span>
-                                )}
-                                {task.due_date && (
-                                  <span className={`text-[9px] font-medium ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-white/30'}`}>
-                                    📅 {new Date(task.due_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${
-                              task.priority === 'High' || task.priority === 'Highest' ? 'bg-red-500/10 text-red-500' : 
-                              task.priority === 'Medium' ? 'bg-amber-500/10 text-amber-500' : 'bg-white/5 text-white/20'
-                            }`}>
-                              {task.priority || 'Low'}
-                            </span>
-                            <span className={`text-[9px] font-black px-2 py-1 rounded-lg ${
-                              task.status?.toLowerCase().includes('progress') ? 'bg-blue-500/10 text-blue-400' : 'bg-white/5 text-white/20'
-                            }`}>
-                              {task.status || 'Pendiente'}
-                            </span>
-                          </div>
-                        </div>
+                <div className="space-y-6">
+                  {overdue.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400">
+                          Vencidas
+                        </h4>
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+                          {overdue.length}
+                        </span>
                       </div>
-                    );
-                  })}
-                  
-                  {pendingTasks.length > 8 && (
-                    <p className="text-center text-xs text-white/30 font-medium pt-2">
-                      +{pendingTasks.length - 8} tareas más...
-                    </p>
+                      <div className="space-y-2">
+                        {overdue.map(renderTaskCard)}
+                      </div>
+                    </div>
                   )}
-                  </div>
+
+                  {dueToday.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-400">
+                          Hoy
+                        </h4>
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          {dueToday.length}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {dueToday.map(renderTaskCard)}
+                      </div>
+                    </div>
+                  )}
+
+                  {backlog.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-white/30" />
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                          Backlog
+                        </h4>
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-white/10 text-white/40 border border-white/20">
+                          {backlog.length}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {backlog.map(renderTaskCard)}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                );
+              );
             })()}
           </div>
         </div>
@@ -2347,20 +2353,20 @@ const mapDbSource = (s: any): Source => {
               <button
                 onClick={() => fetchData(selectedDate)}
                 disabled={driveSyncing}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`p-2 rounded-lg transition-all ${
                   driveSyncing 
                     ? "bg-card/5 text-white/30 cursor-not-allowed" 
                     : "bg-card border border-white/20 text-white/60 hover:text-primary hover:border-primary/50 shadow-sm"
                 }`}
+                title="Sincronizar"
               >
                 <svg 
-                  className={`${driveSyncing ? "animate-spin" : ""}`}
+                  className={`w-4 h-4 ${driveSyncing ? "animate-spin" : ""}`}
                   width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                 >
-                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                  <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                   <polyline points="21 3 21 8 16 8" />
                 </svg>
-                {driveSyncing ? "Sincronizando..." : "Sincronizar ahora"}
               </button>
 
               <button
@@ -2556,9 +2562,9 @@ const mapDbSource = (s: any): Source => {
         />
       )}
 
-      {activeTab === "tasks" && (
+      {activeTab === "tasks" && summaryData?.tasks && (
         <TasksTab
-          items={structuredTasks || []}
+          items={summaryData.tasks}
           objectives={objectives}
           onTaskClick={handleEditTask}
           onAddTask={handleAddTask}

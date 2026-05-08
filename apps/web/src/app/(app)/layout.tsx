@@ -14,7 +14,8 @@ export default function AppLayout({
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
+      const session = data?.session;
       if (!session?.user) {
         window.location.href = "/auth/login";
         return;

@@ -9,13 +9,27 @@ export default function Home() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Si no hay cliente Supabase, usar modo demo
+      if (!supabase) {
+        const isDemo = typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true';
+        if (isDemo) {
+          router.push("/day/today");
+        } else {
+          router.push("/auth/login");
+        }
+        return;
+      }
 
-      if (session?.user) {
-        // Usuario autenticado → ir a /day/today
-        router.push("/day/today");
-      } else {
-        // Usuario no autenticado → ir a /auth/login
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          router.push("/day/today");
+        } else {
+          router.push("/auth/login");
+        }
+      } catch (error) {
+        // Error de Supabase → ir a login
         router.push("/auth/login");
       }
     };

@@ -1,9 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-const client = createClient(supabaseUrl, supabaseAnonKey);
+// Only create client if we have credentials, otherwise use mock for demo
+const client = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null as any;
 
 // Bypass Auth logic for local development/demo
 const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true';
@@ -29,5 +32,15 @@ client.auth.getSession = async () => {
   }
   return originalGetSession();
 };
+
+// Mock getSession if no client exists (for demo mode without Supabase)
+if (!client) {
+  (client as any).auth = {
+    getSession: async () => ({
+      data: { session: null },
+      error: null
+    })
+  };
+}
 
 export const supabase = client;
