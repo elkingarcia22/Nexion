@@ -157,9 +157,14 @@ export default function MetricsPage() {
   const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
-    getOrCreateWorkspace().then(ws => {
-      if (ws?.id) setWorkspaceId(ws.id);
-    });
+    (async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      if (user) {
+        const ws = await getOrCreateWorkspace(user.id, user.email || "");
+        if (ws.data?.id) setWorkspaceId(ws.data.id);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -168,24 +173,30 @@ export default function MetricsPage() {
 
     const cat = teamFilter === "Todas" ? undefined : teamFilter.toLowerCase();
 
-    getMetrics(workspaceId, cat).then(async (result) => {
-      if (!result.success || !result.data) {
-        setLoading(false);
-        return;
+    (async () => {
+      try {
+        const result = await getMetrics(workspaceId, cat);
+        if (!result.success || !result.data) {
+          console.warn("[Metrics] No data:", result.error);
+          setLoading(false);
+          return;
+        }
+        setMetrics(result.data);
+        const logsMap: Record<string, MetricDailyLog[]> = {};
+        await Promise.all(
+          result.data.map(async (m) => {
+            const logsResult = await getMetricDailyLogs(m.id);
+            if (logsResult.success && logsResult.data) {
+              logsMap[m.id] = logsResult.data;
+            }
+          })
+        );
+        setLogsByMetric(logsMap);
+      } catch (e) {
+        console.error("[Metrics] Error loading metrics:", e);
       }
-      setMetrics(result.data);
-      const logsMap: Record<string, MetricDailyLog[]> = {};
-      await Promise.all(
-        result.data.map(async (m) => {
-          const logsResult = await getMetricDailyLogs(m.id);
-          if (logsResult.success && logsResult.data) {
-            logsMap[m.id] = logsResult.data;
-          }
-        })
-      );
-      setLogsByMetric(logsMap);
       setLoading(false);
-    });
+    })();
   }, [workspaceId, teamFilter]);
 
   const talentMetrics = metrics.filter(m => m.category === "talent");
