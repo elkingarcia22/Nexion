@@ -1166,72 +1166,72 @@ export function TaskDrawer({
 
         {/* Footer */}
         <div className="px-8 py-5 border-t border-white/5 bg-card shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
-          {/* Main Actions - Left and Right Groups */}
-          <div className="flex items-center justify-between">
-            {/* Left Side: Delete Button */}
-            {task?.id && (
-              <button
-                onClick={handleDeleteTask}
-                disabled={submitting}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[9px] font-black tracking-widest text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all disabled:opacity-50 hover:border-red-500/40"
-              >
-                <TrashIcon className="w-3 h-3" />
-                ELIMINAR TAREA
-              </button>
-            )}
-
-            {/* Right Side: Action Buttons */}
-            <div className="flex items-center gap-3">
-              {/* Tertiary Action: Discard */}
-              <button
-                onClick={onClose}
-                className="px-5 py-2.5 rounded-xl border border-white/10 text-[10px] font-black text-white/50 hover:bg-white/5 hover:text-white/70 transition-all uppercase tracking-widest"
-              >
-                DESCARTAR
-              </button>
-
-              {/* Secondary Action: Save Changes */}
+          {task?.id ? (
+            /* ─── EDIT MODE ─────────────────────────── */
+            <div className="flex items-center justify-between">
+              {task?.id && (
+                <button
+                  onClick={handleDeleteTask}
+                  disabled={submitting}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[9px] font-black tracking-widest text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all disabled:opacity-50 hover:border-red-500/40"
+                >
+                  <TrashIcon className="w-3 h-3" />
+                  ELIMINAR TAREA
+                </button>
+              )}
+              <div className="flex items-center gap-3 ml-auto">
+                <button
+                  onClick={onClose}
+                  className="px-5 py-2.5 rounded-xl border border-white/10 text-[10px] font-black text-white/50 hover:bg-white/5 hover:text-white/70 transition-all uppercase tracking-widest"
+                >
+                  DESCARTAR
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!formData.title.trim() || submitting}
+                  className="px-6 py-2.5 rounded-xl border border-white/20 text-[10px] font-black tracking-widest text-white bg-white/5 hover:bg-white/10 transition-all disabled:opacity-30"
+                >
+                  {submitting ? (
+                    <><div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin inline mr-2" />GUARDANDO...</>
+                  ) : (
+                    <>GUARDAR CAMBIOS</>
+                  )}
+                </button>
+                {formData.status?.toLowerCase() !== 'done' && (
+                  <button
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, status: 'done' }));
+                      handleSave();
+                    }}
+                    disabled={!formData.title.trim() || submitting}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest text-white shadow-lg shadow-green-500/20 hover:shadow-green-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-30 disabled:hover:translate-y-0"
+                    style={{ background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)" }}
+                  >
+                    {submitting ? (
+                      <><div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />MARCANDO...</>
+                    ) : (
+                      <><CheckCircleIcon />MARCAR COMPLETADA</>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* ─── CREATE MODE ────────────────────────── */
+            <div className="flex items-center justify-end">
               <button
                 onClick={handleSave}
                 disabled={!formData.title.trim() || submitting}
-                className="px-6 py-2.5 rounded-xl border border-white/20 text-[10px] font-black tracking-widest text-white bg-white/5 hover:bg-white/10 transition-all disabled:opacity-30"
+                className="px-8 py-3 rounded-2xl border border-primary/30 text-primary text-[11px] font-black tracking-widest uppercase hover:bg-primary/5 transition-all flex items-center gap-2 shadow-sm disabled:opacity-30"
               >
                 {submitting ? (
-                  <>
-                    <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin inline mr-2" />
-                    GUARDANDO...
-                  </>
+                  <><div className="w-3 h-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />CREANDO...</>
                 ) : (
-                  <>GUARDAR CAMBIOS</>
+                  <><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>CREAR TAREA</>
                 )}
               </button>
-
-              {/* Primary Action: Mark as Complete */}
-              {formData.status?.toLowerCase() !== 'done' && (
-                <button
-                  onClick={() => {
-                    setFormData(prev => ({ ...prev, status: 'done' }));
-                    handleSave();
-                  }}
-                  disabled={!formData.title.trim() || submitting}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest text-white shadow-lg shadow-green-500/20 hover:shadow-green-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-30 disabled:hover:translate-y-0"
-                  style={{ background: "linear-gradient(135deg, #10b981 0%, #34d399 100%)" }}
-                >
-                  {submitting ? (
-                    <>
-                      <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      MARCANDO...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircleIcon />
-                      MARCAR COMPLETADA
-                    </>
-                  )}
-                </button>
-              )}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>,

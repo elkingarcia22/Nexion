@@ -119,6 +119,8 @@ export default function TasksPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [responsableList, setResponsableList] = useState<string[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("");
   const [dueDateRange, setDueDateRange] = useState<{ start: Date; end: Date } | null>(null);
   const [createdDateRange, setCreatedDateRange] = useState<{ start: Date; end: Date } | null>(null);
 
@@ -158,11 +160,12 @@ export default function TasksPage() {
         }
 
         console.log('👤 User:', user.id);
+        setUserId(user.id);
 
         // Get or create workspace
         const wsResult = await getOrCreateWorkspace(user.id, user.email || '');
         console.log('🏢 Workspace result:', wsResult);
-        
+
         if (!wsResult.success || !wsResult.data) {
           console.error('❌ No workspace found');
           setLoading(false);
@@ -173,8 +176,14 @@ export default function TasksPage() {
         console.log('📌 Workspace ID:', wsId);
         setWorkspaceId(wsId);
 
-        // Load tasks
-        const result = await getTasks(wsId);
+        // Load user's full name from profiles or metadata
+        const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+        const userName = profile?.full_name || user.user_metadata?.full_name || "";
+        setUserName(userName);
+        console.log('👤 User name for filtering:', userName);
+
+        // Load tasks scoped to current user (by responsible name)
+        const result = await getTasks(wsId, undefined, undefined, userName);
         console.log('📋 Tasks result:', result);
         console.log('📊 Total tasks:', result.data?.length || 0);
         
@@ -314,7 +323,7 @@ export default function TasksPage() {
     });
 
     if (result.success) {
-      const reloadResult = await getTasks(workspaceId);
+      const reloadResult = await getTasks(workspaceId, undefined, undefined, userName);
       if (reloadResult.success && reloadResult.data) {
         setTasks(reloadResult.data);
       }
@@ -399,9 +408,12 @@ export default function TasksPage() {
         <h1 className="text-4xl font-bold text-white">Tareas</h1>
         <button
           onClick={handleNewTask}
-          className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          className="px-6 py-3 rounded-2xl border border-primary/30 text-primary text-[12px] font-black tracking-widest uppercase hover:bg-primary/5 transition-all flex items-center gap-2 shadow-sm"
         >
-          + Nueva Tarea
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          NUEVA TAREA
         </button>
       </div>
 
@@ -448,14 +460,6 @@ export default function TasksPage() {
             onChange={setSelectedStatus}
             options={STATUS_OPTIONS}
             placeholder="Estado"
-          />
-
-          {/* Responsable Dropdown */}
-          <CustomSelect
-            value={selectedResponsable}
-            onChange={setSelectedResponsable}
-            options={['', ...responsableList]}
-            placeholder="Responsable"
           />
 
           {/* Filtro por fecha de creación */}

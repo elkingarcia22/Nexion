@@ -23,7 +23,7 @@ export interface Task {
   created_at?: string;
 }
 
-export async function getTasks(workspaceId: string, date?: string) {
+export async function getTasks(workspaceId: string, date?: string, userId?: string, userName?: string) {
   const isDemo = typeof window !== 'undefined' && localStorage.getItem('NEXION_DEMO_MODE') === 'true';
 
   if (isDemo) {
@@ -54,11 +54,19 @@ export async function getTasks(workspaceId: string, date?: string) {
     };
   }
 
-  // Fetch all tasks for the workspace
-  const { data: allTasks, error: taskError } = await supabase
+  // Build query for workspace
+  let query = supabase
     .from("task_proposals")
     .select("*")
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", workspaceId);
+
+  // If userId provided, filter by assignee_id OR reporter_id
+  if (userId) {
+    query = query.or(`assignee_id.eq.${userId},reporter_id.eq.${userId}`);
+  }
+
+  // Fetch tasks for the workspace (optionally filtered by user)
+  let { data: allTasks, error: taskError } = await query
     .order('created_at', { ascending: false });
   
   if (taskError) {
@@ -66,8 +74,17 @@ export async function getTasks(workspaceId: string, date?: string) {
     return { success: false, error: taskError.message };
   }
 
+  // Additional filtering by userName in responsible field
+  if (userName && allTasks) {
+    const userNameLower = userName.toLowerCase();
+    allTasks = allTasks.filter((task: any) => {
+      const responsible = task.responsible || task.assignee_name || task.metadata?.responsable || "";
+      return responsible.toLowerCase().includes(userNameLower);
+    });
+  }
+
   // Fetch all comments for these tasks
-  const taskIds = allTasks.map(t => t.id);
+  const taskIds = allTasks.map((t: any) => t.id);
   const { data: allComments, error: commentError } = await supabase
     .from("task_comments")
     .select("*")
@@ -176,6 +193,14 @@ export async function createOrUpdateTask(task: Task) {
   }
 
   const { subtasks, activity, ...taskToSave } = task;
+
+  // Sanitize: strip empty strings from UUID/timestamp fields to avoid PG type errors
+  const nonTextFields = ['workspace_id', 'assignee_id', 'reporter_id', 'goal_id', 'due_date', 'created_at', 'updated_at'];
+  for (const field of nonTextFields) {
+    if ((taskToSave as any)[field] === '') {
+      delete (taskToSave as any)[field];
+    }
+  }
 
   // 1. Upsert the main task
   const { data, error } = await supabase

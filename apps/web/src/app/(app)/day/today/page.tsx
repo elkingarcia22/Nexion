@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { AddSourceDrawer } from "@/components/sources/AddSourceDrawer";
 import { getDaySummary, saveDayAnalysis } from "@/lib/services/summary-service";
 import { getSourcesByDate, createSource, deleteSource, deleteSourcesByUrl, updateSource } from "@/lib/services/source-service";
@@ -261,8 +261,6 @@ function FeedbackTab({ items, objectives = [], jiraTasks = [], team, setTeam, re
         </div>
       </div>
 
-      <ResponsableSelector items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} forceShow={true} />
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredItems.map((item, i) => {
           const linkedGoal = objectives.find(o => o.id === item.goal_id);
@@ -351,10 +349,11 @@ function TasksTab({
     ? tasksByTeam
     : tasksByTeam.filter(task => getResponsable(task) === responsableFilter);
   
-  const talentCount = aiTasks.filter(t => categorizeItem(t, objectives, jiraTasks) === 'talent').length;
-  const hiringCount = aiTasks.filter(t => categorizeItem(t, objectives, jiraTasks) === 'hiring').length;
-  const uxCount = aiTasks.filter(t => categorizeItem(t, objectives, jiraTasks) === 'ux').length;
-  const otrasCount = aiTasks.filter(t => categorizeItem(t, objectives, jiraTasks) === 'otras').length;
+  const baseForCounts = responsableFilter === "todos" ? aiTasks : aiTasks.filter(t => getResponsable(t) === responsableFilter);
+  const talentCount = baseForCounts.filter(t => categorizeItem(t, objectives, jiraTasks) === 'talent').length;
+  const hiringCount = baseForCounts.filter(t => categorizeItem(t, objectives, jiraTasks) === 'hiring').length;
+  const uxCount = baseForCounts.filter(t => categorizeItem(t, objectives, jiraTasks) === 'ux').length;
+  const otrasCount = baseForCounts.filter(t => categorizeItem(t, objectives, jiraTasks) === 'otras').length;
 
   const getPriorityTextColor = (priority: string) => {
     switch(priority?.toLowerCase()) {
@@ -393,7 +392,7 @@ function TasksTab({
           </div>
           <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
             <button
-              onClick={() => { setJiraSubTab('talent'); setResponsableFilter("todos"); }}
+              onClick={() => { setJiraSubTab('talent'); }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 jiraSubTab === 'talent' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
@@ -401,7 +400,7 @@ function TasksTab({
               TALENT ({talentCount})
             </button>
             <button
-              onClick={() => { setJiraSubTab('hiring'); setResponsableFilter("todos"); }}
+              onClick={() => { setJiraSubTab('hiring'); }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 jiraSubTab === 'hiring' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
@@ -409,7 +408,7 @@ function TasksTab({
               HIRING ({hiringCount})
             </button>
             <button
-              onClick={() => { setJiraSubTab('ux'); setResponsableFilter("todos"); }}
+              onClick={() => { setJiraSubTab('ux'); }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 jiraSubTab === 'ux' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
@@ -417,7 +416,7 @@ function TasksTab({
               UX TEAM ({uxCount})
             </button>
             <button
-              onClick={() => { setJiraSubTab('otras'); setResponsableFilter("todos"); }}
+              onClick={() => { setJiraSubTab('otras'); }}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 jiraSubTab === 'otras' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
@@ -427,7 +426,9 @@ function TasksTab({
           </div>
         </div>
 
-        <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} forceShow={true} />
+        {responsableFilter === "todos" && (
+          <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentAiTasks.map((task, i) => {
@@ -586,8 +587,6 @@ function InsightsTab({ items, objectives = [], jiraTasks = [], team, setTeam, re
         </div>
       </div>
 
-      <ResponsableSelector items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} forceShow={true} />
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item, i) => {
           const linkedGoal = objectives.find(o => o.id === item.goal_id);
@@ -705,8 +704,6 @@ function AlertsTab({ items, objectives = [], jiraTasks = [], team, setTeam, resp
         </div>
       </div>
 
-      <ResponsableSelector items={itemsByTeam} filter={responsableFilter} setFilter={setResponsableFilter} forceShow={true} />
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item, i) => {
           const linkedGoal = objectives.find(o => o.id === item.goal_id);
@@ -781,8 +778,32 @@ export default function DayTodayPage() {
   const [jiraSubTab, setJiraSubTab] = useState<'talent' | 'hiring' | 'ux' | 'otras'>('talent');
   const [responsableFilter, setResponsableFilter] = useState<string>("todos");
   
-  // User full name
   const userFullName = user?.user_metadata?.full_name || "Usuario";
+  
+  // Tasks assigned to current user (for tab badge)
+  const userNameForMatch = useMemo(() => {
+    const byId = profiles.find(p => p.id === user?.id);
+    if (byId?.full_name) { console.log('🔍 userNameForMatch from profiles.id:', byId.full_name); return byId.full_name; }
+    const byEmail = profiles.find(p => p.email === user?.email);
+    if (byEmail?.full_name) { console.log('🔍 userNameForMatch from profiles.email:', byEmail.full_name); return byEmail.full_name; }
+    const fromMeta = user?.user_metadata?.full_name;
+    if (fromMeta) { console.log('🔍 userNameForMatch from metadata:', fromMeta); return fromMeta; }
+    const fromEmail = user?.email ? user.email.split('@')[0] : null;
+    console.log('🔍 userNameForMatch fallback to email prefix:', fromEmail, 'user:', user?.email);
+    return fromEmail || "Usuario";
+  }, [profiles, user]);
+  const userTaskCount = useMemo(() => {
+    const name = userNameForMatch;
+    console.log('🔍 DEBUG userTaskCount:', { name, summaryTasks: summaryData?.tasks?.length, structuredLength: structuredTasks?.length });
+    if (name === "Usuario") return 0;
+    const allTasks = summaryData?.tasks || [];
+    const myTasks = allTasks.filter((t: any) => getResponsable(t) === name);
+    console.log('🔍 DEBUG myTasks count:', myTasks.length, 'sample:', myTasks.slice(0,2).map((t: any)=>({title:t.title?.substring(0,30), resp:getResponsable(t)})));
+    if (myTasks.length > 0) return myTasks.length;
+    const fromStructured = (structuredTasks || []).filter((t: any) => getResponsable(t) === name).length;
+    console.log('🔍 DEBUG fromStructured:', fromStructured);
+    return fromStructured;
+  }, [summaryData?.tasks, structuredTasks, userNameForMatch]);
   
   const fetchProfiles = async () => {
     const { data } = await supabase.from("profiles").select("*");
@@ -918,16 +939,16 @@ export default function DayTodayPage() {
         });
 
         // Hierarchy linking: Map AI tasks to their Jira parents
-        const linkedTasks = localTasks.map(lt => {
+        const linkedTasks = localTasks.map((lt: any) => {
           if (lt.linked_jira_key) {
             return { ...lt, isLinkedChild: true };
           }
           return lt;
         });
 
-        const hierarchicalJiraTasks = jiraTasks.map(jt => ({
+        const hierarchicalJiraTasks = jiraTasks.map((jt: any) => ({
           ...jt,
-          linkedAiTasks: linkedTasks.filter(lt => lt.linked_jira_key === jt.external_key)
+          linkedAiTasks: linkedTasks.filter((lt: any) => lt.linked_jira_key === jt.external_key)
         }));
 
         // In the final list, only show top-level items:
@@ -935,7 +956,7 @@ export default function DayTodayPage() {
         // 2. Local AI/Manual tasks that ARE NOT linked to any Jira HU
         const finalTasks = [
           ...hierarchicalJiraTasks,
-          ...linkedTasks.filter(lt => !lt.isLinkedChild)
+          ...linkedTasks.filter((lt: any) => !lt.isLinkedChild)
         ];
 
         setStructuredTasks(finalTasks);
@@ -1068,7 +1089,7 @@ export default function DayTodayPage() {
         .or("priority.eq.high,priority.eq.high");
 
       if (!error && data) {
-        setAlerts(data.filter(a => a.priority === 'high').slice(0, 5));
+        setAlerts(data.filter((a: any) => a.priority === 'high').slice(0, 5));
       }
     } catch (err) {
       console.error("Error fetching alerts:", err);
@@ -1695,7 +1716,7 @@ const mapDbSource = (s: any): Source => {
           { id: "hoy", label: "Hoy" },
           { id: "fuentes", label: "Fuentes" },
           { id: "resumen-del-analisis", label: "Resumen del Análisis", show: summaryData?.summary_text },
-          { id: "tasks", label: "Tareas", count: summaryData?.tasks_count || summaryData?.tasks?.length },
+          { id: "tasks", label: "Tareas", count: userTaskCount || summaryData?.tasks_count || 0 },
           { id: "insights", label: "Insights", count: summaryData?.insights_count || summaryData?.insights?.length },
           { id: "metrics", label: "Métricas", count: summaryData?.metrics_count || summaryData?.metrics?.length },
           { id: "alerts", label: "Alertas", count: summaryData?.alerts_count || summaryData?.alerts?.length },
@@ -1703,7 +1724,14 @@ const mapDbSource = (s: any): Source => {
         ].filter(t => t.id === "hoy" || t.id === "fuentes" || ("show" in t && t.show) || (t.count && t.count > 0)).map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
+              onClick={() => {
+                setActiveTab(tab.id as TabType);
+                if (tab.id === "tasks" && userNameForMatch !== "Usuario") {
+                  setResponsableFilter(userNameForMatch);
+                } else {
+                  setResponsableFilter("todos");
+                }
+              }}
             className={`pb-3 text-sm font-medium transition-colors relative flex items-center gap-2 whitespace-nowrap ${
               activeTab === tab.id ? "text-white" : "text-white/40 hover:text-white/60"
             }`}
@@ -2125,7 +2153,7 @@ const mapDbSource = (s: any): Source => {
             {/* Team filters */}
             <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 w-fit">
               <button
-                onClick={() => { setJiraSubTab('talent'); setResponsableFilter("todos"); }}
+                onClick={() => setJiraSubTab('talent')}
                 className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                   jiraSubTab === 'talent' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
                 }`}
@@ -2133,7 +2161,7 @@ const mapDbSource = (s: any): Source => {
                 TALENT
               </button>
               <button
-                onClick={() => { setJiraSubTab('hiring'); setResponsableFilter("todos"); }}
+                onClick={() => setJiraSubTab('hiring')}
                 className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                   jiraSubTab === 'hiring' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
                 }`}
@@ -2141,7 +2169,7 @@ const mapDbSource = (s: any): Source => {
                 HIRING
               </button>
               <button
-                onClick={() => { setJiraSubTab('ux'); setResponsableFilter("todos"); }}
+                onClick={() => setJiraSubTab('ux')}
                 className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                   jiraSubTab === 'ux' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
                 }`}
@@ -2149,7 +2177,7 @@ const mapDbSource = (s: any): Source => {
                 UX TEAM
               </button>
               <button
-                onClick={() => { setJiraSubTab('otras'); setResponsableFilter("todos"); }}
+                onClick={() => setJiraSubTab('otras')}
                 className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                   jiraSubTab === 'otras' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
                 }`}
@@ -2198,7 +2226,9 @@ const mapDbSource = (s: any): Source => {
               if (pendingTasks.length === 0) {
                 return (
                   <div>
-                    <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+        {responsableFilter === "todos" && (
+          <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+        )}
                     <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-white/10 p-8 text-center mt-4">
                       <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center mx-auto mb-4">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
@@ -2215,7 +2245,9 @@ const mapDbSource = (s: any): Source => {
 
               return (
                 <div className="space-y-4">
-                  <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+                  {responsableFilter === "todos" && (
+                    <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
+                  )}
                   <div className="space-y-2">
                     {pendingTasks.slice(0, 8).map((task: any) => {
                       const isOverdue = task.due_date && new Date(task.due_date) < today && !(task.status?.toLowerCase().includes('done'));
@@ -2500,7 +2532,16 @@ const mapDbSource = (s: any): Source => {
 
       {activeTab === "resumen-del-analisis" && summaryData && (
         <div className="space-y-6">
-          <ResumenDelAnalisisTab data={summaryData} objectives={objectives} />
+          <ResumenDelAnalisisTab
+            data={{
+              ...summaryData,
+              tasks: (summaryData.tasks || []).filter((t: any) => {
+                if (userNameForMatch === "Usuario") return true;
+                return getResponsable(t) === userNameForMatch;
+              })
+            }}
+            objectives={objectives}
+          />
         </div>
       )}
       {activeTab === "feedback" && summaryData?.feedback && (
@@ -2517,17 +2558,14 @@ const mapDbSource = (s: any): Source => {
 
       {activeTab === "tasks" && (
         <TasksTab
-          items={[
-            ...(structuredTasks || []),
-            ...(summaryData?.tasks || [])
-          ]}
+          items={structuredTasks || []}
           objectives={objectives}
           onTaskClick={handleEditTask}
           onAddTask={handleAddTask}
           onReorder={handleReorderTasks}
           onDelete={handleDeleteTaskAction}
           jiraSubTab={jiraSubTab}
-          setJiraSubTab={(t) => { setJiraSubTab(t); setResponsableFilter("todos"); }}
+          setJiraSubTab={setJiraSubTab}
           responsableFilter={responsableFilter}
           setResponsableFilter={setResponsableFilter}
         />
