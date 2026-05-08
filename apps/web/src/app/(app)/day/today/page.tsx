@@ -16,6 +16,7 @@ import { TaskDrawer } from "@/components/day/TaskDrawer";
 import { supabase } from "@/lib/supabase";
 import { getTasks, reorderTasks } from "@/lib/services/task-service";
 import { fetchJiraIssues } from "@/lib/services/jira-service";
+import { getMetrics } from "@/lib/services/metric-service";
 
 /* ─── Data ────────────────────────────────────────────────────── */
 
@@ -626,13 +627,21 @@ function InsightsTab({ items, objectives = [], jiraTasks = [], team, setTeam, re
   );
 }
 
-function MetricsTab({ items, objectives = [], team, setTeam }: { items: any[], objectives: any[], team: string, setTeam: (t: any) => void }) {
-  const filteredItems = items.filter(it => categorizeItem(it, objectives) === team);
+function MetricsTab({ items, objectives = [], platformMetrics = [], team, setTeam }: { items: any[], objectives: any[], platformMetrics?: any[], team: string, setTeam: (t: any) => void }) {
+  const itemsWithPlatformMatch = items.map((it: any) => {
+    const match = platformMetrics.find((m: any) =>
+      m.name.toLowerCase().includes((it.title || "").toLowerCase()) ||
+      (it.title || "").toLowerCase().includes(m.name.toLowerCase())
+    );
+    return { ...it, _platformMetric: match || null };
+  });
+
+  const filteredItems = itemsWithPlatformMatch.filter(it => categorizeItem(it, objectives) === team && it._platformMetric);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b border-white/5 pb-4">
-        <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">KPIs Y MÉTRICAS</h3>
+        <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">MÉTRICAS DETECTADAS</h3>
         <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
           {['talent', 'hiring', 'ux', 'otras'].map((t) => (
             <button 
@@ -642,7 +651,7 @@ function MetricsTab({ items, objectives = [], team, setTeam }: { items: any[], o
                 team === t ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
             >
-              {t === 'ux' ? 'UX TEAM' : t.toUpperCase()} ({items.filter(it => categorizeItem(it, objectives) === t).length})
+              {t === 'ux' ? 'UX TEAM' : t.toUpperCase()} ({itemsWithPlatformMatch.filter(it => categorizeItem(it, objectives) === t && it._platformMetric).length})
             </button>
           ))}
         </div>
@@ -665,14 +674,20 @@ function MetricsTab({ items, objectives = [], team, setTeam }: { items: any[], o
                 </div>
               </div>
               
-              {linkedGoal && (
-                <div className="mt-auto pt-3 border-t border-white/5">
+              <div className="mt-auto pt-3 border-t border-white/5 space-y-2">
+                {linkedGoal && (
                   <div className="flex items-center gap-2 text-[8px] font-black text-primary/60 uppercase">
                     <div className="w-1 h-1 rounded-full bg-primary" />
                     OBJ: {linkedGoal.title}
                   </div>
-                </div>
-              )}
+                )}
+                {item._platformMetric && (
+                  <a href="/metrics" className="flex items-center gap-2 text-[8px] font-black text-[#2ec6ff]/60 uppercase hover:text-[#2ec6ff] transition-colors">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    Ver en Métricas
+                  </a>
+                )}
+              </div>
             </div>
           );
         })}
@@ -777,6 +792,7 @@ export default function DayTodayPage() {
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [structuredTasks, setStructuredTasks] = useState<any[]>([]);
   const [objectives, setObjectives] = useState<any[]>([]);
+  const [platformMetrics, setPlatformMetrics] = useState<any[]>([]);
   const [jiraSubTab, setJiraSubTab] = useState<'talent' | 'hiring' | 'ux' | 'otras'>('talent');
   const [responsableFilter, setResponsableFilter] = useState<string>("todos");
   
@@ -809,6 +825,11 @@ export default function DayTodayPage() {
   const fetchObjectives = async () => {
     const { data } = await supabase.from("workspace_objectives").select("*");
     if (data) setObjectives(data);
+  };
+
+  const fetchPlatformMetrics = async (wsId: string) => {
+    const result = await getMetrics(wsId);
+    if (result.success && result.data) setPlatformMetrics(result.data);
   };
 
   const loadStructuredTasks = async (wsId: string, wsData?: any) => {
@@ -1196,6 +1217,7 @@ const mapDbSource = (s: any): Source => {
       setWorkspaceId(wsId);
       loadStructuredTasks(wsId, wsResult.data);
       fetchProfiles();
+      fetchPlatformMetrics(wsId);
       // NOTE: Objetivos removidos de la carga inicial del tab Hoy
       // Se cargan solo si es necesario para otras pestañas
 
@@ -2593,6 +2615,7 @@ const mapDbSource = (s: any): Source => {
         <MetricsTab 
           items={summaryData.metrics} 
           objectives={objectives}
+          platformMetrics={platformMetrics}
           team={jiraSubTab}
           setTeam={setJiraSubTab}
         />

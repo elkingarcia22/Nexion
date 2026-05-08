@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const { date, meetings, sources, userName, objectives, jiraContext } = await request.json();
+    const { date, meetings, sources, userName, objectives, jiraContext, platformMetrics } = await request.json();
     const apiKey = process.env.GOOGLE_AI_API_KEY;
 
     if (!apiKey) {
@@ -32,6 +32,14 @@ export async function POST(request: Request) {
 
       CONTEXTO OPERATIVO (Jira User Stories y Subtasks):
       ${JSON.stringify(jiraContext, null, 2)}
+
+      MÉTRICAS DE LA PLATAFORMA (existentes en el sistema):
+      ${JSON.stringify(platformMetrics || [], null, 2)}
+
+      INSTRUCCIÓN ESPECIAL — VINCULACIÓN A MÉTRICAS:
+      - Si en las fuentes se menciona alguna métrica que coincida con las de la lista "MÉTRICAS DE LA PLATAFORMA", vincula los elementos (tasks, alerts, insights) a la métrica correspondiente usando el campo "linked_metric_names": ["Nombre Exacto de la Métrica"].
+      - Ejemplo: Si una fuente habla de "bajó el ARR de objetivos", vincula la alerta/task/insight a la métrica "ARR Objetivos".
+      - Si no hay métrica vinculada, deja linked_metric_names como array vacío [].
 
       FUENTES A ANALIZAR (Contenido completo):
       ${sources.map((s: any) => `
@@ -75,6 +83,7 @@ export async function POST(request: Request) {
           "goal_id": "ID del objetivo vinculado o null",
           "linked_jira_key": "Key de Jira vinculada o null",
           "linked_jira_subtask_id": "ID de la subtarea vinculada o null",
+          "linked_metric_names": ["Nombre exacto de métrica vinculada o null"],
           "due_date": "YYYY-MM-DD o null"
         }],
         "insights": [{
@@ -83,7 +92,8 @@ export async function POST(request: Request) {
           "category": "Talent/Hiring/UX/Other",
           "responsible": "Nombre del responsable o null",
           "goal_id": "...",
-          "linked_jira_key": "..."
+          "linked_jira_key": "...",
+          "linked_metric_names": ["Nombre exacto de métrica vinculada o null"]
         }],
         "metrics": [{
           "title": "Nombre de la métrica en español",
@@ -92,7 +102,8 @@ export async function POST(request: Request) {
           "status": "alta/media/baja",
           "category": "Talent/Hiring/UX/Other",
           "responsible": "Nombre del responsable o null",
-          "goal_id": "..."
+          "goal_id": "...",
+          "linked_metric_names": ["Nombre exacto de métrica vinculada o null"]
         }],
         "alerts": [{
           "title": "Título de la alerta en español",
@@ -101,7 +112,8 @@ export async function POST(request: Request) {
           "category": "Talent/Hiring/UX/Other",
           "responsible": "Nombre del responsable o null",
           "goal_id": "...",
-          "linked_jira_key": "..."
+          "linked_jira_key": "...",
+          "linked_metric_names": ["Nombre exacto de métrica vinculada o null"]
         }],
         "feedback": [{
           "title": "Título del feedback en español",
