@@ -116,18 +116,19 @@ export default function ObjectivesPage() {
   };
 
   return (
-    <div className="min-h-full space-y-8 pb-20">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-black text-white uppercase tracking-tight">Estrategia</h1>
+    <div className="space-y-6 pb-20">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-white">Estrategia</h1>
+          <p className="text-xs text-white/40 mt-1">Objetivos y resultados clave por periodo</p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setIsCreateDrawerOpen(true)}
-            className="px-6 py-3 rounded-2xl border border-primary/30 text-primary text-[12px] font-black tracking-widest uppercase hover:bg-primary/5 transition-all flex items-center gap-2 shadow-sm"
+            className="px-5 py-3 bg-[#161927]/80 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-primary hover:border-primary/30 transition-all flex items-center gap-2"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             NUEVO OBJETIVO
@@ -136,13 +137,13 @@ export default function ObjectivesPage() {
           <button
             onClick={() => workspaceId && loadData(workspaceId)}
             disabled={isSyncing}
-            className="p-3 rounded-2xl border-2 border-white/5 hover:border-primary/30 transition-all bg-card disabled:opacity-30"
+            className="p-3 rounded-2xl border border-white/5 hover:border-primary/30 transition-all bg-[#161927]/50 disabled:opacity-30"
             title="Sincronizar"
           >
             {isSyncing ? (
-              <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
             ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/60">
                 <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>
               </svg>
             )}
@@ -151,54 +152,66 @@ export default function ObjectivesPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-40 gap-4">
-          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary animate-spin rounded-full" />
-          <p className="text-sm font-black text-white/20 uppercase tracking-widest">Cargando visión estratégica...</p>
+        <div className="text-center py-24">
+          <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-white/40 mt-3">Cargando visión estratégica...</p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* ── PERIOD SELECTOR ── */}
-          <div className="flex gap-2">
+          <div className="flex gap-1 bg-[#161927]/50 border border-white/5 rounded-2xl p-1 w-max">
             {quarters.length > 0 && quarters.map(q => (
               <button
                 key={q}
                 onClick={() => setQuarter(q)}
-                className={`px-8 py-3 rounded-2xl text-[11px] font-black tracking-widest uppercase transition-all ${
+                className={`px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all ${
                   quarter === q
-                    ? "bg-primary text-white shadow-lg shadow-primary/30"
-                    : "bg-card border border-white/10 text-white/40 hover:border-primary/30 hover:text-white/60"
+                    ? "bg-primary text-white shadow-lg shadow-primary/20"
+                    : "text-white/40 hover:text-white hover:bg-white/5"
                 }`}
               >
-                {q} — PERIODO
+                {q}
               </button>
             ))}
           </div>
 
           {/* ── PANORAMA GENERAL ── */}
-          <div className="bg-card/40 backdrop-blur-sm rounded-[2.5rem] border border-white/5 p-8">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <div className="bg-[#161927]/50 border border-white/5 rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
               </div>
               <div>
-                <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">PANORAMA GENERAL</h3>
-                <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">{quarter} · {totalCount} objetivos estratégicos</p>
+                <h3 className="text-xs font-black text-white uppercase tracking-widest">Panorama General</h3>
+                <p className="text-[10px] text-white/30">{quarter} · {totalCount} objetivos estratégicos</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
-              {[
-                { label: "Objetivos", value: totalCount, sub: `${teamRows.length} equipos activos`, color: "text-white" },
-                { label: "Progreso promedio", value: `${avgProgress}%`, sub: avgProgress > 50 ? "Avanzando" : avgProgress > 0 ? "En desarrollo" : "Sin avance", color: avgProgress > 50 ? "text-green-400" : avgProgress > 0 ? "text-amber-400" : "text-white/40" },
-                { label: "Talent", value: `${talentObjs.length} objetivos`, sub: talentObjs.length > 0 ? `${Math.round(talentObjs.reduce((a, o) => a + (o.progress || 0), 0) / talentObjs.length)}% avg` : "—", color: "text-purple-400" },
-                { label: "Hiring", value: `${hiringObjs.length} objetivos`, sub: hiringObjs.length > 0 ? `${Math.round(hiringObjs.reduce((a, o) => a + (o.progress || 0), 0) / hiringObjs.length)}% avg` : "—", color: "text-amber-400" },
-              ].map((card, i) => (
-                <div key={i} className="bg-card/80 rounded-2xl border border-white/5 p-6 hover:border-primary/30 transition-all">
-                  <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-2">{card.label}</p>
-                  <p className={`text-3xl font-black ${card.color} font-mono`}>{card.value}</p>
-                  <p className="text-[9px] text-white/20 mt-1 font-medium">{card.sub}</p>
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="bg-gradient-to-br from-[#1a6bff]/10 to-transparent border border-primary/20 rounded-2xl p-5">
+                <div className="text-[10px] text-primary font-black uppercase tracking-widest mb-1">Objetivos</div>
+                <div className="text-2xl font-black text-white font-mono">{totalCount}</div>
+                <div className="text-[9px] text-white/30 mt-1">{teamRows.length} equipos activos</div>
+              </div>
+              <div className="bg-gradient-to-br from-[#10b981]/10 to-transparent border border-[#10b981]/20 rounded-2xl p-5">
+                <div className="text-[10px] text-[#10b981] font-black uppercase tracking-widest mb-1">Progreso promedio</div>
+                <div className="text-2xl font-black text-white font-mono">{avgProgress}%</div>
+                <div className="text-[9px] text-white/30 mt-1">{avgProgress > 50 ? "Avanzando" : avgProgress > 0 ? "En desarrollo" : "Sin avance"}</div>
+              </div>
+              <div className="bg-gradient-to-br from-[#2ec6ff]/10 to-transparent border border-[#2ec6ff]/20 rounded-2xl p-5">
+                <div className="text-[10px] text-[#2ec6ff] font-black uppercase tracking-widest mb-1">Talent</div>
+                <div className="text-2xl font-black text-white font-mono">{talentObjs.length}</div>
+                <div className="text-[9px] text-white/30 mt-1">
+                  {talentObjs.length > 0 ? `${Math.round(talentObjs.reduce((a, o) => a + (o.progress || 0), 0) / talentObjs.length)}% avg` : "—"}
                 </div>
-              ))}
+              </div>
+              <div className="bg-gradient-to-br from-[#f49e04]/10 to-transparent border border-[#f49e04]/20 rounded-2xl p-5">
+                <div className="text-[10px] text-[#f49e04] font-black uppercase tracking-widest mb-1">Hiring</div>
+                <div className="text-2xl font-black text-white font-mono">{hiringObjs.length}</div>
+                <div className="text-[9px] text-white/30 mt-1">
+                  {hiringObjs.length > 0 ? `${Math.round(hiringObjs.reduce((a, o) => a + (o.progress || 0), 0) / hiringObjs.length)}% avg` : "—"}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2.5">
@@ -224,7 +237,7 @@ export default function ObjectivesPage() {
 
           {/* ── TALENT ── */}
           {talentObjs.length > 0 && (
-            <div className="bg-card/40 backdrop-blur-sm rounded-[2.5rem] border border-white/5 p-8">
+            <div className="bg-[#161927]/50 border border-white/5 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -243,10 +256,10 @@ export default function ObjectivesPage() {
                     <div
                       key={i}
                       onClick={() => setSelectedObjective(o)}
-                      className="bg-card/70 hover:bg-card rounded-2xl border border-white/5 p-6 hover:border-purple-500/30 transition-all cursor-pointer group"
+                      className="bg-[#161927]/50 hover:bg-[#161927]/80 rounded-2xl border border-white/5 p-5 hover:border-purple-500/30 transition-all cursor-pointer group"
                     >
                       <div className="flex items-start gap-6">
-                        <div className="w-14 h-14 rounded-2xl bg-card/5 flex items-center justify-center shrink-0 border border-white/10">
+                        <div className="w-14 h-14 rounded-2xl bg-[#161927]/80 flex items-center justify-center shrink-0 border border-white/10">
                           <span className="text-sm font-black font-mono text-white">{o.progress || 0}%</span>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -264,7 +277,7 @@ export default function ObjectivesPage() {
                                 <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Owner:</span>
                                 <div className="flex -space-x-2">
                                   {owners.slice(0, 3).map((owner, oi) => (
-                                    <div key={oi} className="w-7 h-7 rounded-lg bg-card border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">
+                                    <div key={oi} className="w-7 h-7 rounded-lg bg-[#161927]/80 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">
                                       {owner.trim()[0]}
                                     </div>
                                   ))}
@@ -299,7 +312,7 @@ export default function ObjectivesPage() {
 
           {/* ── HIRING ── */}
           {hiringObjs.length > 0 && (
-            <div className="bg-card/40 backdrop-blur-sm rounded-[2.5rem] border border-white/5 p-8">
+            <div className="bg-[#161927]/50 border border-white/5 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -318,10 +331,10 @@ export default function ObjectivesPage() {
                     <div
                       key={i}
                       onClick={() => setSelectedObjective(o)}
-                      className="bg-card/70 hover:bg-card rounded-2xl border border-white/5 p-6 hover:border-amber-500/30 transition-all cursor-pointer group"
+                      className="bg-[#161927]/50 hover:bg-[#161927]/80 rounded-2xl border border-white/5 p-5 hover:border-amber-500/30 transition-all cursor-pointer group"
                     >
                       <div className="flex items-start gap-6">
-                        <div className="w-14 h-14 rounded-2xl bg-card/5 flex items-center justify-center shrink-0 border border-white/10">
+                        <div className="w-14 h-14 rounded-2xl bg-[#161927]/80 flex items-center justify-center shrink-0 border border-white/10">
                           <span className="text-sm font-black font-mono text-white">{o.progress || 0}%</span>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -339,17 +352,11 @@ export default function ObjectivesPage() {
                                 <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Owner:</span>
                                 <div className="flex -space-x-2">
                                   {owners.slice(0, 3).map((owner, oi) => (
-                                    <div key={oi} className="w-7 h-7 rounded-lg bg-card border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">
+                                    <div key={oi} className="w-7 h-7 rounded-lg bg-[#161927]/80 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">
                                       {owner.trim()[0]}
                                     </div>
                                   ))}
                                 </div>
-                              </div>
-                            )}
-                            {jiraCount > 0 && (
-                              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400"><path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" /></svg>
-                                <span className="text-[9px] font-black text-blue-400">{jiraCount} HU's</span>
                               </div>
                             )}
                           </div>

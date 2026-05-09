@@ -13,6 +13,7 @@ export interface Metric {
   unit: string;
   source: string;
   source_date?: string;
+  period?: string;
   metadata: any;
   sort_order: number;
   created_at: string;
@@ -45,7 +46,8 @@ export interface EntityLink {
 
 export async function getMetrics(
   workspaceId: string,
-  category?: string
+  category?: string,
+  period?: string
 ): Promise<{ success: boolean; data?: Metric[]; error?: string }> {
   try {
     let query = supabase
@@ -57,6 +59,10 @@ export async function getMetrics(
 
     if (category) {
       query = query.eq("category", category);
+    }
+
+    if (period) {
+      query = query.eq("period", period);
     }
 
     const { data, error } = await query;
@@ -174,6 +180,7 @@ export async function seedMetricsFromPdf(
     .upsert(
       metrics.map(m => ({
         ...m,
+        period: 'Q2 2026',
         source_date: new Date().toISOString().split("T")[0],
       })),
       { onConflict: "workspace_id,name", ignoreDuplicates: true }

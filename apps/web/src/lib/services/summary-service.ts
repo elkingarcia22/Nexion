@@ -377,11 +377,124 @@ export async function saveDayAnalysis(
       console.log("⏭️  No tasks to insert");
     }
 
-    // Log summary of what was saved
+    // 3. Persist Gemini-detected metrics to metrics table + metric_daily_logs + entity_links
+    const daySummaryId = data?.[0]?.id;
+    if (daySummaryId && analysis.metrics && analysis.metrics.length > 0) {
+      console.log(`\n📈 Processing ${analysis.metrics.length} metrics from Gemini for persistence...`);
+      const period = getPeriodFromDate(date);
+
+      for (const geminiMetric of analysis.metrics) {
+        const metricName = geminiMetric.title || geminiMetric.name;
+        if (!metricName) {
+          console.warn("   ⚠️ Skipping metric without title/name");
+          continue;
+        }
+
+        const numericValue = extractNumericValue(geminiMetric.value);
+        const unit = inferUnit(geminiMetric.value, geminiMetric.unit);
+
+        const { data: existingMetrics } = await supabase
+          .from("metrics")
+          .select("id, name, current_value")
+          .eq("workspace_id", workspaceId)
+          .eq("name", metricName);
+
+        const existingMetric = existingMetrics?.[0] || null;
+        let metricId: string | null = existingMetric?.id || null;
+        const previousValue = existingMetric?.current_value != null ? Number(existingMetric.current_value) : 0;
+
+        if (existingMetric && numericValue !== null) {
+          await supabase
+            .from("metrics")
+            .update({
+              current_value: numericValue,
+              previous_value: previousValue,
+              source_date: date,
+              period,
+              source: "gemini_analysis",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingMetric.id);
+          console.log(`   ✅ Updated existing metric "${metricName}": ${previousValue} → ${numericValue}`);
+        } else if (!existingMetric && numericValue !== null) {
+          const { data: inserted } = await supabase
+            .from("metrics")
+            .insert({
+              workspace_id: workspaceId,
+              name: metricName,
+              category: normalizeCategory(geminiMetric.category),
+              current_value: numericValue,
+              unit,
+              source: "gemini_analysis",
+              source_date: date,
+              period,
+              sort_order: 100,
+              metadata: {},
+            })
+            .select()
+            .single();
+          metricId = inserted?.id || null;
+          if (metricId) {
+            console.log(`   ✅ Inserted new metric "${metricName}" = ${numericValue} ${unit}`);
+          }
+        } else {
+          console.warn(`   ⚠️ Skipping metric "${metricName}": no numeric value and no existing record`);
+          continue;
+        }
+
+        if (!metricId) continue;
+
+        const delta = numericValue !== null ? numericValue - previousValue : null;
+
+        const { error: logError } = await supabase
+          .from("metric_daily_logs")
+          .insert({
+            workspace_id: workspaceId,
+            metric_id: metricId,
+            day_summary_id: daySummaryId,
+            value: numericValue,
+            delta,
+            context_text: geminiMetric.change || geminiMetric.description || `Detectado en análisis del ${date}`,
+            source: "gemini_analysis",
+          });
+
+        if (logError) {
+          console.error(`   ❌ Error creating metric_daily_log for "${metricName}":`, logError);
+        } else {
+          console.log(`   📝 metric_daily_log created for "${metricName}" (delta: ${delta})`);
+        }
+
+        const { error: linkError } = await supabase
+          .from("entity_links")
+          .insert({
+            workspace_id: workspaceId,
+            source_type: "day_summary",
+            source_id: daySummaryId,
+            target_type: "metric",
+            target_id: metricId,
+            relationship: "detected_metric",
+            metadata: { metric_name: metricName, value: numericValue, source: "gemini_analysis" },
+          });
+
+        if (linkError) {
+          console.warn(`   ⚠️ Entity link error for "${metricName}":`, linkError);
+        }
+      }
+    }
+
+    // 4. Create entity_links from day_summary → each source analyzed
+    if (daySummaryId && data?.[0]?.source_count && data[0].source_count > 0) {
+      // Link back to the day_summary's sources is implicit via the date/workspace.
+      // Sources are already linked by workspace_id and summary_date.
+      console.log(`   ℹ️ Day summary ${daySummaryId} has ${data[0].source_count} source(s) analyzed`);
+    }
+
     console.log("\n✅ === SAVE DAY ANALYSIS COMPLETE ===");
     console.log("📦 Summary of saved data:");
     console.log("   - day_summaries: KPI metadata + JSON blob (tasks, insights, metrics, alerts, feedback)");
     console.log(`   - task_proposals: ${analysis.tasks?.length || 0} task records`);
+    console.log(`   - metrics upserted: ${analysis.metrics?.length || 0}`);
+    console.log(`   - metric_daily_logs created: ${analysis.metrics?.length || 0}`);
     console.log("   - Alerts stored in: day_summaries.kpi_data.alerts (JSON)");
     console.log("   - Metrics stored in: day_summaries.kpi_data.metrics (JSON)");
     console.log("   - Insights stored in: day_summaries.kpi_data.insights (JSON)");
@@ -397,4 +510,47 @@ export async function saveDayAnalysis(
     }
     return { success: false, error: err };
   }
+}
+
+// ── Helper functions ──────────────────────────────────────────────────────
+
+function getPeriodFromDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  const month = d.getMonth();
+  const year = d.getFullYear();
+  const quarter = month < 3 ? "Q1" : month < 6 ? "Q2" : month < 9 ? "Q3" : "Q4";
+  return `${quarter} ${year}`;
+}
+
+function extractNumericValue(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value === "number") return value;
+  const str = String(value);
+  const cleaned = str.replace(/[$€£\s]/g, "").replace(/%/g, "");
+  const match = cleaned.match(/-?\d+(?:[\d,.]*\d)?/);
+  if (match) {
+    const num = parseFloat(match[0].replace(/,/g, ""));
+    if (!isNaN(num)) return num;
+  }
+  return null;
+}
+
+function inferUnit(value: unknown, explicitUnit?: string): string {
+  if (explicitUnit) return explicitUnit;
+  if (value == null) return "USD";
+  const str = String(value);
+  if (str.includes("%")) return "percent";
+  if (str.includes("$")) return "USD";
+  if (str.includes("€")) return "EUR";
+  if (str.includes("h") || str.includes("hour") || str.includes("hr")) return "hours";
+  return "USD";
+}
+
+function normalizeCategory(cat: string | undefined | null): string {
+  if (!cat) return "other";
+  const lower = cat.toLowerCase().trim();
+  if (lower === "talent") return "talent";
+  if (lower === "hiring") return "hiring";
+  if (lower === "ux") return "ux";
+  return "other";
 }

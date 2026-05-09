@@ -8,6 +8,7 @@ import {
   getSourcesByWorkspace,
   deleteSource,
 } from "@/lib/services/source-service";
+import { syncSlackSourcesForDay, getSlackSourcesByWorkspace } from "@/lib/services/slack-service";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { AddSourceDrawer } from "@/components/sources/AddSourceDrawer";
@@ -20,6 +21,8 @@ export default function DaySourcesPage() {
   const [workspace, setWorkspace] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sources, setSources] = useState<Source[]>([]);
+  const [slackSources, setSlackSources] = useState<Source[]>([]);
+  const [slackSyncing, setSlackSyncing] = useState(false);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [type, setType] = useState("");
@@ -52,12 +55,31 @@ export default function DaySourcesPage() {
 
       setWorkspace(workspaceResult.data);
 
-      // Load sources for this workspace
+      // Load manual sources for this workspace
       const sourcesResult = await getSourcesByWorkspace(workspaceResult.data.id);
       if (sourcesResult.success && sourcesResult.data) {
         setSources(sourcesResult.data);
       }
 
+      // Sync Slack sources for today (like Drive auto-refresh on Today page)
+      const today = new Date();
+      setSlackSyncing(true);
+      const providerToken = sessionData.session?.provider_token;
+      console.log("[DaySourcesPage] Starting Slack sync... providerToken:", !!providerToken);
+      const slackResult = await syncSlackSourcesForDay(workspaceResult.data.id, today, providerToken || undefined);
+      console.log("[DaySourcesPage] Slack sync result:", slackResult);
+      if (slackResult.success) {
+        console.log("[DaySourcesPage] Fetching Slack sources from DB...");
+        const slackSourcesResult = await getSlackSourcesByWorkspace(workspaceResult.data.id, today);
+        console.log("[DaySourcesPage] Slack sources from DB:", slackSourcesResult);
+        if (slackSourcesResult.success && slackSourcesResult.data) {
+          console.log(`[DaySourcesPage] Setting ${slackSourcesResult.data.length} Slack sources in state`);
+          setSlackSources(slackSourcesResult.data);
+        }
+      } else {
+        console.error("[DaySourcesPage] Slack sync failed:", slackResult.error);
+      }
+      setSlackSyncing(false);
       setLoading(false);
     };
 
@@ -194,6 +216,81 @@ export default function DaySourcesPage() {
       <div>
         <h1 className="text-3xl font-bold text-white mb-2">Fuentes</h1>
         <p className="text-white/60">Manage and monitor your information sources</p>
+      </div>
+
+      {/* Slack Sources */}
+      <div className="bg-card rounded-xl shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Slack</h2>
+            <p className="text-xs text-white/40">Canales monitoreados por Nexión hoy</p>
+          </div>
+          <button
+            onClick={async () => {
+              if (!workspace) return;
+              setSlackSyncing(true);
+              const sess = await supabase.auth.getSession();
+              const tok = sess.data.session?.provider_token;
+              const result = await syncSlackSourcesForDay(workspace.id, new Date(), tok || undefined);
+              if (result.success) {
+                const slackResult = await getSlackSourcesByWorkspace(workspace.id, new Date());
+                if (slackResult.success && slackResult.data) {
+                  setSlackSources(slackResult.data);
+                }
+              }
+              setSlackSyncing(false);
+            }}
+            disabled={slackSyncing}
+            className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-all disabled:opacity-50 flex items-center gap-1.5"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" /></svg>
+            {slackSyncing ? "Sincronizando..." : "Sincronizar"}
+          </button>
+        </div>
+        {slackSources.length === 0 ? (
+          <div className="flex items-center gap-3 py-6">
+            {slackSyncing ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#E01E5A" className="opacity-30">
+                <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.521-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.522 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.166 0a2.528 2.528 0 0 1 2.522 2.522v6.312zM15.166 18.956a2.528 2.528 0 0 1 2.522 2.522A2.528 2.528 0 0 1 15.166 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.166 17.688a2.527 2.527 0 0 1-2.52-2.52 2.526 2.526 0 0 1 2.52-2.522h6.312A2.527 2.527 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.522h-6.312z"/>
+              </svg>
+            )}
+            <p className="text-sm text-white/40">{slackSyncing ? "Sincronizando canales..." : "No hay mensajes de Slack hoy"}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {slackSources.map((source) => (
+              <div key={source.id} className="flex items-start justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border-l-4 border-l-[#E01E5A]">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#E01E5A">
+                      <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.521-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.522 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.166 0a2.528 2.528 0 0 1 2.522 2.522v6.312zM15.166 18.956a2.528 2.528 0 0 1 2.522 2.522A2.528 2.528 0 0 1 15.166 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.166 17.688a2.527 2.527 0 0 1-2.52-2.52 2.526 2.526 0 0 1 2.52-2.522h6.312A2.527 2.527 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.522h-6.312z"/>
+                    </svg>
+                    <h3 className="font-semibold text-white text-sm">{source.title}</h3>
+                    <Badge variant="default" className="bg-[#E01E5A]/20 text-[#E01E5A] border-0 text-[9px]">
+                      SLACK
+                    </Badge>
+                  </div>
+                  {source.metadata?.preview && (
+                    <p className="text-xs text-white/50 mt-1.5 line-clamp-2">{source.metadata.preview}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="text-[10px] text-white/30 font-mono">
+                      {source.metadata?.channelName ? `#${source.metadata.channelName}` : ""}
+                    </span>
+                    <span className="text-[10px] text-white/30">
+                      {source.metadata?.messageCount || 0} mensajes
+                    </span>
+                    <span className="text-[10px] text-white/20">
+                      {new Date(source.source_date).toLocaleDateString("es-ES")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Add Source Card */}

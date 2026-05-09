@@ -405,45 +405,44 @@ export default function TasksPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold text-white">Tareas</h1>
+        <div>
+          <h1 className="text-2xl font-black text-white">Tareas</h1>
+          <p className="text-xs text-white/40 mt-1">Gestión de tareas operativas</p>
+        </div>
         <button
           onClick={handleNewTask}
-          className="px-6 py-3 rounded-2xl border border-primary/30 text-primary text-[12px] font-black tracking-widest uppercase hover:bg-primary/5 transition-all flex items-center gap-2 shadow-sm"
+          className="px-5 py-3 bg-[#161927]/80 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-primary hover:border-primary/30 transition-all flex items-center gap-2"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
           NUEVA TAREA
         </button>
       </div>
 
-      {/* Debug Info */}
-      <div className="bg-card rounded-lg border border-white/10 p-4 text-xs text-white/60">
-        <p>Workspace: {workspaceId || 'No loaded'} | Total tasks: {tasks.length}</p>
-      </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-card rounded-2xl border border-white/10 p-6">
-          <p className="text-white/60 text-sm mb-2">Total de Tareas</p>
-          <p className="text-3xl font-bold text-white">{kpis.total}</p>
+        <div className="bg-gradient-to-br from-[#1a6bff]/10 to-transparent border border-[#1a6bff]/20 rounded-2xl p-5">
+          <p className="text-[10px] text-[#1a6bff] font-black uppercase tracking-widest mb-1">Total de Tareas</p>
+          <p className="text-2xl font-black text-white font-mono">{kpis.total}</p>
         </div>
-        <div className="bg-card rounded-2xl border border-white/10 p-6">
-          <p className="text-white/60 text-sm mb-2">Pendientes</p>
-          <p className="text-3xl font-bold text-amber-400">{kpis.pending}</p>
+        <div className="bg-gradient-to-br from-[#f49e04]/10 to-transparent border border-[#f49e04]/20 rounded-2xl p-5">
+          <p className="text-[10px] text-[#f49e04] font-black uppercase tracking-widest mb-1">Pendientes</p>
+          <p className="text-2xl font-black text-white font-mono">{kpis.pending}</p>
         </div>
-        <div className="bg-card rounded-2xl border border-white/10 p-6">
-          <p className="text-white/60 text-sm mb-2">En Progreso</p>
-          <p className="text-3xl font-bold text-blue-400">{kpis.inProgress}</p>
+        <div className="bg-gradient-to-br from-[#2ec6ff]/10 to-transparent border border-[#2ec6ff]/20 rounded-2xl p-5">
+          <p className="text-[10px] text-[#2ec6ff] font-black uppercase tracking-widest mb-1">En Progreso</p>
+          <p className="text-2xl font-black text-white font-mono">{kpis.inProgress}</p>
         </div>
-        <div className="bg-card rounded-2xl border border-white/10 p-6">
-          <p className="text-white/60 text-sm mb-2">Completadas</p>
-          <p className="text-3xl font-bold text-green-400">{kpis.completed}</p>
+        <div className="bg-gradient-to-br from-[#10b981]/10 to-transparent border border-[#10b981]/20 rounded-2xl p-5">
+          <p className="text-[10px] text-[#10b981] font-black uppercase tracking-widest mb-1">Completadas</p>
+          <p className="text-2xl font-black text-white font-mono">{kpis.completed}</p>
         </div>
       </div>
 
       {/* Filters - Compact */}
-      <div className="bg-card rounded-2xl border border-white/10 p-4 space-y-3">
+      <div className="bg-[#161927]/50 border border-white/5 rounded-2xl p-4 space-y-3">
         {/* Row 1: Main filters */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Equipo Dropdown */}
@@ -520,11 +519,11 @@ export default function TasksPage() {
 
       {/* Tasks Grid */}
       {filteredTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-96 bg-card rounded-2xl border border-white/10">
+        <div className="flex flex-col items-center justify-center h-96 bg-[#161927]/50 border border-white/5 rounded-2xl">
           <p className="text-white/60 mb-4">No hay tareas que coincidan con los filtros</p>
           <a
             href="/day/today"
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="px-5 py-3 bg-[#161927]/80 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-primary hover:border-primary/30 transition-all"
           >
             Ir a Análisis Diario
           </a>
@@ -534,7 +533,7 @@ export default function TasksPage() {
           {filteredTasks.map(task => (
             <div
               key={task.id}
-              className={`bg-card rounded-[2.5rem] border p-7 hover:border-primary/40 transition-all cursor-pointer group/task ${getStatusColor(task.status)} ${
+              className={`bg-[#161927]/50 border border-white/5 rounded-2xl p-5 hover:border-primary/40 transition-all cursor-pointer group/task ${getStatusColor(task.status)} ${
                 task.status?.toLowerCase() === 'done' ? 'opacity-60' : ''
               }`}
               onClick={() => handleEditTask(task)}

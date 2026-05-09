@@ -1199,6 +1199,7 @@ const mapDbSource = (s: any): Source => {
 
       const { data: sessionData } = await supabase.auth.getSession();
       const sessionUser = sessionData?.session?.user;
+      const slackUserToken = sessionData?.session?.provider_token;
 
       if (!sessionUser) {
         console.error("No user found");
@@ -1355,8 +1356,8 @@ const mapDbSource = (s: any): Source => {
       if (fetchId !== currentFetchIdRef.current) return;
 
       try {
-        console.log("[fetchData] Starting Slack sync for", dateStr);
-        const slackResult = await syncSlackSourcesForDay(wsId, forDate);
+        console.log("[fetchData] Starting Slack sync for", dateStr, "userToken:", !!slackUserToken);
+        const slackResult = await syncSlackSourcesForDay(wsId, forDate, slackUserToken || undefined);
         console.log("[fetchData] Slack sync result:", slackResult);
 
         if (slackResult.success) {
