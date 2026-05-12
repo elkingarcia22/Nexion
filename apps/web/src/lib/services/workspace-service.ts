@@ -67,6 +67,23 @@ export async function getOrCreateWorkspace(
         return { success: false, error: "Workspace not found" };
       }
 
+      // Ensure membership exists (defense in depth for users created before
+      // the signup trigger was fixed)
+      const { data: existingMembership } = await supabase
+        .from("workspace_memberships")
+        .select("id")
+        .eq("workspace_id", profile.workspace_id)
+        .eq("profile_id", userId)
+        .maybeSingle();
+
+      if (!existingMembership) {
+        await supabase.from("workspace_memberships").insert({
+          workspace_id: profile.workspace_id,
+          profile_id: userId,
+          membership_role: "owner",
+        });
+      }
+
       return { success: true, data: workspaces[0] };
     }
 
@@ -149,6 +166,22 @@ export async function updateWorkspaceJiraConfig(
     return { success: true };
   } catch (err: any) {
     console.error("Error updating Jira config:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+export async function updateWorkspaceGeminiKey(
+  workspaceId: string,
+  geminiApiKey: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from("workspaces")
+      .update({ gemini_api_key: geminiApiKey || null, updated_at: new Date().toISOString() })
+      .eq("id", workspaceId);
+    if (error) throw error;
+    return { success: true };
+  } catch (err: any) {
     return { success: false, error: err.message };
   }
 }

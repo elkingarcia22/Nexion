@@ -7,7 +7,7 @@ import { getSourcesByDate, createSource, deleteSource, deleteSourcesByUrl, updat
 import { getOrCreateWorkspace } from "@/lib/services/workspace-service";
 import { fetchGoogleDriveFiles, fetchGoogleFileContent, DriveFile } from "@/lib/services/google-drive-service";
 import { fetchGoogleCalendarEvents, CalendarEvent } from "@/lib/services/google-calendar-service";
-import { syncSlackSourcesForDay, getSlackSourcesByWorkspace } from "@/lib/services/slack-service";
+import { syncSlackSourcesForDay, getSlackSourcesByWorkspace, verifyPrivateChannel, addPrivateChannelToSync } from "@/lib/services/slack-service";
 import { analyzeDay } from "@/lib/services/analyze-service";
 import { DayNavigator } from "@/components/ui/DayNavigator";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -787,6 +787,10 @@ export default function DayTodayPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [channelIdInput, setChannelIdInput] = useState("");
+  const [connectingPrivate, setConnectingPrivate] = useState(false);
+  const [privateChannelError, setPrivateChannelError] = useState("");
+  const [privateChannelSuccess, setPrivateChannelSuccess] = useState("");
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
@@ -1002,6 +1006,8 @@ export default function DayTodayPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [slackDrawerOpen, setSlackDrawerOpen] = useState(false);
+  const [slackDrawerChannel, setSlackDrawerChannel] = useState<{id: string; name: string; messages: any[]; loading: boolean}>({id: "", name: "", messages: [], loading: false});
   
   // Time calculation states (8am-6pm workday)
   const [timeMetrics, setTimeMetrics] = useState<{
@@ -1357,7 +1363,7 @@ const mapDbSource = (s: any): Source => {
 
       try {
         console.log("[fetchData] Starting Slack sync for", dateStr, "userToken:", !!slackUserToken);
-        const slackResult = await syncSlackSourcesForDay(wsId, forDate, slackUserToken || undefined);
+        const slackResult = await syncSlackSourcesForDay(wsId, forDate);
         console.log("[fetchData] Slack sync result:", slackResult);
 
         if (slackResult.success) {
@@ -1507,6 +1513,7 @@ const mapDbSource = (s: any): Source => {
         date: dateStr,
         meetings: calendarEvents,
         sources: sourcesWithContent,
+        workspaceId: workspaceId,
         userName: currentUserName,
         objectives: objectives,
         jiraContext: structuredTasks.filter(t => t.origin === 'jira').map(jt => ({
@@ -1608,6 +1615,56 @@ const mapDbSource = (s: any): Source => {
       setSources((prev) => prev.map((s) => s.id === id ? { ...s, name: newTitle } : s));
     } else {
       alert("Error al renombrar la fuente: " + result.error);
+    }
+  };
+
+  const handleConnectPrivateChannel = async () => {
+    if (!workspaceId || !channelIdInput.trim()) return;
+    setConnectingPrivate(true);
+    setPrivateChannelError("");
+    setPrivateChannelSuccess("");
+
+    const result = await addPrivateChannelToSync(workspaceId, channelIdInput.trim());
+
+    if (!result.success) {
+      setPrivateChannelError(result.error || "Error al conectar canal");
+      setConnectingPrivate(false);
+      return;
+    }
+
+    setPrivateChannelSuccess(`Canal #${result.channel?.name} conectado exitosamente`);
+    setChannelIdInput("");
+
+    const syncResult = await syncSlackSourcesForDay(workspaceId, new Date());
+    if (syncResult.success) {
+      const slackSourcesResult = await getSlackSourcesByWorkspace(workspaceId, new Date());
+      if (slackSourcesResult.success && slackSourcesResult.data) {
+        setSources((prevSources) => {
+          const allIds = new Set(prevSources.map(s => s.id));
+          const newSlack = (slackSourcesResult.data || []).filter((s: any) => !allIds.has(s.id));
+          return [...prevSources, ...newSlack];
+        });
+      }
+    }
+
+    setConnectingPrivate(false);
+  };
+
+  const openSlackChannelDrawer = async (source: any) => {
+    const channelId = source.metadata?.channelId;
+    if (!channelId) return;
+    const channelName = source.metadata?.channelName || source.name.replace(/^#/, "");
+    setSlackDrawerOpen(true);
+    setSlackDrawerChannel({id: channelId, name: channelName, messages: [], loading: true});
+    try {
+      const today = new Date();
+      const oldest = Math.floor(new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() / 1000);
+      const latest = Math.floor(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).getTime() / 1000);
+      const res = await fetch(`/api/slack?action=channel-history&channelId=${channelId}&oldest=${oldest}&latest=${latest}`);
+      const data = await res.json();
+      setSlackDrawerChannel(prev => ({...prev, messages: data.messages || [], loading: false}));
+    } catch {
+      setSlackDrawerChannel(prev => ({...prev, loading: false}));
     }
   };
 
@@ -2457,10 +2514,16 @@ const mapDbSource = (s: any): Source => {
               </div>
             )}
             {filteredSources.map((source) => (
-              <div key={source.id} className="flex items-center gap-4 px-5 py-4 hover:bg-card/50 transition-colors">
+              <div
+                key={source.id}
+                className={`flex items-center gap-4 px-5 py-4 transition-colors ${source.origin === "slack" ? "cursor-pointer hover:bg-card/80" : "hover:bg-card/50"}`}
+                onClick={() => {
+                  if (source.origin === "slack") openSlackChannelDrawer(source);
+                }}
+              >
                 {/* Checkbox */}
                 <button
-                  onClick={() => toggleSource(source.id as number)}
+                  onClick={(e) => { e.stopPropagation(); toggleSource(source.id as number); }}
                   className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                     source.checked ? "border-primary bg-primary" : "border-white/40 hover:border-primary/50"
                   }`}
@@ -2496,7 +2559,7 @@ const mapDbSource = (s: any): Source => {
                   {source.isManual && (
                     <>
                       <button
-                        onClick={() => handleRenameSource(source.id as string, source.name)}
+                        onClick={(e) => { e.stopPropagation(); handleRenameSource(source.id as string, source.name); }}
                         className="text-white/20 hover:text-primary transition-colors p-1.5"
                         title="Renombrar"
                       >
@@ -2507,7 +2570,7 @@ const mapDbSource = (s: any): Source => {
                       </button>
 
                       <button
-                        onClick={() => handleDeleteSource(source.id as string)}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteSource(source.id as string); }}
                         className="text-white/20 hover:text-red-500 transition-colors p-1.5"
                         title="Eliminar"
                       >
@@ -2554,6 +2617,7 @@ const mapDbSource = (s: any): Source => {
               {checkedCount} de {filteredSources.length} fuentes seleccionadas para análisis
             </p>
           </div>
+
         </div>
       )}
 
@@ -2672,6 +2736,67 @@ const mapDbSource = (s: any): Source => {
         onConfirm={confirmDelete}
         onCancel={() => setConfirmDeleteId(null)}
       />
+
+      {/* Slack Channel Drawer */}
+      <div
+        className={`fixed inset-0 bg-black/50 z-40 transition-opacity ${slackDrawerOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setSlackDrawerOpen(false)}
+      />
+      <div
+        className={`fixed top-0 right-0 h-screen w-[480px] bg-[#161927] z-50 flex flex-col shadow-hard transition-transform duration-300 ${slackDrawerOpen ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="flex items-center justify-between p-5 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#E01E5A">
+              <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.521-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z" />
+            </svg>
+            <h2 className="text-lg font-semibold text-white">#{slackDrawerChannel.name}</h2>
+          </div>
+          <button onClick={() => setSlackDrawerOpen(false)} className="text-white/40 hover:text-white p-1">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-3">
+          {slackDrawerChannel.loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : slackDrawerChannel.messages.length === 0 ? (
+            <div className="py-20 text-center">
+              <p className="text-white/40 text-sm">No hay mensajes en este canal hoy</p>
+            </div>
+          ) : (
+            slackDrawerChannel.messages.map((msg: any, i: number) => (
+              <div key={msg.ts || i} className="bg-white/5 rounded-xl p-4 space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
+                    {msg.user_name?.[0] || "?"}
+                  </div>
+                  <span className="text-sm font-semibold text-white">{msg.user_name || "Usuario"}</span>
+                  <span className="text-[10px] text-white/30 font-mono">
+                    {msg.ts ? new Date(parseFloat(msg.ts) * 1000).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : ""}
+                  </span>
+                </div>
+                <p className="text-sm text-white/80 pl-8">{msg.text}</p>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="border-t border-white/10 p-4">
+          <button
+            onClick={() => {
+              setSlackDrawerOpen(false);
+              // Trigger analysis
+            }}
+            disabled={slackDrawerChannel.messages.length === 0}
+            className="w-full py-3 bg-primary text-white text-[11px] font-black tracking-widest uppercase rounded-xl hover:bg-primary/80 transition-all disabled:opacity-30"
+          >
+            Analizar con IA
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

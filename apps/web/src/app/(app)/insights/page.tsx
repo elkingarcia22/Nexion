@@ -4,8 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateWorkspace } from '@/lib/services/workspace-service';
 import { getInsights, Insight } from '@/lib/services/insight-service';
+import { ALL_PRODUCTS } from '@/lib/services/analysis-config-service';
 
 const TEAMS = ['Todas', 'Talent', 'Hiring', 'UX', 'Otras'];
+const PRODUCTS = ['Todos', ...ALL_PRODUCTS.map(p => p.label)];
 
 const CustomSelect = ({
   value, onChange, options, placeholder = "Selecciona...", className = ""
@@ -55,6 +57,7 @@ export default function InsightsPage() {
   const [filteredInsights, setFilteredInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTeam, setSelectedTeam] = useState('Todas');
+  const [selectedProduct, setSelectedProduct] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -94,12 +97,21 @@ export default function InsightsPage() {
       const teamMap: Record<string, string> = { 'Talent': 'talent', 'Hiring': 'hiring', 'UX': 'ux', 'Otras': 'otras' };
       filtered = filtered.filter(i => getTeam(i) === (teamMap[selectedTeam] || selectedTeam.toLowerCase()));
     }
+    if (selectedProduct !== 'Todos') {
+      const product = ALL_PRODUCTS.find(p => p.label === selectedProduct);
+      if (product) {
+        filtered = filtered.filter(i => {
+          const cat = (i.category || '').toLowerCase();
+          return cat === product.key || cat === product.label.toLowerCase();
+        });
+      }
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(i => i.title.toLowerCase().includes(q) || (i.description || '').toLowerCase().includes(q));
     }
     setFilteredInsights(filtered);
-  }, [insights, selectedTeam, searchQuery]);
+  }, [insights, selectedTeam, selectedProduct, searchQuery]);
 
   const kpis = {
     total: insights.length,
@@ -151,8 +163,9 @@ export default function InsightsPage() {
       <div className="bg-[#161927]/50 border border-white/5 rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           <CustomSelect value={selectedTeam} onChange={setSelectedTeam} options={TEAMS} placeholder="Equipo" />
-          {(selectedTeam !== 'Todas' || searchQuery) && (
-            <button onClick={() => { setSelectedTeam('Todas'); setSearchQuery(''); }} className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
+          <CustomSelect value={selectedProduct} onChange={setSelectedProduct} options={PRODUCTS} placeholder="Producto" />
+          {(selectedTeam !== 'Todas' || selectedProduct !== 'Todos' || searchQuery) && (
+            <button onClick={() => { setSelectedTeam('Todas'); setSelectedProduct('Todos'); setSearchQuery(''); }} className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
               Limpiar
             </button>
           )}

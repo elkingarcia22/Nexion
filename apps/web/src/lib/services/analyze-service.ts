@@ -2,9 +2,17 @@ export interface AnalysisRequest {
   date: string;
   meetings: any[];
   sources: any[];
+  workspaceId?: string;
   userName?: string;
   objectives?: any[];
   jiraContext?: any[];
+  analysisConfig?: {
+    resolved_tasks?: string[];
+    resolved_open?: string[];
+    custom_categories?: string[];
+    filter_responsibles?: boolean;
+    selected_responsibles?: string[];
+  };
 }
 
 export interface AnalysisResult {

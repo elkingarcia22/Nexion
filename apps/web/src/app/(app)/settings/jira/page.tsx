@@ -80,6 +80,15 @@ export default function JiraSettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-12 space-y-10 animate-in fade-in duration-700">
+      <div className="flex items-center gap-4 mb-4">
+        <a
+          href="/settings"
+          className="flex items-center gap-1.5 text-xs font-bold text-white/40 hover:text-white/70 transition-colors uppercase tracking-widest"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+          Volver
+        </a>
+      </div>
       <div className="space-y-2 text-center">
         <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white">Integración con Jira</h1>
         <p className="text-white/40 text-sm font-bold tracking-widest uppercase">

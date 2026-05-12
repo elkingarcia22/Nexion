@@ -1,13 +1,29 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
   try {
-    const { date, meetings, sources, userName, objectives, jiraContext, platformMetrics } = await request.json();
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
+    const { date, meetings, sources, userName, objectives, jiraContext, platformMetrics, workspaceId } = await request.json();
+
+    // Try per-workspace key first, fall back to global env var
+    let apiKey = process.env.GOOGLE_AI_API_KEY;
+    if (workspaceId) {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        if (supabaseUrl && supabaseKey) {
+          const supabase = createClient(supabaseUrl, supabaseKey);
+          const { data: ws } = await supabase.from("workspaces").select("gemini_api_key").eq("id", workspaceId).single();
+          if (ws?.gemini_api_key) apiKey = ws.gemini_api_key;
+        }
+      } catch (e) {
+        console.error("Error fetching workspace Gemini key, using fallback:", e);
+      }
+    }
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "GOOGLE_AI_API_KEY no configurada. Obtenla gratis en aistudio.google.com" },
+        { error: "Clave de Gemini no configurada. Cada usuario debe configurar su propia clave en Configuración > Gemini AI, u obtenla gratis en aistudio.google.com" },
         { status: 500 }
       );
     }

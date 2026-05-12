@@ -547,10 +547,9 @@ function inferUnit(value: unknown, explicitUnit?: string): string {
 }
 
 function normalizeCategory(cat: string | undefined | null): string {
-  if (!cat) return "other";
+  if (!cat) return "general";
   const lower = cat.toLowerCase().trim();
-  if (lower === "talent") return "talent";
-  if (lower === "hiring") return "hiring";
-  if (lower === "ux") return "ux";
-  return "other";
+  const valid = ["objetivos", "360", "encuestas", "learning", "matrix", "hiring", "asx", "pyt", "general", "talent", "ux"];
+  if (valid.includes(lower)) return lower;
+  return "general";
 }

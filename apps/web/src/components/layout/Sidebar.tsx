@@ -81,10 +81,19 @@ const navItems = [
 interface SidebarProps {
   expanded: boolean;
   onToggle: () => void;
+  activeModules?: string[] | null;
 }
 
-export function Sidebar({ expanded, onToggle }: SidebarProps) {
+const ALWAYS_VISIBLE = ["/day", "/settings"];
+
+export function Sidebar({ expanded, onToggle, activeModules }: SidebarProps) {
   const pathname = usePathname();
+
+  const filteredNavItems = navItems.filter(item => {
+    if (ALWAYS_VISIBLE.some(p => item.matchPrefix.startsWith(p))) return true;
+    if (!activeModules) return true;
+    return activeModules.some(m => item.matchPrefix === `/${m}`);
+  });
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -131,7 +140,7 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 flex flex-col gap-0.5 px-2 py-3 overflow-hidden">
-        {navItems.map((item) => {
+        {filteredNavItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.matchPrefix);
 
@@ -167,6 +176,40 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
         })}
       </nav>
 
+      {/* Settings */}
+      <div className="px-2 pb-1 flex-shrink-0">
+        <div className="relative group">
+          <Link
+            href="/settings"
+            className={`flex items-center gap-3 rounded-xl px-2.5 py-2.5 transition-all duration-150 ${
+              pathname.startsWith("/settings")
+                ? "bg-primary text-white shadow-lg shadow-primary/20"
+                : "text-white/40 hover:bg-card/5 hover:text-white"
+            }`}
+          >
+            <span className="flex-shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </span>
+            {expanded && (
+              <span className="text-sm font-medium whitespace-nowrap overflow-hidden">
+                Configuración
+              </span>
+            )}
+          </Link>
+          {!expanded && (
+            <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+              <div className="bg-card text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-hard">
+                Configuración
+              </div>
+              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[#1f212e]" />
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Logout */}
       <div className="px-2 pb-4 flex-shrink-0">
         <div className="relative group">
@@ -188,7 +231,6 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
             )}
           </button>
 
-          {/* Tooltip when collapsed */}
           {!expanded && (
             <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
               <div className="bg-card text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-hard">

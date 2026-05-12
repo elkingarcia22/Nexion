@@ -2,9 +2,20 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import { syncObjectives, getObjectives } from "@/lib/services/objectives-service";
+import { syncObjectives, getObjectives, getObjectivesConfig } from "@/lib/services/objectives-service";
 import { getUserWorkspace } from "@/lib/services/workspace-service";
 import CreateObjectiveDrawer from "@/components/objectives/CreateObjectiveDrawer";
+
+const TEAM_COLORS = [
+  { accent: "purple", hex: "#8b5cf6", border: "border-purple-500/30", bg: "bg-purple-500/10", text: "text-purple-400", badgeBg: "bg-purple-500/10", badgeBorder: "border-purple-500/20", bar: "bg-purple-500", hoverBorder: "hover:border-purple-500/30", hoverText: "group-hover:text-purple-400" },
+  { accent: "amber", hex: "#f59e0b", border: "border-amber-500/30", bg: "bg-amber-500/10", text: "text-amber-400", badgeBg: "bg-amber-500/10", badgeBorder: "border-amber-500/20", bar: "bg-amber-500", hoverBorder: "hover:border-amber-500/30", hoverText: "group-hover:text-amber-400" },
+  { accent: "cyan", hex: "#06b6d4", border: "border-cyan-500/30", bg: "bg-cyan-500/10", text: "text-cyan-400", badgeBg: "bg-cyan-500/10", badgeBorder: "border-cyan-500/20", bar: "bg-cyan-500", hoverBorder: "hover:border-cyan-500/30", hoverText: "group-hover:text-cyan-400" },
+  { accent: "pink", hex: "#ec4899", border: "border-pink-500/30", bg: "bg-pink-500/10", text: "text-pink-400", badgeBg: "bg-pink-500/10", badgeBorder: "border-pink-500/20", bar: "bg-pink-500", hoverBorder: "hover:border-pink-500/30", hoverText: "group-hover:text-pink-400" },
+  { accent: "emerald", hex: "#10b981", border: "border-emerald-500/30", bg: "bg-emerald-500/10", text: "text-emerald-400", badgeBg: "bg-emerald-500/10", badgeBorder: "border-emerald-500/20", bar: "bg-emerald-500", hoverBorder: "hover:border-emerald-500/30", hoverText: "group-hover:text-emerald-400" },
+  { accent: "orange", hex: "#f97316", border: "border-orange-500/30", bg: "bg-orange-500/10", text: "text-orange-400", badgeBg: "bg-orange-500/10", badgeBorder: "border-orange-500/20", bar: "bg-orange-500", hoverBorder: "hover:border-orange-500/30", hoverText: "group-hover:text-orange-400" },
+  { accent: "indigo", hex: "#6366f1", border: "border-indigo-500/30", bg: "bg-indigo-500/10", text: "text-indigo-400", badgeBg: "bg-indigo-500/10", badgeBorder: "border-indigo-500/20", bar: "bg-indigo-500", hoverBorder: "hover:border-indigo-500/30", hoverText: "group-hover:text-indigo-400" },
+  { accent: "teal", hex: "#14b8a6", border: "border-teal-500/30", bg: "bg-teal-500/10", text: "text-teal-400", badgeBg: "bg-teal-500/10", badgeBorder: "border-teal-500/20", bar: "bg-teal-500", hoverBorder: "hover:border-teal-500/30", hoverText: "group-hover:text-teal-400" },
+];
 
 export default function ObjectivesPage() {
   const [objectives, setObjectives] = useState<any[]>([]);
@@ -16,6 +27,7 @@ export default function ObjectivesPage() {
   const [user, setUser] = useState<any>(null);
   const [quarter, setQuarter] = useState<string>("Q2");
   const [selectedObjective, setSelectedObjective] = useState<any>(null);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
 
   useEffect(() => {
     async function init() {
@@ -26,6 +38,12 @@ export default function ObjectivesPage() {
       const wsResult = await getUserWorkspace(session.user.id);
       if (wsResult.success && wsResult.data) {
         setWorkspaceId(wsResult.data.id);
+
+        const configResult = await getObjectivesConfig(wsResult.data.id);
+        if (configResult.success && configResult.data) {
+          setSelectedTeams(configResult.data.selected_teams || []);
+        }
+
         loadData(wsResult.data.id);
       } else {
         setLoading(false);
@@ -86,8 +104,19 @@ export default function ObjectivesPage() {
     ? Math.round(filteredObjectives.reduce((a, o) => a + (o.progress || 0), 0) / totalCount)
     : 0;
 
-  const talentObjs = filteredObjectives.filter(o => o.team === "Talent");
-  const hiringObjs = filteredObjectives.filter(o => o.team === "Hiring");
+  const teamObjectives = useMemo(() => {
+    let filtered = filteredObjectives;
+    if (selectedTeams.length > 0) {
+      filtered = filtered.filter(o => selectedTeams.includes(o.team));
+    }
+    const byTeam: Record<string, any[]> = {};
+    for (const o of filtered) {
+      if (!byTeam[o.team]) byTeam[o.team] = [];
+      byTeam[o.team].push(o);
+    }
+    return Object.entries(byTeam)
+      .sort(([a], [b]) => a.localeCompare(b)) as [string, any[]][];
+  }, [filteredObjectives, selectedTeams]);
 
   const getJiraCount = (obj: any) => {
     if (!jiraTasks || jiraTasks.length === 0) return 0;
@@ -98,22 +127,12 @@ export default function ObjectivesPage() {
     return jiraTasks.filter(task => {
       const taskSummary = (task.fields.summary || "").toLowerCase();
       const matchesObj = objKeywords.length > 0 && objKeywords.every((kw: string) => taskSummary.includes(kw));
-
-      let teamMatch = !objTeam;
-      if (objTeam === "talent") {
-        const context = `${taskSummary} ${(task.fields.labels || []).join(" ")}`.toLowerCase();
-        teamMatch = (context.includes("talent") || context.includes("culture")) &&
-                    !context.includes("hiring") && !context.includes("utu");
-      } else if (objTeam === "hiring") {
-        const context = `${taskSummary} ${(task.fields.labels || []).join(" ")}`.toLowerCase();
-        teamMatch = context.includes("hiring") || context.includes("utu") || context.includes("recruit");
-      } else {
-        teamMatch = taskSummary.includes(objTeam);
-      }
-
+      const teamMatch = !objTeam || taskSummary.includes(objTeam);
       return matchesObj && teamMatch;
     }).length;
   };
+
+  const getTeamColor = (index: number) => TEAM_COLORS[index % TEAM_COLORS.length];
 
   return (
     <div className="space-y-6 pb-20">
@@ -198,20 +217,17 @@ export default function ObjectivesPage() {
                 <div className="text-2xl font-black text-white font-mono">{avgProgress}%</div>
                 <div className="text-[9px] text-white/30 mt-1">{avgProgress > 50 ? "Avanzando" : avgProgress > 0 ? "En desarrollo" : "Sin avance"}</div>
               </div>
-              <div className="bg-gradient-to-br from-[#2ec6ff]/10 to-transparent border border-[#2ec6ff]/20 rounded-2xl p-5">
-                <div className="text-[10px] text-[#2ec6ff] font-black uppercase tracking-widest mb-1">Talent</div>
-                <div className="text-2xl font-black text-white font-mono">{talentObjs.length}</div>
-                <div className="text-[9px] text-white/30 mt-1">
-                  {talentObjs.length > 0 ? `${Math.round(talentObjs.reduce((a, o) => a + (o.progress || 0), 0) / talentObjs.length)}% avg` : "—"}
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-[#f49e04]/10 to-transparent border border-[#f49e04]/20 rounded-2xl p-5">
-                <div className="text-[10px] text-[#f49e04] font-black uppercase tracking-widest mb-1">Hiring</div>
-                <div className="text-2xl font-black text-white font-mono">{hiringObjs.length}</div>
-                <div className="text-[9px] text-white/30 mt-1">
-                  {hiringObjs.length > 0 ? `${Math.round(hiringObjs.reduce((a, o) => a + (o.progress || 0), 0) / hiringObjs.length)}% avg` : "—"}
-                </div>
-              </div>
+              {teamObjectives.slice(0, 2).map(([team, objs], i) => {
+                const color = getTeamColor(i);
+                const teamAvg = objs.length > 0 ? Math.round(objs.reduce((a: number, o: any) => a + (o.progress || 0), 0) / objs.length) : 0;
+                return (
+                  <div key={team} className={`bg-gradient-to-br from-[${color.hex}]/10 to-transparent border border-[${color.hex}]/20 rounded-2xl p-5`}>
+                    <div className={`text-[10px] ${color.text} font-black uppercase tracking-widest mb-1`}>{team}</div>
+                    <div className="text-2xl font-black text-white font-mono">{objs.length}</div>
+                    <div className="text-[9px] text-white/30 mt-1">{teamAvg}% avg</div>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="space-y-2.5">
@@ -235,149 +251,83 @@ export default function ObjectivesPage() {
             </div>
           </div>
 
-          {/* ── TALENT ── */}
-          {talentObjs.length > 0 && (
-            <div className="bg-[#161927]/50 border border-white/5 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          {/* ── TEAM SECTIONS ── */}
+          {teamObjectives.map(([team, objs], teamIdx) => {
+            const color = getTeamColor(teamIdx);
+            return (
+              <div key={team} className="bg-[#161927]/50 border border-white/5 rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className={`w-10 h-10 rounded-xl ${color.bg} flex items-center justify-center ${color.text}`}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">{team.toUpperCase()}</h3>
+                    <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">{objs.length} objetivos · {quarter}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">TALENT</h3>
-                  <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">{talentObjs.length} objetivos · {quarter}</p>
-                </div>
-              </div>
 
-              <div className="space-y-4">
-                {talentObjs.map((o, i) => {
-                  const jiraCount = getJiraCount(o);
-                  const owners = (o.owner || "").split(/[,\n]/).filter(Boolean);
-                  return (
-                    <div
-                      key={i}
-                      onClick={() => setSelectedObjective(o)}
-                      className="bg-[#161927]/50 hover:bg-[#161927]/80 rounded-2xl border border-white/5 p-5 hover:border-purple-500/30 transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-start gap-6">
-                        <div className="w-14 h-14 rounded-2xl bg-[#161927]/80 flex items-center justify-center shrink-0 border border-white/10">
-                          <span className="text-sm font-black font-mono text-white">{o.progress || 0}%</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest px-2.5 py-1 bg-purple-500/10 rounded-lg border border-purple-500/20">{o.type || "ESTRATÉGICO"}</span>
-                            <div className="w-1 h-1 rounded-full bg-white/10" />
-                            <span className="text-[10px] font-bold text-white/40">{o.quarter}</span>
+                <div className="space-y-4">
+                  {(objs as any[]).map((o, i) => {
+                    const jiraCount = getJiraCount(o);
+                    const owners: string[] = (o.owner || "").split(/[,\n]/).filter(Boolean);
+                    return (
+                      <div
+                        key={i}
+                        onClick={() => setSelectedObjective(o)}
+                        className={`bg-[#161927]/50 hover:bg-[#161927]/80 rounded-2xl border border-white/5 p-5 ${color.hoverBorder} transition-all cursor-pointer group`}
+                      >
+                        <div className="flex items-start gap-6">
+                          <div className="w-14 h-14 rounded-2xl bg-[#161927]/80 flex items-center justify-center shrink-0 border border-white/10">
+                            <span className="text-sm font-black font-mono text-white">{o.progress || 0}%</span>
                           </div>
-                          <h4 className="text-lg font-black text-white group-hover:text-purple-400 transition-colors leading-tight">{o.title}</h4>
-                          <p className="text-sm text-white/50 mt-1.5 leading-relaxed">{o.key_result}</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className={`text-[10px] font-black ${color.text} uppercase tracking-widest px-2.5 py-1 ${color.badgeBg} rounded-lg ${color.badgeBorder}`}>{o.type || "ESTRATÉGICO"}</span>
+                              <div className="w-1 h-1 rounded-full bg-white/10" />
+                              <span className="text-[10px] font-bold text-white/40">{o.quarter}</span>
+                            </div>
+                            <h4 className={`text-lg font-black text-white ${color.hoverText} transition-colors leading-tight`}>{o.title}</h4>
+                            <p className="text-sm text-white/50 mt-1.5 leading-relaxed">{o.key_result}</p>
 
-                          <div className="flex items-center gap-4 mt-4">
-                            {owners.length > 0 && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Owner:</span>
-                                <div className="flex -space-x-2">
-                                  {owners.slice(0, 3).map((owner, oi) => (
-                                    <div key={oi} className="w-7 h-7 rounded-lg bg-[#161927]/80 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">
-                                      {owner.trim()[0]}
-                                    </div>
-                                  ))}
+                            <div className="flex items-center gap-4 mt-4">
+                              {owners.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Owner:</span>
+                                  <div className="flex -space-x-2">
+                                    {owners.slice(0, 3).map((owner, oi) => (
+                                      <div key={oi} className="w-7 h-7 rounded-lg bg-[#161927]/80 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">
+                                        {owner.trim()[0]}
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                            {jiraCount > 0 && (
-                              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400"><path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" /></svg>
-                                <span className="text-[9px] font-black text-blue-400">{jiraCount} HU's</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 shrink-0">
-                          <div className="w-24">
-                            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full bg-purple-500 transition-all" style={{ width: `${o.progress || 0}%` }} />
+                              )}
+                              {jiraCount > 0 && (
+                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400"><path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" /></svg>
+                                  <span className="text-[9px] font-black text-blue-400">{jiraCount} HU's</span>
+                                </div>
+                              )}
                             </div>
                           </div>
-                          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/20 group-hover:bg-purple-500/20 group-hover:text-purple-400 transition-all">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m9 18 6-6-6-6"/></svg>
+                          <div className="flex items-center gap-4 shrink-0">
+                            <div className="w-24">
+                              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${color.bar} transition-all`} style={{ width: `${o.progress || 0}%` }} />
+                              </div>
+                            </div>
+                            <div className={`w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/20 ${color.hoverBorder} transition-all`}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m9 18 6-6-6-6"/></svg>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* ── HIRING ── */}
-          {hiringObjs.length > 0 && (
-            <div className="bg-[#161927]/50 border border-white/5 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">HIRING</h3>
-                  <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">{hiringObjs.length} objetivos · {quarter}</p>
+                    );
+                  })}
                 </div>
               </div>
-
-              <div className="space-y-4">
-                {hiringObjs.map((o, i) => {
-                  const jiraCount = getJiraCount(o);
-                  const owners = (o.owner || "").split(/[,\n]/).filter(Boolean);
-                  return (
-                    <div
-                      key={i}
-                      onClick={() => setSelectedObjective(o)}
-                      className="bg-[#161927]/50 hover:bg-[#161927]/80 rounded-2xl border border-white/5 p-5 hover:border-amber-500/30 transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-start gap-6">
-                        <div className="w-14 h-14 rounded-2xl bg-[#161927]/80 flex items-center justify-center shrink-0 border border-white/10">
-                          <span className="text-sm font-black font-mono text-white">{o.progress || 0}%</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest px-2.5 py-1 bg-amber-500/10 rounded-lg border border-amber-500/20">{o.type || "ESTRATÉGICO"}</span>
-                            <div className="w-1 h-1 rounded-full bg-white/10" />
-                            <span className="text-[10px] font-bold text-white/40">{o.quarter}</span>
-                          </div>
-                          <h4 className="text-lg font-black text-white group-hover:text-amber-400 transition-colors leading-tight">{o.title}</h4>
-                          <p className="text-sm text-white/50 mt-1.5 leading-relaxed">{o.key_result}</p>
-
-                          <div className="flex items-center gap-4 mt-4">
-                            {owners.length > 0 && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Owner:</span>
-                                <div className="flex -space-x-2">
-                                  {owners.slice(0, 3).map((owner, oi) => (
-                                    <div key={oi} className="w-7 h-7 rounded-lg bg-[#161927]/80 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40">
-                                      {owner.trim()[0]}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 shrink-0">
-                          <div className="w-24">
-                            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                              <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${o.progress || 0}%` }} />
-                            </div>
-                          </div>
-                          <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/20 group-hover:bg-amber-500/20 group-hover:text-amber-400 transition-all">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m9 18 6-6-6-6"/></svg>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       )}
 

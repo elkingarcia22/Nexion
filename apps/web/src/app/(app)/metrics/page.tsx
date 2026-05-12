@@ -1,28 +1,60 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateWorkspace } from '@/lib/services/workspace-service';
-import { getMetrics, getMetricDailyLogs, Metric, MetricDailyLog } from '@/lib/services/metric-service';
+import { getMetrics, getMetricDailyLogs, getMetricsConfig, Metric, MetricDailyLog, MetricsConfig } from '@/lib/services/metric-service';
 
-const TABS = [
-  { key: "General", label: "General", desc: "Métricas generales de la empresa" },
-  { key: "Talent", label: "Talent", desc: "Detalle por producto" },
-  { key: "Hiring", label: "Hiring", desc: "Detalle por producto" },
-] as const;
+const CATEGORY_COLORS = [
+  { border: "border-l-[#2ec6ff]", text: "text-[#2ec6ff]", bg: "bg-[#2ec6ff]/10", hex: "#2ec6ff" },
+  { border: "border-l-[#f49e04]", text: "text-[#f49e04]", bg: "bg-[#f49e04]/10", hex: "#f49e04" },
+  { border: "border-l-[#8b5cf6]", text: "text-[#8b5cf6]", bg: "bg-[#8b5cf6]/10", hex: "#8b5cf6" },
+  { border: "border-l-[#10b981]", text: "text-[#10b981]", bg: "bg-[#10b981]/10", hex: "#10b981" },
+  { border: "border-l-[#ec4899]", text: "text-[#ec4899]", bg: "bg-[#ec4899]/10", hex: "#ec4899" },
+  { border: "border-l-[#06b6d4]", text: "text-[#06b6d4]", bg: "bg-[#06b6d4]/10", hex: "#06b6d4" },
+  { border: "border-l-[#f97316]", text: "text-[#f97316]", bg: "bg-[#f97316]/10", hex: "#f97316" },
+  { border: "border-l-[#6366f1]", text: "text-[#6366f1]", bg: "bg-[#6366f1]/10", hex: "#6366f1" },
+];
+
+const GENERAL_COLOR = { border: "border-l-primary", text: "text-primary", bg: "bg-primary/10", hex: "#1a6bff" };
+
+function getCatStyle(category: string, index: number) {
+  if (category === "general") return GENERAL_COLOR;
+  return CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  objetivos: "Objetivos",
+  "360": "360",
+  encuestas: "Encuestas",
+  matrix: "Matriz de Talento",
+  learning: "Aprendizaje",
+  learning_map: "Learning Map",
+  creator: "Creator",
+  hiring: "Contratación",
+  pyt: "PYT",
+  core: "Core",
+  asx: "ASX",
+  planes_tareas: "Planes y Tareas",
+  general: "General",
+};
 
 const PRODUCT_GROUPS = [
-  { key: "objetivos", label: "Objetivos", icon: "○", category: "talent", color: "#2ec6ff" },
-  { key: "360", label: "360 / AXS", icon: "◎", category: "talent", color: "#2ec6ff" },
-  { key: "encuestas", label: "Encuestas", icon: "□", category: "talent", color: "#2ec6ff" },
-  { key: "matriz_talento", label: "Matriz de Talento", icon: "◇", category: "talent", color: "#2ec6ff" },
-  { key: "learning", label: "Aprendizaje (Learning)", icon: "△", category: "talent", color: "#2ec6ff" },
-  { key: "reclutamiento", label: "Reclutamiento (PYT)", icon: "▽", category: "hiring", color: "#f49e04" },
-  { key: "general", label: "General", icon: "⬡", category: "general", color: "#1a6bff" },
-] as const;
-
-
+  { key: "objetivos", label: "Objetivos", icon: "○", category: "objetivos", color: "#2ec6ff" },
+  { key: "360", label: "360", icon: "◎", category: "360", color: "#2ec6ff" },
+  { key: "encuestas", label: "Encuestas", icon: "□", category: "encuestas", color: "#2ec6ff" },
+  { key: "matrix", label: "Matriz de Talento", icon: "◇", category: "matrix", color: "#2ec6ff" },
+  { key: "learning", label: "Aprendizaje", icon: "△", category: "learning", color: "#2ec6ff" },
+  { key: "learning_map", label: "Learning Map", icon: "♢", category: "learning_map", color: "#2ec6ff" },
+  { key: "creator", label: "Creator", icon: "♤", category: "creator", color: "#2ec6ff" },
+  { key: "hiring", label: "Contratación", icon: "▽", category: "hiring", color: "#f49e04" },
+  { key: "pyt", label: "PYT", icon: "◈", category: "pyt", color: "#ec4899" },
+  { key: "core", label: "Core", icon: "◆", category: "core", color: "#10b981" },
+  { key: "asx", label: "ASX", icon: "⬡", category: "asx", color: "#8b5cf6" },
+  { key: "planes_tareas", label: "Planes y Tareas", icon: "⬢", category: "planes_tareas", color: "#8b5cf6" },
+  { key: "general", label: "General", icon: "⬟", category: "general", color: "#1a6bff" },
+];
 
 function formatMetricValue(val: number, unit: string = "USD"): string {
   if (unit === "USD") {
@@ -147,19 +179,19 @@ function LogsDrawer({ open, onClose, metricName, logs, unit }: { open: boolean; 
   );
 }
 
-function MetricCard({ metric, logs }: { metric: Metric; logs: MetricDailyLog[] }) {
+function MetricCard({ metric, logs, catIndex }: { metric: Metric; logs: MetricDailyLog[]; catIndex: number }) {
   const [logsOpen, setLogsOpen] = useState(false);
-  const catColor = metric.category === "talent" ? "border-l-[#2ec6ff]" : metric.category === "hiring" ? "border-l-[#f49e04]" : "border-l-primary";
+  const style = getCatStyle(metric.category, catIndex);
   const isFunnel = !!(metric.metadata as any)?.funnel;
   const funnelStages = isFunnel ? (metric.metadata as any)?.stages : null;
   const isNsm = !!(metric.metadata as any)?.nsm;
 
   return (
-    <div className={`bg-[#161927]/50 border border-white/5 rounded-2xl p-5 border-l-4 ${catColor}`}>
+    <div className={`bg-[#161927]/50 border border-white/5 rounded-2xl p-5 border-l-4 ${style.border}`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`text-[10px] font-black uppercase tracking-widest ${metric.category === "talent" ? "text-[#2ec6ff]" : metric.category === "hiring" ? "text-[#f49e04]" : "text-primary"}`}>
+            <span className={`text-[10px] font-black uppercase tracking-widest ${style.text}`}>
               {metric.category}
             </span>
             {metric.subcategory && (
@@ -218,6 +250,11 @@ function MetricCard({ metric, logs }: { metric: Metric; logs: MetricDailyLog[] }
   );
 }
 
+function getCategoryIndex(categories: string[], cat: string): number {
+  const idx = categories.indexOf(cat);
+  return idx >= 0 ? idx : 0;
+}
+
 export default function MetricsPage() {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [logsByMetric, setLogsByMetric] = useState<Record<string, MetricDailyLog[]>>({});
@@ -227,6 +264,7 @@ export default function MetricsPage() {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<{ date: string; source: string } | null>(null);
+  const [metricsConfig, setMetricsConfig] = useState<MetricsConfig>({ selected_categories: [] });
 
   useEffect(() => {
     (async () => {
@@ -234,7 +272,13 @@ export default function MetricsPage() {
       const user = sessionData?.session?.user;
       if (user) {
         const ws = await getOrCreateWorkspace(user.id, user.email || "");
-        if (ws.data?.id) setWorkspaceId(ws.data.id);
+        if (ws.data?.id) {
+          setWorkspaceId(ws.data.id);
+          const configResult = await getMetricsConfig(ws.data.id);
+          if (configResult.success && configResult.data) {
+            setMetricsConfig(configResult.data);
+          }
+        }
       }
     })();
   }, []);
@@ -263,7 +307,6 @@ export default function MetricsPage() {
         );
         setLogsByMetric(logsMap);
 
-        // Get last update info from most recent metric_daily_log
         const { data: recentLog } = await supabase
           .from("metric_daily_logs")
           .select("created_at, source")
@@ -293,35 +336,77 @@ export default function MetricsPage() {
     })();
   }, [workspaceId, period]);
 
-  const talentMetrics = metrics.filter(m => m.category === "talent");
-  const hiringMetrics = metrics.filter(m => m.category === "hiring");
+  const nonGeneralCategories = useMemo(() => {
+    return [...new Set(metrics.filter(m => m.category !== "general").map(m => m.category))].sort();
+  }, [metrics]);
+
+  const tabs = useMemo(() => {
+    const base = [{ key: "General", label: "General", desc: "Métricas generales de la empresa" }];
+    const cats = metricsConfig.selected_categories;
+    let displayCats: string[];
+    if (cats.length > 0) {
+      displayCats = cats.filter(c => nonGeneralCategories.includes(c));
+    } else {
+      displayCats = nonGeneralCategories;
+    }
+    return [...base, ...displayCats.map(c => ({
+      key: c.charAt(0).toUpperCase() + c.slice(1),
+      label: CATEGORY_LABELS[c] || c.charAt(0).toUpperCase() + c.slice(1),
+      desc: "Detalle por producto",
+    }))];
+  }, [metricsConfig, nonGeneralCategories]);
+
+  useEffect(() => {
+    if (tabs.length > 0 && !tabs.some(t => t.key === activeTab)) {
+      setActiveTab(tabs[0].key);
+    }
+  }, [tabs, activeTab]);
 
   const arrMetrics = metrics.filter(m => m.unit === "USD");
   const nsmMetrics = metrics.filter(m => (m.metadata as any)?.nsm);
   const funnelMetrics = metrics.filter(m => (m.metadata as any)?.funnel);
 
   const totalArr = arrMetrics.reduce((sum, m) => sum + (m.current_value || 0), 0);
-  const talentArr = arrMetrics.filter(m => m.category === "talent").reduce((sum, m) => sum + (m.current_value || 0), 0);
-  const hiringArr = arrMetrics.filter(m => m.category === "hiring").reduce((sum, m) => sum + (m.current_value || 0), 0);
 
-  const wau = metrics.find(m => m.name.includes("semanales"))?.current_value;
-  const mau = metrics.find(m => m.name.includes("mensuales"))?.current_value;
-  const nps = metrics.find(m => m.name === "NPS")?.current_value;
+  // Compute ARR by category for the General tab overview
+  const categoryArr = useMemo(() => {
+    const result: Record<string, { arr: number; count: number }> = {};
+    for (const cat of nonGeneralCategories) {
+      const catArrMetrics = arrMetrics.filter(m => m.category === cat);
+      const arr = catArrMetrics.reduce((sum, m) => sum + (m.current_value || 0), 0);
+      const count = metrics.filter(m => m.category === cat).length;
+      result[cat] = { arr, count };
+    }
+    return result;
+  }, [arrMetrics, metrics, nonGeneralCategories]);
 
   const filteredByTeam = activeTab === "General"
     ? metrics
     : metrics.filter(m => m.category === activeTab.toLowerCase());
 
-  const groupedByProduct = PRODUCT_GROUPS
-    .map(pg => ({
-      ...pg,
-      metrics: filteredByTeam.filter(m =>
-        pg.key === "general"
-          ? !m.subcategory || m.subcategory === "general"
-          : m.subcategory === pg.key
-      ),
-    }))
-    .filter(pg => pg.metrics.length > 0);
+  const groupedByProduct = useMemo(() => {
+    if (activeTab === "General") return [];
+    const cat = activeTab.toLowerCase();
+    const catMetrics = metrics.filter(m => m.category === cat);
+    if (catMetrics.length === 0) return [];
+
+    const pg = PRODUCT_GROUPS.find(p => p.category === cat);
+    if (pg) {
+      return [{ ...pg, metrics: catMetrics }];
+    }
+    return [{
+      key: cat,
+      label: CATEGORY_LABELS[cat] || cat.charAt(0).toUpperCase() + cat.slice(1),
+      icon: "○",
+      category: cat,
+      color: "#2ec6ff",
+      metrics: catMetrics,
+    }];
+  }, [metrics, activeTab]);
+
+  const wau = metrics.find(m => m.name.includes("semanales"))?.current_value;
+  const mau = metrics.find(m => m.name.includes("mensuales"))?.current_value;
+  const nps = metrics.find(m => m.name === "NPS")?.current_value;
 
   const seedMetrics = async () => {
     if (!workspaceId) return;
@@ -331,15 +416,24 @@ export default function MetricsPage() {
 
     const q1Data = [
       { name: "ARR Total Empresas", category: "general", current_value: 9800000, target_value: 12000000, previous_value: 9500000, unit: "USD", sort_order: 0, metadata: {} },
-      { name: "ARR Objetivos", category: "talent", subcategory: "objetivos", current_value: 105000, target_value: 150000, previous_value: 98000, unit: "USD", sort_order: 1, metadata: {} },
-      { name: "ARR 360", category: "talent", subcategory: "360", current_value: 118000, target_value: 160000, previous_value: 112000, unit: "USD", sort_order: 2, metadata: {} },
-      { name: "ARR Encuestas", category: "talent", subcategory: "encuestas", current_value: 68000, target_value: 90000, previous_value: 62000, unit: "USD", sort_order: 3, metadata: {} },
-      { name: "ARR Matriz de Talento", category: "talent", subcategory: "matriz_talento", current_value: 39000, target_value: 60000, previous_value: 35000, unit: "USD", sort_order: 4, metadata: {} },
-      { name: "ARR Reclutamiento (PYT)", category: "hiring", subcategory: "reclutamiento", current_value: 7200, target_value: 15000, previous_value: 6500, unit: "USD", sort_order: 5, metadata: {} },
-      { name: "NSM Learning - Horas de aprendizaje", category: "talent", subcategory: "learning", current_value: 11200, target_value: 15000, previous_value: 10500, unit: "hours", sort_order: 20, metadata: { nsm: true } },
-      { name: "NSM Objetivos - OKRs actualizados", category: "talent", subcategory: "objetivos", current_value: 280, target_value: 500, previous_value: 250, unit: "number", sort_order: 21, metadata: { nsm: true } },
-      { name: "NSM Encuestas - Tasa de respuesta", category: "talent", subcategory: "encuestas", current_value: 74, target_value: 85, previous_value: 70, unit: "percent", sort_order: 22, metadata: { nsm: true } },
-      { name: "NSM Matriz - Mapas actualizados", category: "talent", subcategory: "matriz_talento", current_value: 10, target_value: 24, previous_value: 8, unit: "number", sort_order: 23, metadata: { nsm: true } },
+      { name: "ARR Objetivos", category: "objetivos", current_value: 105000, target_value: 150000, previous_value: 98000, unit: "USD", sort_order: 1, metadata: {} },
+      { name: "ARR 360", category: "360", current_value: 118000, target_value: 160000, previous_value: 112000, unit: "USD", sort_order: 2, metadata: {} },
+      { name: "ARR Encuestas", category: "encuestas", current_value: 68000, target_value: 90000, previous_value: 62000, unit: "USD", sort_order: 3, metadata: {} },
+      { name: "ARR Matriz de Talento", category: "matrix", current_value: 39000, target_value: 60000, previous_value: 35000, unit: "USD", sort_order: 4, metadata: {} },
+      { name: "ARR Contratación", category: "hiring", current_value: 7200, target_value: 15000, previous_value: 6500, unit: "USD", sort_order: 5, metadata: {} },
+      { name: "ARR ASX", category: "asx", current_value: 45000, target_value: 70000, previous_value: 42000, unit: "USD", sort_order: 6, metadata: {} },
+      { name: "ARR PYT", category: "pyt", current_value: 28000, target_value: 50000, previous_value: 25000, unit: "USD", sort_order: 7, metadata: {} },
+      { name: "ARR Core", category: "core", current_value: 85000, target_value: 120000, previous_value: 80000, unit: "USD", sort_order: 8, metadata: {} },
+      { name: "ARR Planes y Tareas", category: "planes_tareas", current_value: 15000, target_value: 30000, previous_value: 12000, unit: "USD", sort_order: 9, metadata: {} },
+      { name: "ARR Learning Map", category: "learning_map", current_value: 25000, target_value: 40000, previous_value: 22000, unit: "USD", sort_order: 10, metadata: {} },
+      { name: "ARR Creator", category: "creator", current_value: 12000, target_value: 25000, previous_value: 10000, unit: "USD", sort_order: 11, metadata: {} },
+      { name: "NSM Learning - Horas de aprendizaje", category: "learning", current_value: 11200, target_value: 15000, previous_value: 10500, unit: "hours", sort_order: 20, metadata: { nsm: true } },
+      { name: "NSM Objetivos - OKRs actualizados", category: "objetivos", current_value: 280, target_value: 500, previous_value: 250, unit: "number", sort_order: 21, metadata: { nsm: true } },
+      { name: "NSM Encuestas - Tasa de respuesta", category: "encuestas", current_value: 74, target_value: 85, previous_value: 70, unit: "percent", sort_order: 22, metadata: { nsm: true } },
+      { name: "NSM Matriz - Mapas actualizados", category: "matrix", current_value: 10, target_value: 24, previous_value: 8, unit: "number", sort_order: 23, metadata: { nsm: true } },
+      { name: "NSM 360 - Evaluaciones completadas", category: "360", current_value: 420, target_value: 500, previous_value: 380, unit: "number", sort_order: 24, metadata: { nsm: true } },
+      { name: "NSM Learning Map - Mapas publicados", category: "learning_map", current_value: 450, target_value: 800, previous_value: 380, unit: "number", sort_order: 25, metadata: { nsm: true } },
+      { name: "NSM Creator - Cursos publicados", category: "creator", current_value: 220, target_value: 400, previous_value: 180, unit: "number", sort_order: 26, metadata: { nsm: true } },
       { name: "Usuarios activos semanales (WAU)", category: "general", current_value: 2500, target_value: 4000, previous_value: 2300, unit: "number", sort_order: 30, metadata: {} },
       { name: "Usuarios activos mensuales (MAU)", category: "general", current_value: 3900, target_value: 6000, previous_value: 3600, unit: "number", sort_order: 31, metadata: {} },
       { name: "Tasa de retención mensual", category: "general", current_value: 90, target_value: 95, previous_value: 88, unit: "percent", sort_order: 32, metadata: {} },
@@ -349,15 +443,24 @@ export default function MetricsPage() {
 
     const q2Data = [
       { name: "ARR Total Empresas", category: "general", current_value: 10200000, target_value: 12000000, previous_value: 9800000, unit: "USD", sort_order: 0, metadata: {} },
-      { name: "ARR Objetivos", category: "talent", subcategory: "objetivos", current_value: 117100, target_value: 150000, previous_value: 105000, unit: "USD", sort_order: 1, metadata: {} },
-      { name: "ARR 360", category: "talent", subcategory: "360", current_value: 127600, target_value: 160000, previous_value: 118000, unit: "USD", sort_order: 2, metadata: {} },
-      { name: "ARR Encuestas", category: "talent", subcategory: "encuestas", current_value: 74300, target_value: 90000, previous_value: 68000, unit: "USD", sort_order: 3, metadata: {} },
-      { name: "ARR Matriz de Talento", category: "talent", subcategory: "matriz_talento", current_value: 43100, target_value: 60000, previous_value: 39000, unit: "USD", sort_order: 4, metadata: {} },
-      { name: "ARR Reclutamiento (PYT)", category: "hiring", subcategory: "reclutamiento", current_value: 8200, target_value: 15000, previous_value: 7200, unit: "USD", sort_order: 5, metadata: {} },
-      { name: "NSM Learning - Horas de aprendizaje", category: "talent", subcategory: "learning", current_value: 12400, target_value: 15000, previous_value: 11200, unit: "hours", sort_order: 20, metadata: { nsm: true } },
-      { name: "NSM Objetivos - OKRs actualizados", category: "talent", subcategory: "objetivos", current_value: 320, target_value: 500, previous_value: 280, unit: "number", sort_order: 21, metadata: { nsm: true } },
-      { name: "NSM Encuestas - Tasa de respuesta", category: "talent", subcategory: "encuestas", current_value: 78, target_value: 85, previous_value: 74, unit: "percent", sort_order: 22, metadata: { nsm: true } },
-      { name: "NSM Matriz - Mapas actualizados", category: "talent", subcategory: "matriz_talento", current_value: 12, target_value: 24, previous_value: 10, unit: "number", sort_order: 23, metadata: { nsm: true } },
+      { name: "ARR Objetivos", category: "objetivos", current_value: 117100, target_value: 150000, previous_value: 105000, unit: "USD", sort_order: 1, metadata: {} },
+      { name: "ARR 360", category: "360", current_value: 127600, target_value: 160000, previous_value: 118000, unit: "USD", sort_order: 2, metadata: {} },
+      { name: "ARR Encuestas", category: "encuestas", current_value: 74300, target_value: 90000, previous_value: 68000, unit: "USD", sort_order: 3, metadata: {} },
+      { name: "ARR Matriz de Talento", category: "matrix", current_value: 43100, target_value: 60000, previous_value: 39000, unit: "USD", sort_order: 4, metadata: {} },
+      { name: "ARR Contratación", category: "hiring", current_value: 8200, target_value: 15000, previous_value: 7200, unit: "USD", sort_order: 5, metadata: {} },
+      { name: "ARR ASX", category: "asx", current_value: 48000, target_value: 70000, previous_value: 45000, unit: "USD", sort_order: 6, metadata: {} },
+      { name: "ARR PYT", category: "pyt", current_value: 31000, target_value: 50000, previous_value: 28000, unit: "USD", sort_order: 7, metadata: {} },
+      { name: "ARR Core", category: "core", current_value: 92000, target_value: 120000, previous_value: 85000, unit: "USD", sort_order: 8, metadata: {} },
+      { name: "ARR Planes y Tareas", category: "planes_tareas", current_value: 18000, target_value: 30000, previous_value: 15000, unit: "USD", sort_order: 9, metadata: {} },
+      { name: "ARR Learning Map", category: "learning_map", current_value: 28000, target_value: 40000, previous_value: 25000, unit: "USD", sort_order: 10, metadata: {} },
+      { name: "ARR Creator", category: "creator", current_value: 14000, target_value: 25000, previous_value: 12000, unit: "USD", sort_order: 11, metadata: {} },
+      { name: "NSM Learning - Horas de aprendizaje", category: "learning", current_value: 12400, target_value: 15000, previous_value: 11200, unit: "hours", sort_order: 20, metadata: { nsm: true } },
+      { name: "NSM Objetivos - OKRs actualizados", category: "objetivos", current_value: 320, target_value: 500, previous_value: 280, unit: "number", sort_order: 21, metadata: { nsm: true } },
+      { name: "NSM Encuestas - Tasa de respuesta", category: "encuestas", current_value: 78, target_value: 85, previous_value: 74, unit: "percent", sort_order: 22, metadata: { nsm: true } },
+      { name: "NSM Matriz - Mapas actualizados", category: "matrix", current_value: 12, target_value: 24, previous_value: 10, unit: "number", sort_order: 23, metadata: { nsm: true } },
+      { name: "NSM 360 - Evaluaciones completadas", category: "360", current_value: 450, target_value: 500, previous_value: 420, unit: "number", sort_order: 24, metadata: { nsm: true } },
+      { name: "NSM Learning Map - Mapas publicados", category: "learning_map", current_value: 500, target_value: 800, previous_value: 450, unit: "number", sort_order: 25, metadata: { nsm: true } },
+      { name: "NSM Creator - Cursos publicados", category: "creator", current_value: 260, target_value: 400, previous_value: 220, unit: "number", sort_order: 26, metadata: { nsm: true } },
       { name: "Usuarios activos semanales (WAU)", category: "general", current_value: 2800, target_value: 4000, previous_value: 2500, unit: "number", sort_order: 30, metadata: {} },
       { name: "Usuarios activos mensuales (MAU)", category: "general", current_value: 4300, target_value: 6000, previous_value: 3900, unit: "number", sort_order: 31, metadata: {} },
       { name: "Tasa de retención mensual", category: "general", current_value: 92, target_value: 95, previous_value: 90, unit: "percent", sort_order: 32, metadata: {} },
@@ -366,14 +469,14 @@ export default function MetricsPage() {
     ];
 
     const sharedData = [
-      { name: "Embudo Aprendizaje", category: "talent", subcategory: "learning", current_value: 2100, unit: "number", description: "Usuarios que completan cursos cada mes", sort_order: 10, metadata: { funnel: true, stages: [
+      { name: "Embudo Aprendizaje", category: "learning", current_value: 2100, unit: "number", description: "Usuarios que completan cursos cada mes", sort_order: 10, metadata: { funnel: true, stages: [
         { label: "Visitantes plataforma", value: 10000, rate: 1.0 },
         { label: "Cursos iniciados", value: 5200, rate: 0.52 },
         { label: "Lecciones completadas", value: 3800, rate: 0.73 },
         { label: "Cursos finalizados", value: 2100, rate: 0.55 },
         { label: "Certificaciones obtenidas", value: 850, rate: 0.40 },
       ]}},
-      { name: "Embudo Contratación", category: "hiring", subcategory: "reclutamiento", current_value: 85, unit: "number", description: "Contrataciones cerradas por mes", sort_order: 11, metadata: { funnel: true, stages: [
+      { name: "Embudo Contratación", category: "hiring", current_value: 85, unit: "number", description: "Contrataciones cerradas por mes", sort_order: 11, metadata: { funnel: true, stages: [
         { label: "Vacantes activas", value: 45, rate: 1.0 },
         { label: "Postulaciones recibidas", value: 320, rate: 1.0 },
         { label: "Screening completado", value: 280, rate: 0.88 },
@@ -381,9 +484,58 @@ export default function MetricsPage() {
         { label: "Ofertas enviadas", value: 120, rate: 0.63 },
         { label: "Contrataciones cerradas", value: 85, rate: 0.71 },
       ]}},
-      { name: "Embudo Evaluaciones 360", category: "talent", subcategory: "360", current_value: 420, unit: "number", description: "Evaluaciones completadas por ciclo", sort_order: 12, metadata: { funnel: true, stages: [
+      { name: "Embudo Evaluaciones 360", category: "360", current_value: 420, unit: "number", description: "Evaluaciones completadas por ciclo", sort_order: 12, metadata: { funnel: true, stages: [
         { label: "Evaluaciones iniciadas", value: 580, rate: 1.0 },
         { label: "Evaluaciones completadas", value: 420, rate: 0.72 },
+      ]}},
+      { name: "Embudo Objetivos", category: "objetivos", current_value: 185, unit: "number", description: "OKRs completados por trimestre", sort_order: 13, metadata: { funnel: true, stages: [
+        { label: "OKRs definidos", value: 320, rate: 1.0 },
+        { label: "OKRs en seguimiento", value: 280, rate: 0.88 },
+        { label: "OKRs actualizados", value: 240, rate: 0.86 },
+        { label: "OKRs completados", value: 185, rate: 0.77 },
+      ]}},
+      { name: "Embudo Encuestas", category: "encuestas", current_value: 3400, unit: "number", description: "Encuestas completadas por mes", sort_order: 14, metadata: { funnel: true, stages: [
+        { label: "Encuestas enviadas", value: 8500, rate: 1.0 },
+        { label: "Encuestas iniciadas", value: 5200, rate: 0.61 },
+        { label: "Encuestas completadas", value: 3400, rate: 0.65 },
+        { label: "Reportes generados", value: 1200, rate: 0.35 },
+      ]}},
+      { name: "Embudo Matriz de Talento", category: "matrix", current_value: 180, unit: "number", description: "Mapas de talento actualizados por mes", sort_order: 15, metadata: { funnel: true, stages: [
+        { label: "Colaboradores mapeados", value: 450, rate: 1.0 },
+        { label: "Evaluaciones realizadas", value: 380, rate: 0.84 },
+        { label: "Mapas actualizados", value: 280, rate: 0.74 },
+        { label: "Planes de acción", value: 180, rate: 0.64 },
+      ]}},
+      { name: "Embudo ASX", category: "asx", current_value: 890, unit: "number", description: "Encuestas de experiencia completadas", sort_order: 16, metadata: { funnel: true, stages: [
+        { label: "Encuestas enviadas", value: 3200, rate: 1.0 },
+        { label: "Participaciones", value: 2100, rate: 0.66 },
+        { label: "Insights generados", value: 1500, rate: 0.71 },
+        { label: "Acciones tomadas", value: 890, rate: 0.59 },
+      ]}},
+      { name: "Embudo PYT", category: "pyt", current_value: 320, unit: "number", description: "Evaluaciones de desempeño completadas", sort_order: 17, metadata: { funnel: true, stages: [
+        { label: "Evaluaciones iniciadas", value: 640, rate: 1.0 },
+        { label: "Autoevaluaciones", value: 580, rate: 0.91 },
+        { label: "Evaluaciones pares", value: 480, rate: 0.83 },
+        { label: "Feedback entregado", value: 400, rate: 0.83 },
+        { label: "Metas actualizadas", value: 320, rate: 0.80 },
+      ]}},
+      { name: "Embudo Aprendizaje - Learning Map", category: "learning_map", current_value: 450, unit: "number", description: "Mapas de aprendizaje creados", sort_order: 18, metadata: { funnel: true, stages: [
+        { label: "Usuarios activos", value: 1200, rate: 1.0 },
+        { label: "Mapas iniciados", value: 850, rate: 0.71 },
+        { label: "Mapas completados", value: 620, rate: 0.73 },
+        { label: "Mapas publicados", value: 450, rate: 0.73 },
+      ]}},
+      { name: "Embudo Creator", category: "creator", current_value: 180, unit: "number", description: "Contenido creado por mes", sort_order: 19, metadata: { funnel: true, stages: [
+        { label: "Creadores activos", value: 340, rate: 1.0 },
+        { label: "Cursos iniciados", value: 280, rate: 0.82 },
+        { label: "Cursos publicados", value: 220, rate: 0.79 },
+        { label: "Cursos certificados", value: 180, rate: 0.82 },
+      ]}},
+      { name: "Embudo Core", category: "core", current_value: 1200, unit: "number", description: "Empresas activas en Core", sort_order: 20, metadata: { funnel: true, stages: [
+        { label: "Empresas registradas", value: 2400, rate: 1.0 },
+        { label: "API activa", value: 1800, rate: 0.75 },
+        { label: "Personalización completa", value: 1500, rate: 0.83 },
+        { label: "Gestión activa", value: 1200, rate: 0.80 },
       ]}},
     ];
 
@@ -481,24 +633,26 @@ export default function MetricsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-[#161927]/50 border border-white/5 rounded-2xl p-1" role="tablist">
-        {TABS.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            role="tab"
-            aria-selected={activeTab === tab.key}
-            className={`flex-1 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-              activeTab === tab.key
-                ? "bg-primary text-white shadow-lg shadow-primary/20"
-                : "text-white/40 hover:text-white hover:bg-white/5"
-            }`}
-          >
-            {tab.label}
-            <span className="block text-[8px] font-normal normal-case tracking-normal mt-0.5 opacity-60">{tab.desc}</span>
-          </button>
-        ))}
-      </div>
+      {tabs.length > 1 && (
+        <div className="flex gap-1 bg-[#161927]/50 border border-white/5 rounded-2xl p-1" role="tablist">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              role="tab"
+              aria-selected={activeTab === tab.key}
+              className={`flex-1 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                activeTab === tab.key
+                  ? "bg-primary text-white shadow-lg shadow-primary/20"
+                  : "text-white/40 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              {tab.label}
+              <span className="block text-[8px] font-normal normal-case tracking-normal mt-0.5 opacity-60">{tab.desc}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* KPI row */}
       <div className="grid grid-cols-3 gap-4">
@@ -513,22 +667,25 @@ export default function MetricsPage() {
                 {nsmMetrics.length > 0 && <span className="text-[9px] bg-[#f49e04]/20 text-[#f49e04] px-1.5 py-0.5 rounded font-bold uppercase tracking-widest">{nsmMetrics.length} NSM</span>}
               </div>
             </div>
-            <div className="bg-gradient-to-br from-[#2ec6ff]/10 to-transparent border border-[#2ec6ff]/20 rounded-2xl p-5">
-              <div className="text-[10px] text-[#2ec6ff] font-black uppercase tracking-widest mb-1">ARR Talent</div>
-              <div className="text-2xl font-black text-white font-mono">{formatMetricValue(talentArr, "USD")}</div>
-              <div className="text-[10px] text-white/30 mt-1">{talentMetrics.length} métricas</div>
-            </div>
-            <div className="bg-gradient-to-br from-[#f49e04]/10 to-transparent border border-[#f49e04]/20 rounded-2xl p-5">
-              <div className="text-[10px] text-[#f49e04] font-black uppercase tracking-widest mb-1">ARR Hiring</div>
-              <div className="text-2xl font-black text-white font-mono">{formatMetricValue(hiringArr, "USD")}</div>
-              <div className="text-[10px] text-white/30 mt-1">{hiringMetrics.length} métricas</div>
-            </div>
+            {Object.entries(categoryArr).slice(0, 2).map(([cat, { arr, count }], idx) => {
+              const style = getCatStyle(cat, idx);
+              return (
+                <div key={cat} className={`bg-gradient-to-br from-[${style.hex}]/10 to-transparent border border-[${style.hex}]/20 rounded-2xl p-5`}>
+                  <div className={`text-[10px] ${style.text} font-black uppercase tracking-widest mb-1`}>ARR {CATEGORY_LABELS[cat] || cat.charAt(0).toUpperCase() + cat.slice(1)}</div>
+                  <div className="text-2xl font-black text-white font-mono">{formatMetricValue(arr, "USD")}</div>
+                  <div className="text-[10px] text-white/30 mt-1">{count} métricas</div>
+                </div>
+              );
+            })}
           </>
         ) : (
           <>
             <div className="bg-gradient-to-br from-[#1a6bff]/10 to-transparent border border-primary/20 rounded-2xl p-5">
               <div className="text-[10px] text-primary font-black uppercase tracking-widest mb-1">ARR {activeTab}</div>
-              <div className="text-2xl font-black text-white font-mono">{formatMetricValue(activeTab === "Talent" ? talentArr : hiringArr, "USD")}</div>
+              <div className="text-2xl font-black text-white font-mono">{formatMetricValue(
+                arrMetrics.filter(m => m.category === activeTab.toLowerCase()).reduce((sum, m) => sum + (m.current_value || 0), 0),
+                "USD"
+              )}</div>
               <div className="flex items-center gap-3 mt-2">
                 <span className="text-[9px] text-white/30">{filteredByTeam.length} métricas</span>
                 {funnelMetrics.filter(m => m.category === activeTab.toLowerCase()).length > 0 && (
@@ -626,7 +783,7 @@ export default function MetricsPage() {
             const productCards = PRODUCT_GROUPS
               .filter(pg => pg.key !== "general")
               .map(pg => {
-                const productMetrics = metrics.filter(m => m.subcategory === pg.key);
+                const productMetrics = metrics.filter(m => m.category === pg.key);
                 if (productMetrics.length === 0) return null;
                 const arr = productMetrics.find(m => m.unit === "USD");
                 const nsm = productMetrics.find(m => (m.metadata as any)?.nsm);
@@ -693,8 +850,8 @@ export default function MetricsPage() {
                 <span className="text-[10px] text-white/20 font-mono">{pg.metrics.length} métricas</span>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {pg.metrics.map(m => (
-                  <MetricCard key={m.id} metric={m} logs={logsByMetric[m.id] || []} />
+                {pg.metrics.map((m: Metric) => (
+                  <MetricCard key={m.id} metric={m} logs={logsByMetric[m.id] || []} catIndex={getCategoryIndex(nonGeneralCategories, activeTab.toLowerCase())} />
                 ))}
               </div>
             </div>
@@ -713,7 +870,7 @@ export default function MetricsPage() {
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {genMetrics.map(m => (
-                    <MetricCard key={m.id} metric={m} logs={logsByMetric[m.id] || []} />
+                    <MetricCard key={m.id} metric={m} logs={logsByMetric[m.id] || []} catIndex={-1} />
                   ))}
                 </div>
               </div>

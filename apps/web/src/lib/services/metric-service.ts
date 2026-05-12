@@ -155,24 +155,62 @@ export async function createEntityLink(
   }
 }
 
+export interface MetricsConfig {
+  selected_categories: string[];
+}
+
+export async function getMetricsConfig(workspaceId: string): Promise<{ success: boolean; data?: MetricsConfig; error?: string }> {
+  const { data, error } = await supabase
+    .from("workspaces")
+    .select("metrics_config")
+    .eq("id", workspaceId)
+    .single();
+  if (error) return { success: false, error: error.message };
+  const config = (data?.metrics_config || {}) as MetricsConfig;
+  return {
+    success: true,
+    data: {
+      selected_categories: config.selected_categories || [],
+    },
+  };
+}
+
+export async function updateMetricsConfig(workspaceId: string, config: MetricsConfig): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("workspaces")
+    .update({ metrics_config: config, updated_at: new Date().toISOString() })
+    .eq("id", workspaceId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 export async function seedMetricsFromPdf(
   workspaceId: string
 ): Promise<{ success: boolean; data?: Metric[]; error?: string }> {
   const metrics: Omit<Metric, "id" | "created_at" | "updated_at">[] = [
-    { workspace_id: workspaceId, name: "ARR Objetivos", category: "talent", subcategory: "objetivos", current_value: 117100, unit: "USD", source: "pdf_seed", sort_order: 1, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR Usabilidad Objetivos", category: "talent", subcategory: "objetivos", current_value: 67000, unit: "USD", source: "pdf_seed", sort_order: 2, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR NSM Objetivos", category: "talent", subcategory: "objetivos", current_value: 39700, unit: "USD", source: "pdf_seed", sort_order: 3, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR Encuestas", category: "talent", subcategory: "encuestas", current_value: 74300, unit: "USD", source: "pdf_seed", sort_order: 4, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR NSM Encuestas", category: "talent", subcategory: "encuestas", current_value: 29300, unit: "USD", source: "pdf_seed", sort_order: 5, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR Matriz de Talento", category: "talent", subcategory: "matriz_talento", current_value: 43100, unit: "USD", source: "pdf_seed", sort_order: 6, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR NSM Matriz de Talento", category: "talent", subcategory: "matriz_talento", current_value: 3300, unit: "USD", source: "pdf_seed", sort_order: 7, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR 360", category: "talent", subcategory: "360", current_value: 127600, unit: "USD", source: "pdf_seed", sort_order: 8, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR NSM 360", category: "talent", subcategory: "360", current_value: 48300, unit: "USD", source: "pdf_seed", sort_order: 9, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR Reclutamiento (PYT)", category: "hiring", subcategory: "reclutamiento", current_value: 8200, unit: "USD", source: "pdf_seed", sort_order: 10, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR NSM Reclutamiento", category: "hiring", subcategory: "reclutamiento", current_value: 1300, unit: "USD", source: "pdf_seed", sort_order: 11, metadata: {} },
-    { workspace_id: workspaceId, name: "ARR Total Empresas", category: "general", subcategory: undefined, current_value: 10200000, unit: "USD", source: "pdf_seed", sort_order: 0, metadata: {} },
-    { workspace_id: workspaceId, name: "Empresas en NSM Objetivos", category: "talent", subcategory: "objetivos", current_value: 39, unit: "number", source: "pdf_seed", sort_order: 12, metadata: {} },
-    { workspace_id: workspaceId, name: "Empresas en NSM Encuestas", category: "talent", subcategory: "encuestas", current_value: 967, unit: "number", source: "pdf_seed", sort_order: 13, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR Objetivos", category: "objetivos", current_value: 117100, unit: "USD", source: "pdf_seed", sort_order: 1, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR Usabilidad Objetivos", category: "objetivos", current_value: 67000, unit: "USD", source: "pdf_seed", sort_order: 2, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR NSM Objetivos", category: "objetivos", current_value: 39700, unit: "USD", source: "pdf_seed", sort_order: 3, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR Encuestas", category: "encuestas", current_value: 74300, unit: "USD", source: "pdf_seed", sort_order: 4, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR NSM Encuestas", category: "encuestas", current_value: 29300, unit: "USD", source: "pdf_seed", sort_order: 5, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR Matriz de Talento", category: "matrix", current_value: 43100, unit: "USD", source: "pdf_seed", sort_order: 6, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR NSM Matriz de Talento", category: "matrix", current_value: 3300, unit: "USD", source: "pdf_seed", sort_order: 7, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR 360", category: "360", current_value: 127600, unit: "USD", source: "pdf_seed", sort_order: 8, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR NSM 360", category: "360", current_value: 48300, unit: "USD", source: "pdf_seed", sort_order: 9, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR Contratación", category: "hiring", current_value: 8200, unit: "USD", source: "pdf_seed", sort_order: 10, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR NSM Contratación", category: "hiring", current_value: 1300, unit: "USD", source: "pdf_seed", sort_order: 11, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR ASX", category: "asx", current_value: 48000, unit: "USD", source: "pdf_seed", sort_order: 12, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR PYT", category: "pyt", current_value: 31000, unit: "USD", source: "pdf_seed", sort_order: 13, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR Learning Map", category: "learning_map", current_value: 28000, unit: "USD", source: "pdf_seed", sort_order: 14, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR NSM Learning Map", category: "learning_map", current_value: 5000, unit: "USD", source: "pdf_seed", sort_order: 15, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR Creator", category: "creator", current_value: 14000, unit: "USD", source: "pdf_seed", sort_order: 16, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR NSM Creator", category: "creator", current_value: 3000, unit: "USD", source: "pdf_seed", sort_order: 17, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR Core", category: "core", current_value: 92000, unit: "USD", source: "pdf_seed", sort_order: 18, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR NSM Core", category: "core", current_value: 15000, unit: "USD", source: "pdf_seed", sort_order: 19, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR Planes y Tareas", category: "planes_tareas", current_value: 18000, unit: "USD", source: "pdf_seed", sort_order: 20, metadata: {} },
+    { workspace_id: workspaceId, name: "ARR Total Empresas", category: "general", current_value: 10200000, unit: "USD", source: "pdf_seed", sort_order: 0, metadata: {} },
+    { workspace_id: workspaceId, name: "Empresas en NSM Objetivos", category: "objetivos", current_value: 39, unit: "number", source: "pdf_seed", sort_order: 14, metadata: {} },
+    { workspace_id: workspaceId, name: "Empresas en NSM Encuestas", category: "encuestas", current_value: 967, unit: "number", source: "pdf_seed", sort_order: 15, metadata: {} },
   ];
 
   const { data, error } = await supabase

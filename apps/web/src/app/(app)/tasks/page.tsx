@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { getTasks, createOrUpdateTask, deleteTask } from '@/lib/services/task-service';
 import { getOrCreateWorkspace } from '@/lib/services/workspace-service';
 import { categorizeItem, getResponsable } from '@/lib/services/categorization-service';
+import { ALL_PRODUCTS } from '@/lib/services/analysis-config-service';
 import { TaskDrawer } from '@/components/day/TaskDrawer';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
@@ -39,6 +40,7 @@ interface Task {
 
 const TEAMS = ['Todas', 'Talent', 'Hiring', 'UX', 'Otras'];
 const STATUS_OPTIONS = ['Todas', 'Pendientes', 'En progreso', 'Completadas', 'Bloqueadas'];
+const PRODUCTS = ['Todos', ...ALL_PRODUCTS.map(p => p.label)];
 
 // Custom Select Component
 const CustomSelect = ({
@@ -111,6 +113,7 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTeam, setSelectedTeam] = useState('Todas');
   const [selectedStatus, setSelectedStatus] = useState('Todas');
+  const [selectedProduct, setSelectedProduct] = useState('Todos');
   const [selectedResponsable, setSelectedResponsable] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -254,6 +257,17 @@ export default function TasksPage() {
       filtered = filtered.filter(t => validStatuses.includes((t.status || '').toLowerCase()));
     }
 
+    // Product filter
+    if (selectedProduct !== 'Todos') {
+      const product = ALL_PRODUCTS.find(p => p.label === selectedProduct);
+      if (product) {
+        filtered = filtered.filter(t => {
+          const team = (t.team || '').toLowerCase();
+          return team === product.key || team === product.label.toLowerCase();
+        });
+      }
+    }
+
     // Responsable filter - handle multiple responsables separated by " | "
     if (selectedResponsable) {
       filtered = filtered.filter(t => {
@@ -298,7 +312,7 @@ export default function TasksPage() {
     }
 
     setFilteredTasks(filtered);
-  }, [tasks, selectedTeam, selectedStatus, selectedResponsable, searchQuery, dueDateRange, createdDateRange]);
+  }, [tasks, selectedTeam, selectedStatus, selectedProduct, selectedResponsable, searchQuery, dueDateRange, createdDateRange]);
 
   // Calculate KPIs
   const kpis = {
@@ -453,6 +467,14 @@ export default function TasksPage() {
             placeholder="Equipo"
           />
 
+          {/* Producto Dropdown */}
+          <CustomSelect
+            value={selectedProduct}
+            onChange={setSelectedProduct}
+            options={PRODUCTS}
+            placeholder="Producto"
+          />
+
           {/* Estado Dropdown */}
           <CustomSelect
             value={selectedStatus}
@@ -477,7 +499,7 @@ export default function TasksPage() {
           />
 
           {/* Clear button */}
-          {(selectedTeam !== 'Todas' || selectedStatus !== 'Todas' || selectedResponsable || searchQuery ||
+          {(selectedTeam !== 'Todas' || selectedStatus !== 'Todas' || selectedProduct !== 'Todos' || selectedResponsable || searchQuery ||
             dueDateRange || createdDateRange) && (
             <Button
               variant="ghost"
@@ -485,6 +507,7 @@ export default function TasksPage() {
               onClick={() => {
                 setSelectedTeam('Todas');
                 setSelectedStatus('Todas');
+                setSelectedProduct('Todos');
                 setSelectedResponsable('');
                 setSearchQuery('');
                 setDueDateRange(null);

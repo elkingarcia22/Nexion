@@ -4,9 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateWorkspace } from '@/lib/services/workspace-service';
 import { getAlerts, Alert } from '@/lib/services/alert-service';
+import { ALL_PRODUCTS } from '@/lib/services/analysis-config-service';
 
 const TEAMS = ['Todas', 'Talent', 'Hiring', 'UX', 'Otras'];
 const PRIORITY_OPTIONS = ['Todas', 'Crítica', 'Alta', 'Media'];
+const PRODUCTS = ['Todos', ...ALL_PRODUCTS.map(p => p.label)];
 
 const CustomSelect = ({
   value, onChange, options, placeholder = "Selecciona...", className = ""
@@ -56,6 +58,7 @@ export default function AlertsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTeam, setSelectedTeam] = useState('Todas');
   const [selectedPriority, setSelectedPriority] = useState('Todas');
+  const [selectedProduct, setSelectedProduct] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -98,6 +101,15 @@ export default function AlertsPage() {
     if (selectedPriority !== 'Todas') {
       const priorityMap: Record<string, string> = { 'Crítica': 'critica', 'Alta': 'alta', 'Media': 'media' };
       filtered = filtered.filter(a => (a.priority || 'media').toLowerCase() === priorityMap[selectedPriority]);
+    }
+    if (selectedProduct !== 'Todos') {
+      const product = ALL_PRODUCTS.find(p => p.label === selectedProduct);
+      if (product) {
+        filtered = filtered.filter(a => {
+          const cat = (a.category || '').toLowerCase();
+          return cat === product.key || cat === product.label.toLowerCase();
+        });
+      }
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -156,9 +168,10 @@ export default function AlertsPage() {
       <div className="bg-[#161927]/50 border border-white/5 rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           <CustomSelect value={selectedTeam} onChange={setSelectedTeam} options={TEAMS} placeholder="Equipo" />
+          <CustomSelect value={selectedProduct} onChange={setSelectedProduct} options={PRODUCTS} placeholder="Producto" />
           <CustomSelect value={selectedPriority} onChange={setSelectedPriority} options={PRIORITY_OPTIONS} placeholder="Prioridad" />
-          {(selectedTeam !== 'Todas' || selectedPriority !== 'Todas' || searchQuery) && (
-            <button onClick={() => { setSelectedTeam('Todas'); setSelectedPriority('Todas'); setSearchQuery(''); }} className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
+          {(selectedTeam !== 'Todas' || selectedPriority !== 'Todas' || selectedProduct !== 'Todos' || searchQuery) && (
+            <button onClick={() => { setSelectedTeam('Todas'); setSelectedPriority('Todas'); setSelectedProduct('Todos'); setSearchQuery(''); }} className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
               Limpiar
             </button>
           )}

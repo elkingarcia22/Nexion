@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const KNOWN_PRIVATE_CHANNELS = [
-  { id: "C084AP7K4Q2", name: "triada-growth" },
-];
-
 async function syncSlackSources(supabase: any, workspaceId: string, date: Date) {
   const slackToken = process.env.NEXT_PUBLIC_SLACK_BOT_TOKEN;
   if (!slackToken) return 0;
@@ -21,41 +17,100 @@ async function syncSlackSources(supabase: any, workspaceId: string, date: Date) 
   todayStart.setHours(23, 59, 59, 999);
   const latest = Math.floor(todayStart.getTime() / 1000).toString();
 
-  const channelsResp = await fetch("https://slack.com/api/users.conversations", {
+  // Get public channels via conversations.list
+  const channelsResp = await fetch("https://slack.com/api/conversations.list", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${slackToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ types: "public_channel,private_channel", limit: 200, exclude_archived: true }),
+    body: JSON.stringify({ types: "public_channel", limit: 200, exclude_archived: true }),
   });
   const channelsData = await channelsResp.json();
   if (!channelsData.ok) return 0;
 
-  const channels = [...(channelsData.channels || []), ...KNOWN_PRIVATE_CHANNELS];
-  let added = 0;
+  const allChannels: any[] = channelsData.channels?.filter((ch: any) => ch.is_member) || [];
 
-  for (const channel of channels) {
-    const msgResp = await fetch("https://slack.com/api/conversations.history", {
+  // Attempt cursor pagination
+  let cursor = channelsData.response_metadata?.next_cursor;
+  while (cursor) {
+    const pageResp = await fetch("https://slack.com/api/conversations.list", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${slackToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ channel: channel.id, oldest, latest, limit: 50 }),
+      body: JSON.stringify({ types: "public_channel", limit: 200, exclude_archived: true, cursor }),
     });
-    const msgData = await msgResp.json();
-    if (!msgData.ok) continue;
+    const pageData = await pageResp.json();
+    if (!pageData.ok) break;
+    if (pageData.channels) {
+      for (const ch of pageData.channels) {
+        if (ch.is_member && !allChannels.some((c: any) => c.id === ch.id)) {
+          allChannels.push(ch);
+        }
+      }
+    }
+    cursor = pageData.response_metadata?.next_cursor;
+  }
 
-    const messages = msgData.messages || [];
-    if (messages.length === 0) continue;
+  // Also try to load known private channels from DB
+  const { data: dbPrivateChannels } = await supabase
+    .from("app_slack_channels")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("is_private", true);
 
-    const preview = messages.slice(0, 5).map((m: any) => m.text).join("\n---\n");
+  if (dbPrivateChannels) {
+    for (const pc of dbPrivateChannels) {
+      if (!allChannels.some((c: any) => c.id === pc.channel_id)) {
+        const infoResp = await fetch(`https://slack.com/api/conversations.info?channel=${pc.channel_id}`, {
+          headers: { "Authorization": `Bearer ${slackToken}` },
+        });
+        const infoData = await infoResp.json();
+        if (infoData.ok && infoData.channel?.is_member) {
+          allChannels.push(infoData.channel);
+        }
+      }
+    }
+  }
+
+  let added = 0;
+
+  for (const channel of allChannels) {
+    let allMessages: any[] = [];
+    let msgCursor: string | undefined = undefined;
+
+    do {
+      const msgBody: any = { channel: channel.id, oldest, latest, limit: 200 };
+      if (msgCursor) msgBody.cursor = msgCursor;
+
+      const msgResp = await fetch("https://slack.com/api/conversations.history", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${slackToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(msgBody),
+      });
+      const msgData = await msgResp.json();
+      if (!msgData.ok) break;
+
+      if (msgData.messages) {
+        allMessages = allMessages.concat(msgData.messages);
+      }
+      msgCursor = msgData.response_metadata?.next_cursor;
+    } while (msgCursor);
+
+    if (allMessages.length === 0) continue;
+
+    const preview = allMessages.slice(0, 5).map((m: any) => m.text).join("\n---\n");
     const metadata = {
       channelId: channel.id,
       channelName: channel.name,
-      messageCount: messages.length,
-      messages: messages.map((m: any) => ({ user: m.user, text: m.text, ts: m.ts })),
+      isPrivate: channel.is_private || false,
+      messageCount: allMessages.length,
+      messages: allMessages.map((m: any) => ({ user: m.user, text: m.text, ts: m.ts })),
       preview: preview.substring(0, 2000),
     };
 
@@ -137,12 +192,22 @@ async function getObjectives(supabase: any, workspaceId: string) {
 }
 
 async function runGeminiAnalysis(data: any) {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const apiKey = data.apiKey || process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) return null;
 
   const nextDayDate = new Date(data.date);
   nextDayDate.setDate(nextDayDate.getDate() + 1);
   const nextDay = nextDayDate.toISOString().split('T')[0];
+
+  const hasTasksProductFilter = data.analysisConfig?.resolved_tasks?.length > 0;
+  const hasOpenProductFilter = data.analysisConfig?.resolved_open?.length > 0;
+  const hasResponsibleFilter = data.analysisConfig?.filter_responsibles && data.analysisConfig?.selected_responsibles?.length > 0;
+
+  const openCategories = [
+    ...(data.analysisConfig?.resolved_open || []),
+    ...(data.analysisConfig?.custom_categories || []),
+  ].filter(Boolean);
+  const openCategoriesStr = openCategories.length > 0 ? openCategories.join(", ") : "cualquier categoría";
 
   const prompt = `
     🔴 REGLA ABSOLUTA: TODO el contenido de la respuesta debe estar 100% EN ESPAÑOL.
@@ -167,14 +232,22 @@ async function runGeminiAnalysis(data: any) {
     --- FIN ---
     `).join('\n')}
 
+    ${hasTasksProductFilter ? `FILTRO DE TAREAS: Solo genera TAREAS relacionadas con estos productos: ${data.analysisConfig.resolved_tasks.join(", ")}. Ignora otros temas para las tareas.` : ""}
+
+    ${hasOpenProductFilter ? `FILTRO DE INSIGHTS/MÉTRICAS/ALERTAS: Para insights, métricas y alertas usa estas categorías: ${openCategoriesStr}. Puedes usar cualquiera de estas.` : `CATEGORÍAS PARA INSIGHTS/MÉTRICAS/ALERTAS: Puedes usar cualquier categoría, incluyendo estas sugeridas: ${openCategoriesStr}.`}
+
+    ${hasResponsibleFilter ? `FILTRO DE RESPONSABLES: Solo genera tareas e insights donde el responsable sea uno de: ${data.analysisConfig.selected_responsibles.join(", ")}. Ignora menciones de otras personas.` : ""}
+
+    CATEGORÍAS VÁLIDAS para el campo "category": objetivos, encuestas, matriz_talento, evaluacion_360, aprendizaje, modo_ia_estudio, lms_creator, planes_formacion, universidad_corporativa, certificados, seguimientos, metricas_empresa, assessments, learning_map, gestion_usuarios, organigrama, gestion_empresa, personalizacion, roles_permisos, comunicaciones, api, app, core_ia, chat_soporte, planes_tareas, contratacion, pyt
+
     ESTRUCTURA DE RESPUESTA (JSON — todos los textos en español):
     {
       "summary": "Resumen ejecutivo del día",
-      "tasks": [{ "title": "...", "priority": "alta/media/baja", "category": "Talent/Hiring/UX/Other", "responsible": "Nombre", "goal_id": "ID o null", "linked_jira_key": "Key o null", "due_date": "YYYY-MM-DD o null" }],
-      "insights": [{ "title": "...", "description": "...", "category": "Talent/Hiring/UX/Other", "responsible": "..." }],
-      "metrics": [{ "title": "...", "value": "...", "change": "...", "status": "alta/media/baja", "category": "Talent/Hiring/UX/Other" }],
-      "alerts": [{ "title": "...", "description": "...", "priority": "critica/alta/media", "category": "Talent/Hiring/UX/Other" }],
-      "feedback": [{ "title": "...", "content": "...", "type": "producto/laboral/personal", "category": "Talent/Hiring/UX/Other" }]
+      "tasks": [{ "title": "...", "priority": "alta/media/baja", "category": "objetivos/encuestas/matriz_talento/evaluacion_360/aprendizaje/modo_ia_estudio/lms_creator/planes_formacion/universidad_corporativa/certificados/seguimientos/metricas_empresa/assessments/learning_map/gestion_usuarios/organigrama/gestion_empresa/personalizacion/roles_permisos/comunicaciones/api/app/core_ia/chat_soporte/planes_tareas/contratacion/pyt", "responsible": "Nombre", "goal_id": "ID o null", "linked_jira_key": "Key o null", "due_date": "YYYY-MM-DD o null" }],
+      "insights": [{ "title": "...", "description": "...", "category": "objetivos/encuestas/matriz_talento/evaluacion_360/aprendizaje/modo_ia_estudio/lms_creator/planes_formacion/universidad_corporativa/certificados/seguimientos/metricas_empresa/assessments/learning_map/gestion_usuarios/organigrama/gestion_empresa/personalizacion/roles_permisos/comunicaciones/api/app/core_ia/chat_soporte/planes_tareas/contratacion/pyt", "responsible": "..." }],
+      "metrics": [{ "title": "...", "value": "...", "change": "...", "status": "alta/media/baja", "category": "objetivos/encuestas/matriz_talento/evaluacion_360/aprendizaje/modo_ia_estudio/lms_creator/planes_formacion/universidad_corporativa/certificados/seguimientos/metricas_empresa/assessments/learning_map/gestion_usuarios/organigrama/gestion_empresa/personalizacion/roles_permisos/comunicaciones/api/app/core_ia/chat_soporte/planes_tareas/contratacion/pyt" }],
+      "alerts": [{ "title": "...", "description": "...", "priority": "critica/alta/media", "category": "objetivos/encuestas/matriz_talento/evaluacion_360/aprendizaje/modo_ia_estudio/lms_creator/planes_formacion/universidad_corporativa/certificados/seguimientos/metricas_empresa/assessments/learning_map/gestion_usuarios/organigrama/gestion_empresa/personalizacion/roles_permisos/comunicaciones/api/app/core_ia/chat_soporte/planes_tareas/contratacion/pyt" }],
+      "feedback": [{ "title": "...", "content": "...", "type": "producto/laboral/personal", "category": "objetivos/encuestas/matriz_talento/evaluacion_360/aprendizaje/modo_ia_estudio/lms_creator/planes_formacion/universidad_corporativa/certificados/seguimientos/metricas_empresa/assessments/learning_map/gestion_usuarios/organigrama/gestion_empresa/personalizacion/roles_permisos/comunicaciones/api/app/core_ia/chat_soporte/planes_tareas/contratacion/pyt" }]
     }
   `;
 
@@ -236,116 +309,189 @@ export async function POST(request: Request) {
     const d = String(targetDate.getDate()).padStart(2, "0");
     const dateStr = `${y}-${m}-${d}`;
 
-    // Find workspace
-    let workspaceId = explicitWs;
-    if (!workspaceId) {
-      const { data: workspaces } = await supabase.from("workspaces").select("id").limit(1);
+    // Find workspaces
+    let workspaceIds: string[] = [];
+    if (explicitWs) {
+      workspaceIds = [explicitWs];
+    } else {
+      const { data: workspaces } = await supabase.from("workspaces").select("id");
       if (!workspaces || workspaces.length === 0) {
         return NextResponse.json({ error: "No se encontró workspace" }, { status: 404 });
       }
-      workspaceId = workspaces[0].id;
+      workspaceIds = workspaces.map((w: any) => w.id);
     }
 
     const log: string[] = [];
-    log.push(`Iniciando análisis automático para ${dateStr} (workspace: ${workspaceId})`);
+    log.push(`Iniciando análisis automático para ${dateStr} (${workspaceIds.length} workspace(s))`);
 
-    // 1. Sync Slack
-    const slackCount = await syncSlackSources(supabase, workspaceId, targetDate);
-    log.push(`Slack: ${slackCount} fuente(s) nueva(s)`);
+    for (const workspaceId of workspaceIds) {
+      log.push(`--- Procesando workspace ${workspaceId} ---`);
 
-    // 2. Get sources
-    const dbSources = await getSources(supabase, workspaceId, targetDate);
-    const sourcesWithContent = await getSourcesWithContent(dbSources);
-    log.push(`Fuentes: ${dbSources.length} en DB, ${sourcesWithContent.length} con contenido`);
+      // 1. Sync Slack
+      const slackCount = await syncSlackSources(supabase, workspaceId, targetDate);
+      log.push(`Slack: ${slackCount} fuente(s) nueva(s)`);
 
-    // 3. Get objectives
-    const objectives = await getObjectives(supabase, workspaceId);
-    log.push(`Objetivos: ${objectives.length}`);
+      // 2. Get sources
+      const dbSources = await getSources(supabase, workspaceId, targetDate);
+      const sourcesWithContent = await getSourcesWithContent(dbSources);
+      log.push(`Fuentes: ${dbSources.length} en DB, ${sourcesWithContent.length} con contenido`);
 
-    // 4. Get Jira tasks
-    let jiraContext: any[] = [];
-    try {
-      const { data: workspaces } = await supabase
-        .from("workspaces")
-        .select("jira_config")
-        .eq("id", workspaceId)
-        .single();
+      // 3. Get objectives
+      const objectives = await getObjectives(supabase, workspaceId);
+      log.push(`Objetivos: ${objectives.length}`);
 
-      if (workspaces?.jira_config?.domain && workspaces?.jira_config?.email && workspaces?.jira_config?.api_token) {
-        const auth = Buffer.from(`${workspaces.jira_config.email}:${workspaces.jira_config.api_token}`).toString("base64");
-        const jql = "assignee = currentUser() AND updated >= -30d ORDER BY updated DESC";
-        const jiraResp = await fetch(`https://${workspaces.jira_config.domain}/rest/agile/1.0/issue/search?jql=${encodeURIComponent(jql)}&maxResults=50`, {
-          headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
-        });
+      // 4. Get Jira tasks + Gemini API key
+      let jiraContext: any[] = [];
+      let geminiApiKey: string | null = null;
+      try {
+        const { data: ws } = await supabase
+          .from("workspaces")
+          .select("jira_config, gemini_api_key")
+          .eq("id", workspaceId)
+          .single();
 
-        if (jiraResp.ok) {
-          const jiraData = await jiraResp.json();
-          jiraContext = (jiraData.issues || []).map((issue: any) => ({
-            key: issue.key,
-            title: issue.fields?.summary || "",
-            subtasks: (issue.fields?.subtasks || []).map((st: any) => ({ id: st.id, title: st.fields?.summary || "" })),
-          }));
+        if (ws?.gemini_api_key) geminiApiKey = ws.gemini_api_key;
+
+        if (ws?.jira_config?.domain && ws?.jira_config?.email && ws?.jira_config?.api_token) {
+          const auth = Buffer.from(`${ws.jira_config.email}:${ws.jira_config.api_token}`).toString("base64");
+          const jql = "assignee = currentUser() AND updated >= -30d ORDER BY updated DESC";
+          const jiraResp = await fetch(`https://${ws.jira_config.domain}/rest/agile/1.0/issue/search?jql=${encodeURIComponent(jql)}&maxResults=50`, {
+            headers: { Authorization: `Basic ${auth}`, Accept: "application/json" },
+          });
+
+          if (jiraResp.ok) {
+            const jiraData = await jiraResp.json();
+            jiraContext = (jiraData.issues || []).map((issue: any) => ({
+              key: issue.key,
+              title: issue.fields?.summary || "",
+              subtasks: (issue.fields?.subtasks || []).map((st: any) => ({ id: st.id, title: st.fields?.summary || "" })),
+            }));
+          }
         }
+      } catch (e) {
+        log.push(`Jira: error al obtener (${e instanceof Error ? e.message : "desconocido"})`);
       }
-    } catch (e) {
-      log.push(`Jira: error al obtener (${e instanceof Error ? e.message : "desconocido"})`);
-    }
-    log.push(`Jira: ${jiraContext.length} tareas`);
+      log.push(`Jira: ${jiraContext.length} tareas`);
 
-    // 5. Run Gemini analysis
-    if (sourcesWithContent.length === 0) {
-      log.push("Análisis: saltado (sin fuentes con contenido)");
-      return NextResponse.json({ success: true, log, note: "Sin fuentes para analizar" });
-    }
+      // 5. Load analysis config for filtering
+      let analysisConfig: any = {};
+      try {
+        const { data: wsConfig } = await supabase
+          .from("workspaces")
+          .select("analysis_config")
+          .eq("id", workspaceId)
+          .single();
+        if (wsConfig?.analysis_config) {
+          analysisConfig = wsConfig.analysis_config;
+        }
+      } catch (e) {
+        log.push("Config: error al cargar (usando defaults)");
+      }
 
-    const userName = "Usuario";
-    const analysisResult = await runGeminiAnalysis({
-      date: dateStr,
-      sources: sourcesWithContent,
-      userName,
-      objectives,
-      jiraContext,
-    });
+      // 6. Run Gemini analysis
+      if (sourcesWithContent.length === 0) {
+        log.push("Análisis: saltado (sin fuentes con contenido)");
+        continue;
+      }
 
-    if (!analysisResult) {
-      log.push("Gemini: falló el análisis");
-      return NextResponse.json({ success: false, log, error: "Falló el análisis de Gemini" }, { status: 500 });
-    }
+      const tasks = analysisConfig.tasks || {};
+      const open = analysisConfig.open || {};
 
-    log.push(`Gemini: ${analysisResult.tasks?.length || 0} tareas, ${analysisResult.insights?.length || 0} insights`);
+      const resolvedTasks = (tasks.selected_products || []).map((p: string) => p.toLowerCase());
+      const resolvedOpen = (open.selected_products || []).map((p: string) => p.toLowerCase());
+      const customCategories = open.custom_categories || [];
 
-    // 6. Save day summary
-    await supabase.from("day_summaries").upsert({
-      workspace_id: workspaceId,
-      summary_date: dateStr,
-      summary_text: analysisResult.summary || "",
-      focus_text: (analysisResult.summary || "").substring(0, 300),
-      source_count: sourcesWithContent.length,
-      finding_count: analysisResult.insights?.length || 0,
-      proposal_count: analysisResult.tasks?.length || 0,
-      alert_count: analysisResult.alerts?.length || 0,
-      insight_count: analysisResult.insights?.length || 0,
-      feedback_count: analysisResult.feedback?.length || 0,
-      kpi_data: {
-        summary_text: analysisResult.summary,
-        tasks: analysisResult.tasks || [],
-        insights: analysisResult.insights || [],
-        metrics: analysisResult.metrics || [],
-        alerts: analysisResult.alerts || [],
-        feedback: analysisResult.feedback || [],
-        tasks_count: analysisResult.tasks?.length || 0,
-        insights_count: analysisResult.insights?.length || 0,
-        alerts_count: analysisResult.alerts?.length || 0,
-        feedback_count: analysisResult.feedback?.length || 0,
-        metrics_count: analysisResult.metrics?.length || 0,
+      const userName = "Usuario";
+      const analysisResult = await runGeminiAnalysis({
+        date: dateStr,
+        sources: sourcesWithContent,
+        userName,
+        objectives,
+        jiraContext,
+        apiKey: geminiApiKey || undefined,
+        analysisConfig: {
+          resolved_tasks: resolvedTasks,
+          resolved_open: resolvedOpen,
+          custom_categories: customCategories,
+          filter_responsibles: analysisConfig.filter_responsibles ?? false,
+          selected_responsibles: analysisConfig.selected_responsibles || [],
+        },
+      });
+
+      if (!analysisResult) {
+        log.push("Gemini: falló el análisis");
+        continue;
+      }
+
+      log.push(`Gemini: ${analysisResult.tasks?.length || 0} tareas, ${analysisResult.insights?.length || 0} insights`);
+
+      const hasResponsibleFilter = analysisConfig.filter_responsibles && analysisConfig.selected_responsibles?.length > 0;
+
+      // Post-filter tasks with tasks config
+      const hasTasksFilter = resolvedTasks.length > 0;
+      if (analysisResult.tasks && (hasTasksFilter || hasResponsibleFilter)) {
+        analysisResult.tasks = analysisResult.tasks.filter((item: any) => {
+          const catMatch = !hasTasksFilter || resolvedTasks.includes(item.category?.toLowerCase());
+          const respMatch = !hasResponsibleFilter || (analysisConfig.selected_responsibles || []).some((r: string) =>
+            (item.responsible || "").toLowerCase().includes(r.toLowerCase())
+          );
+          return catMatch && respMatch;
+        });
+      }
+
+      // Post-filter insights/metrics/alerts with open config + custom categories
+      const openFilterCategories = [...resolvedOpen, ...customCategories].filter(Boolean);
+      const hasOpenFilter = openFilterCategories.length > 0;
+      const filterOpenItem = (item: any) => {
+        const catMatch = !hasOpenFilter || openFilterCategories.some((c: string) =>
+          (item.category || "").toLowerCase().includes(c.toLowerCase())
+        );
+        const respMatch = !hasResponsibleFilter || (analysisConfig.selected_responsibles || []).some((r: string) =>
+          (item.responsible || "").toLowerCase().includes(r.toLowerCase())
+        );
+        return catMatch && respMatch;
+      };
+      if (analysisResult.insights && (hasOpenFilter || hasResponsibleFilter)) analysisResult.insights = analysisResult.insights.filter(filterOpenItem);
+      if (analysisResult.metrics && (hasOpenFilter || hasResponsibleFilter)) analysisResult.metrics = analysisResult.metrics.filter(filterOpenItem);
+      if (analysisResult.alerts && (hasOpenFilter || hasResponsibleFilter)) analysisResult.alerts = analysisResult.alerts.filter(filterOpenItem);
+
+      if (hasTasksFilter || hasOpenFilter || hasResponsibleFilter) {
+        log.push(`Filtros: ${analysisResult.tasks?.length || 0} tareas, ${analysisResult.insights?.length || 0} insights restantes`);
+      }
+
+      // 7. Save day summary
+      await supabase.from("day_summaries").upsert({
+        workspace_id: workspaceId,
+        summary_date: dateStr,
+        summary_text: analysisResult.summary || "",
+        focus_text: (analysisResult.summary || "").substring(0, 300),
         source_count: sourcesWithContent.length,
-      },
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "workspace_id,summary_date" });
+        finding_count: analysisResult.insights?.length || 0,
+        proposal_count: analysisResult.tasks?.length || 0,
+        alert_count: analysisResult.alerts?.length || 0,
+        insight_count: analysisResult.insights?.length || 0,
+        feedback_count: analysisResult.feedback?.length || 0,
+        kpi_data: {
+          summary_text: analysisResult.summary,
+          tasks: analysisResult.tasks || [],
+          insights: analysisResult.insights || [],
+          metrics: analysisResult.metrics || [],
+          alerts: analysisResult.alerts || [],
+          feedback: analysisResult.feedback || [],
+          tasks_count: analysisResult.tasks?.length || 0,
+          insights_count: analysisResult.insights?.length || 0,
+          alerts_count: analysisResult.alerts?.length || 0,
+          feedback_count: analysisResult.feedback?.length || 0,
+          metrics_count: analysisResult.metrics?.length || 0,
+          source_count: sourcesWithContent.length,
+        },
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "workspace_id,summary_date" });
 
-    log.push("Resumen guardado exitosamente");
+      log.push("Resumen guardado exitosamente");
+    }
 
-    return NextResponse.json({ success: true, log, summary: analysisResult.summary });
+    return NextResponse.json({ success: true, log });
   } catch (err) {
     console.error("[CRON] Error:", err);
     return NextResponse.json(

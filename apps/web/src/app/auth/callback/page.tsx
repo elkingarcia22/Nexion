@@ -79,6 +79,12 @@ function CallbackContent() {
                   role: 'owner',
                   is_active: true
                 });
+
+                await supabase.from('workspace_memberships').insert({
+                  workspace_id: ws.id,
+                  profile_id: session.user.id,
+                  membership_role: 'owner',
+                });
               }
             } else {
               // Update profile with latest info
@@ -87,6 +93,21 @@ function CallbackContent() {
                 full_name: session.user.user_metadata?.full_name || '',
                 updated_at: new Date().toISOString()
               }).eq('id', session.user.id);
+
+              // Ensure workspace_memberships exists (defense in depth)
+              const { data: profile } = await supabase.from('profiles')
+                .select('workspace_id').eq('id', session.user.id).single();
+              if (profile?.workspace_id) {
+                const { data: existing } = await supabase.from('workspace_memberships')
+                  .select('id').eq('profile_id', session.user.id).maybeSingle();
+                if (!existing) {
+                  await supabase.from('workspace_memberships').insert({
+                    workspace_id: profile.workspace_id,
+                    profile_id: session.user.id,
+                    membership_role: 'owner',
+                  });
+                }
+              }
             }
           } catch (profileErr) {
             console.warn("Profile creation error:", profileErr);
@@ -96,12 +117,29 @@ function CallbackContent() {
         // 4. Force a small wait to ensure storage is committed and Supabase state is stable
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        // 5. Final check and redirect
+        // 5. Check if onboarding is needed
+        let needsOnboarding = false;
+        if (session?.user) {
+          try {
+            const { data: profile } = await supabase.from("profiles")
+              .select("workspace_id").eq("id", session.user.id).single();
+            if (profile?.workspace_id) {
+              const { data: ws } = await supabase.from("workspaces")
+                .select("analysis_config, name").eq("id", profile.workspace_id).single();
+              const ac = (ws as any)?.analysis_config || {};
+              // Only redirect if explicitly not onboarded AND workspace has no existing config
+              const hasExistingConfig = ac.tasks?.selected_products?.length > 0 || ac.selected_responsibles?.length > 0;
+              needsOnboarding = !ac.onboarding_completed && !hasExistingConfig;
+            }
+          } catch (e) {
+            console.warn("Onboarding check error:", e);
+          }
+        }
+
+        // 6. Redirect
         if (session?.user || providerToken) {
           console.log("✓ Authentication successful, redirecting...");
-          // Use window.location for a harder refresh of the app state if needed, 
-          // but router.push is usually fine if we wait.
-          router.push("/day/today");
+          router.push(needsOnboarding ? "/onboarding" : "/day/today");
         } else {
           console.warn("DEBUG: Authentication failed - no session or token");
           router.push("/auth/login?error=auth_failed");

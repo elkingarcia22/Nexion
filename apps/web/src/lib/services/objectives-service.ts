@@ -1,7 +1,38 @@
 import { supabase } from "@/lib/supabase";
 import { refreshGoogleToken } from "./google-auth-service";
 
-const OBJECTIVES_SHEET_ID = "1_2xmTZTSNKdjYO1oJ1H79UCQ6rlOQvwxXfOUdV6tbUI";
+const DEFAULT_SHEET_ID = "1_2xmTZTSNKdjYO1oJ1H79UCQ6rlOQvwxXfOUdV6tbUI";
+
+export interface ObjectivesConfig {
+  spreadsheet_id: string;
+  selected_teams: string[];
+}
+
+export async function getObjectivesConfig(workspaceId: string): Promise<{ success: boolean; data?: ObjectivesConfig; error?: string }> {
+  const { data, error } = await supabase
+    .from("workspaces")
+    .select("objectives_config")
+    .eq("id", workspaceId)
+    .single();
+  if (error) return { success: false, error: error.message };
+  const config = (data?.objectives_config || {}) as ObjectivesConfig;
+  return {
+    success: true,
+    data: {
+      spreadsheet_id: config.spreadsheet_id || DEFAULT_SHEET_ID,
+      selected_teams: config.selected_teams || [],
+    },
+  };
+}
+
+export async function updateObjectivesConfig(workspaceId: string, config: ObjectivesConfig): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("workspaces")
+    .update({ objectives_config: config, updated_at: new Date().toISOString() })
+    .eq("id", workspaceId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
 
 export interface Objective {
   team: string;
@@ -78,13 +109,18 @@ export async function syncObjectives(workspaceId: string) {
       return { success: true, count: 0, mode: 'demo' };
     }
 
+    const configResult = await getObjectivesConfig(workspaceId);
+    const sheetId = configResult.success && configResult.data
+      ? configResult.data.spreadsheet_id
+      : DEFAULT_SHEET_ID;
+
     const token = await getGoogleToken();
     if (!token) {
       console.warn("[ObjectivesSync] No Google token found. Skipping sync.");
       return { success: false, error: "No token" };
     }
 
-    const metaResponse = await fetch(`/api/google/sheets?spreadsheetId=${OBJECTIVES_SHEET_ID}`, {
+    const metaResponse = await fetch(`/api/google/sheets?spreadsheetId=${sheetId}`, {
       headers: { "x-google-token": token }
     });
     
@@ -282,7 +318,7 @@ export async function syncObjectives(workspaceId: string) {
     const allObjectives = [];
     for (const sheet of qSheets) {
       const title = sheet.properties.title;
-      const data = await fetchSheetValues(OBJECTIVES_SHEET_ID, `${title}!A2:L500`);
+      const data = await fetchSheetValues(sheetId, `${title}!A2:L500`);
       if (data.values) {
         console.log(`[ObjectivesSync] Processing ${data.values.length} rows from ${title}...`);
         const processed = processRows(data.values, title);
@@ -315,7 +351,7 @@ export async function syncObjectives(workspaceId: string) {
     }
 
     // Sync Initiatives
-    const initiativesData = await fetchSheetValues(OBJECTIVES_SHEET_ID, "'Tablero Producto'!A2:H200");
+    const initiativesData = await fetchSheetValues(sheetId, "'Tablero Producto'!A2:H200");
     const initiatives = (initiativesData.values || []).map((row: any) => ({
       workspace_id: workspaceId,
       title: row[0] || "",

@@ -8,7 +8,7 @@ import {
   getSourcesByWorkspace,
   deleteSource,
 } from "@/lib/services/source-service";
-import { syncSlackSourcesForDay, getSlackSourcesByWorkspace } from "@/lib/services/slack-service";
+import { syncSlackSourcesForDay, getSlackSourcesByWorkspace, verifyPrivateChannel, addPrivateChannelToSync } from "@/lib/services/slack-service";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { AddSourceDrawer } from "@/components/sources/AddSourceDrawer";
@@ -30,6 +30,10 @@ export default function DaySourcesPage() {
   const [error, setError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingSource, setEditingSource] = useState<any>(null);
+  const [channelIdInput, setChannelIdInput] = useState("");
+  const [connectingPrivate, setConnectingPrivate] = useState(false);
+  const [privateChannelError, setPrivateChannelError] = useState("");
+  const [privateChannelSuccess, setPrivateChannelSuccess] = useState("");
 
   useEffect(() => {
     const initializeWorkspace = async () => {
@@ -61,12 +65,11 @@ export default function DaySourcesPage() {
         setSources(sourcesResult.data);
       }
 
-      // Sync Slack sources for today (like Drive auto-refresh on Today page)
+      // Sync Slack sources for today
       const today = new Date();
       setSlackSyncing(true);
-      const providerToken = sessionData.session?.provider_token;
-      console.log("[DaySourcesPage] Starting Slack sync... providerToken:", !!providerToken);
-      const slackResult = await syncSlackSourcesForDay(workspaceResult.data.id, today, providerToken || undefined);
+      console.log("[DaySourcesPage] Starting Slack sync...");
+      const slackResult = await syncSlackSourcesForDay(workspaceResult.data.id, today);
       console.log("[DaySourcesPage] Slack sync result:", slackResult);
       if (slackResult.success) {
         console.log("[DaySourcesPage] Fetching Slack sources from DB...");
@@ -169,6 +172,35 @@ export default function DaySourcesPage() {
     return data;
   };
 
+  const handleConnectPrivateChannel = async () => {
+    if (!workspace || !channelIdInput.trim()) return;
+    setConnectingPrivate(true);
+    setPrivateChannelError("");
+    setPrivateChannelSuccess("");
+
+    const result = await addPrivateChannelToSync(workspace.id, channelIdInput.trim());
+
+    if (!result.success) {
+      setPrivateChannelError(result.error || "Error al conectar canal");
+      setConnectingPrivate(false);
+      return;
+    }
+
+    setPrivateChannelSuccess(`Canal #${result.channel?.name} conectado exitosamente`);
+    setChannelIdInput("");
+
+    // Re-sync Slack sources
+    const syncResult = await syncSlackSourcesForDay(workspace.id, new Date());
+    if (syncResult.success) {
+      const slackSourcesResult = await getSlackSourcesByWorkspace(workspace.id, new Date());
+      if (slackSourcesResult.success && slackSourcesResult.data) {
+        setSlackSources(slackSourcesResult.data);
+      }
+    }
+
+    setConnectingPrivate(false);
+  };
+
   const handleAddSourceCallback = () => {
     setDrawerOpen(false);
     setEditingSource(null);
@@ -229,9 +261,7 @@ export default function DaySourcesPage() {
             onClick={async () => {
               if (!workspace) return;
               setSlackSyncing(true);
-              const sess = await supabase.auth.getSession();
-              const tok = sess.data.session?.provider_token;
-              const result = await syncSlackSourcesForDay(workspace.id, new Date(), tok || undefined);
+              const result = await syncSlackSourcesForDay(workspace.id, new Date());
               if (result.success) {
                 const slackResult = await getSlackSourcesByWorkspace(workspace.id, new Date());
                 if (slackResult.success && slackResult.data) {
@@ -290,6 +320,43 @@ export default function DaySourcesPage() {
               </div>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* Private Slack Channel Connector */}
+      <div className="bg-card rounded-xl shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#E01E5A">
+            <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.521-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z" />
+          </svg>
+          <h2 className="text-lg font-semibold text-white">Conectar Canal Privado</h2>
+        </div>
+        <p className="text-xs text-white/40 mb-4">
+          Invita al bot <code className="text-primary">@Nexion</code> al canal privado en Slack, luego pega el ID del canal aquí.
+          Para obtener el ID: abre el canal en Slack, ve a <strong>Acerca de</strong> y copia el ID (ej: C084AP7K4Q2).
+        </p>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            placeholder="ID del canal privado (C...)"
+            value={channelIdInput}
+            onChange={(e) => setChannelIdInput(e.target.value)}
+            className="flex-1 px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white text-sm placeholder-white/30 focus:outline-none focus:border-primary"
+          />
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleConnectPrivateChannel}
+            disabled={connectingPrivate}
+          >
+            {connectingPrivate ? "Verificando..." : "Conectar"}
+          </Button>
+        </div>
+        {privateChannelError && (
+          <p className="text-xs text-red-400 mt-2">{privateChannelError}</p>
+        )}
+        {privateChannelSuccess && (
+          <p className="text-xs text-green-400 mt-2">{privateChannelSuccess}</p>
         )}
       </div>
 

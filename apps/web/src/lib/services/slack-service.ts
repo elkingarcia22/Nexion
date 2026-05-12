@@ -4,16 +4,18 @@ const API_BASE = typeof window !== "undefined"
   ? `${window.location.origin}/api/slack`
   : "";
 
-interface SlackChannel {
+export interface SlackChannel {
   id: string;
   name: string;
   is_channel: boolean;
   is_group: boolean;
   is_mpim: boolean;
+  is_private?: boolean;
+  is_member?: boolean;
   num_members: number;
 }
 
-interface SlackMessage {
+export interface SlackMessage {
   type: string;
   channel: string;
   user: string;
@@ -25,7 +27,7 @@ interface SlackMessage {
 
 export async function getSlackBotChannels(): Promise<{ success: boolean; data?: SlackChannel[]; error?: string }> {
   if (!API_BASE) {
-    console.warn("[getSlackBotChannels] API_BASE is empty — running server-side?");
+    console.warn("[getSlackBotChannels] API_BASE is empty");
     return { success: false, error: "API no disponible" };
   }
 
@@ -33,21 +35,7 @@ export async function getSlackBotChannels(): Promise<{ success: boolean; data?: 
     const url = `${API_BASE}?action=my-channels`;
     console.log(`[getSlackBotChannels] Fetching from: ${url}`);
     const response = await fetch(url);
-    console.log(`[getSlackBotChannels] HTTP status: ${response.status} ${response.statusText}`);
-
     const data = await response.json();
-    console.log(`[getSlackBotChannels] Response: ok=${data.ok} channels=${data.channels?.length || 0} error=${data.error || "none"}`);
-
-    if (data._debug) {
-      console.log(`[getSlackBotChannels] DEBUG from server: totalRaw=${data._debug.totalRaw} tokenPrefix=${data._debug.tokenPrefix} tokenLength=${data._debug.tokenLength}`);
-      console.log(`[getSlackBotChannels] DEBUG rawNames: ${data._debug.rawNames?.join(" | ") || "EMPTY"}`);
-    }
-
-    if (data.channels && data.channels.length > 0) {
-      console.log(`[getSlackBotChannels] Channel list: ${data.channels.map((c: any) => `#${c.name}(${c.is_group ? "priv" : "pub"},member=${c.is_member})`).join(", ")}`);
-    } else {
-      console.warn("[getSlackBotChannels] No channels returned from API");
-    }
 
     if (!data.ok) {
       console.warn("[getSlackBotChannels] API error:", data.error);
@@ -63,7 +51,47 @@ export async function getSlackBotChannels(): Promise<{ success: boolean; data?: 
   }
 }
 
+export async function joinChannel(channelId: string): Promise<{ success: boolean; error?: string }> {
+  if (!API_BASE) {
+    return { success: false, error: "API no disponible" };
+  }
 
+  try {
+    const response = await fetch(`${API_BASE}?action=join-channel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channelId }),
+    });
+    const data = await response.json();
+
+    if (!data.ok) {
+      return { success: false, error: data.error || "No se pudo unir al canal" };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Error" };
+  }
+}
+
+export async function verifyPrivateChannel(channelId: string): Promise<{ success: boolean; data?: SlackChannel; error?: string }> {
+  if (!API_BASE) {
+    return { success: false, error: "API no disponible" };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}?action=private-channel-info&channelId=${channelId}`);
+    const data = await response.json();
+
+    if (!data.ok) {
+      return { success: false, error: data.error || "No se pudo acceder al canal" };
+    }
+
+    return { success: true, data: data.channel };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Error" };
+  }
+}
 
 export async function getSlackMessagesFromChannel(
   channelId: string,
@@ -71,7 +99,6 @@ export async function getSlackMessagesFromChannel(
   latest: string
 ): Promise<{ success: boolean; data?: SlackMessage[]; error?: string }> {
   if (!API_BASE) {
-    console.warn("[getSlackMessagesFromChannel] API_BASE is empty");
     return { success: false, error: "API no disponible" };
   }
 
@@ -89,8 +116,6 @@ export async function getSlackMessagesFromChannel(
     const response = await fetch(url);
     const data = await response.json();
 
-    console.log(`[getSlackMessagesFromChannel] ${channelId}: ok=${data.ok} messages=${data.messages?.length || 0} error=${data.error || "none"}`);
-
     if (!data.ok) {
       console.warn(`[getSlackMessagesFromChannel] ${channelId} error:`, data.error);
       return { success: false, error: data.error || "Error de Slack" };
@@ -103,7 +128,6 @@ export async function getSlackMessagesFromChannel(
   }
 }
 
-// Channels that match these patterns are excluded (noisy public channels)
 const CHANNEL_DENYLIST_PATTERNS = [
   /^general$/i,
   /-general$/i,
@@ -116,14 +140,57 @@ const CHANNEL_DENYLIST_PATTERNS = [
   /^staff$/i,
 ];
 
-function isChannelAllowed(name: string, isGroup: boolean): boolean {
-  if (isGroup) return true;
+function isChannelAllowed(name: string, isPrivate?: boolean): boolean {
+  if (isPrivate) return true;
   return !CHANNEL_DENYLIST_PATTERNS.some(p => p.test(name));
+}
+
+export async function getChannelPreferences(
+  workspaceId: string
+): Promise<{ success: boolean; data?: { channel_id: string; channel_name: string; is_private: boolean; enabled: boolean }[]; error?: string }> {
+  const { data, error } = await supabase
+    .from("app_slack_channels")
+    .select("channel_id, channel_name, is_private, enabled")
+    .eq("workspace_id", workspaceId);
+  if (error) return { success: false, error: error.message };
+  return { success: true, data: data || [] };
+}
+
+export async function setChannelEnabled(
+  workspaceId: string,
+  channelId: string,
+  channelName: string,
+  isPrivate: boolean,
+  enabled: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase.from("app_slack_channels").upsert({
+    workspace_id: workspaceId,
+    channel_id: channelId,
+    channel_name: channelName,
+    is_private: isPrivate,
+    enabled,
+    created_at: new Date().toISOString(),
+  }, { onConflict: "workspace_id,channel_id" });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function removeChannelPreference(
+  workspaceId: string,
+  channelId: string
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("app_slack_channels")
+    .delete()
+    .eq("workspace_id", workspaceId)
+    .eq("channel_id", channelId);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 }
 
 async function syncChannelSources(
   workspaceId: string,
-  channel: { id: string; name: string },
+  channel: { id: string; name: string; is_private?: boolean },
   oldest: string,
   latest: string,
   dateStr: string,
@@ -149,6 +216,7 @@ async function syncChannelSources(
   const metadata = {
     channelId: channel.id,
     channelName: channel.name,
+    isPrivate: channel.is_private || false,
     messageCount: messages.length,
     messages: messages.map(m => ({
       user: m.user,
@@ -207,7 +275,6 @@ async function syncChannelSources(
 export async function syncSlackSourcesForDay(
   workspaceId: string,
   date: Date,
-  userToken?: string
 ): Promise<{ success: boolean; count?: number; error?: string }> {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -221,18 +288,74 @@ export async function syncSlackSourcesForDay(
   today.setHours(23, 59, 59, 999);
   const latest = Math.floor(today.getTime() / 1000).toString();
 
-  console.log(`[syncSlackSourcesForDay] Starting sync for workspace=${workspaceId} date=${dateStr} oldest=${oldest} latest=${latest}`);
+  console.log(`[syncSlackSourcesForDay] Starting sync for workspace=${workspaceId} date=${dateStr}`);
 
   const channelsResult = await getSlackBotChannels();
   if (!channelsResult.success) {
-    console.warn("[syncSlackSourcesForDay] getSlackBotChannels failed:", channelsResult.error);
     return { success: false, error: channelsResult.error };
   }
 
-  const channels = channelsResult.data || [];
-  console.log(`[syncSlackSourcesForDay] Found ${channels.length} channels from API. dateStr=${dateStr}`);
+  let channels = channelsResult.data || [];
+  console.log(`[syncSlackSourcesForDay] Found ${channels.length} channels from API`);
 
-  // Clean slate: remove old Slack sources for this date so stale entries don't persist
+  // Load known private channels from DB (app_slack_channels table)
+  const { data: dbPrivateChannels, error: dbError } = await supabase
+    .from("app_slack_channels")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("is_private", true);
+
+  if (!dbError && dbPrivateChannels) {
+    for (const pc of dbPrivateChannels) {
+      if (!channels.some(c => c.id === pc.channel_id)) {
+        const result = await verifyPrivateChannel(pc.channel_id);
+        if (result.success && result.data?.is_member) {
+          channels.push({
+            id: result.data.id,
+            name: result.data.name,
+            is_channel: true,
+            is_group: false,
+            is_mpim: false,
+            is_private: true,
+            is_member: true,
+            num_members: result.data.num_members || 0,
+          });
+          console.log(`[syncSlackSourcesForDay] Added private channel #${result.data.name} from DB`);
+        }
+      }
+    }
+  }
+
+  // Fallback: known private channels verified to work
+  const KNOWN_PRIVATE: { id: string; name: string }[] = [
+    { id: "C084AP7K4Q2", name: "triada-growth" },
+    { id: "C083FSV36KY", name: "ux_team_ubits" },
+    { id: "C0APCFJJ39V", name: "claude-masters" },
+    { id: "C09JV33J9PB", name: "growth-interno" },
+    { id: "C085E86CDEC", name: "talent-growth-implementation" },
+    { id: "C08VBKFA9ST", name: "hiring-team" },
+  ];
+
+  for (const kp of KNOWN_PRIVATE) {
+    if (!channels.some(c => c.id === kp.id)) {
+      const result = await verifyPrivateChannel(kp.id);
+      if (result.success && result.data?.is_member) {
+        channels.push({
+          id: result.data.id,
+          name: result.data.name,
+          is_channel: true,
+          is_group: false,
+          is_mpim: false,
+          is_private: true,
+          is_member: true,
+          num_members: result.data.num_members || 0,
+        });
+        console.log(`[syncSlackSourcesForDay] Added private channel #${result.data.name} from fallback list`);
+      }
+    }
+  }
+
+  // Clean slate: remove old Slack sources for this date
   const { error: deleteError } = await supabase
     .from("sources")
     .delete()
@@ -241,26 +364,64 @@ export async function syncSlackSourcesForDay(
     .eq("source_date", dateStr);
   if (deleteError) {
     console.warn(`[syncSlackSourcesForDay] Error cleaning old sources:`, deleteError);
-  } else {
-    console.log(`[syncSlackSourcesForDay] Cleaned old Slack sources for ${dateStr}`);
   }
+
+  // Load channel preferences (which channels user has enabled/disabled)
+  const prefsResult = await getChannelPreferences(workspaceId);
+  const channelPrefs = prefsResult.success && prefsResult.data
+    ? new Map(prefsResult.data.map(p => [p.channel_id, p]))
+    : new Map();
 
   let addedCount = 0;
 
-  console.log(`[syncSlackSourcesForDay] All channels from API: ${channels.map((c: any) => "#" + c.name + (c.is_group ? " (priv)" : "")).join(", ")}`);
-
   for (const channel of channels) {
-    if (!isChannelAllowed(channel.name, channel.is_group === true)) {
-      console.log(`[syncSlackSourcesForDay] ⏭️ Skipping denylisted channel #${channel.name}`);
+    if (!isChannelAllowed(channel.name, channel.is_private)) {
+      console.log(`[syncSlackSourcesForDay] Skipping denylisted channel #${channel.name}`);
+      continue;
+    }
+    // Check preference: if a preference exists and it's disabled, skip
+    const pref = channelPrefs.get(channel.id);
+    if (pref !== undefined && !pref.enabled) {
+      console.log(`[syncSlackSourcesForDay] Skipping disabled channel #${channel.name}`);
       continue;
     }
     const count = await syncChannelSources(workspaceId, channel, oldest, latest, dateStr);
-    console.log(`[syncSlackSourcesForDay] #${channel.name}: ${count} source(s) added`);
     addedCount += count;
   }
 
-  console.log(`[syncSlackSourcesForDay] FINISHED: ${addedCount} new sources added, ${channels.length - addedCount} skipped (denylisted or no messages)`);
+  console.log(`[syncSlackSourcesForDay] FINISHED: ${addedCount} new sources added`);
   return { success: true, count: addedCount };
+}
+
+export async function addPrivateChannelToSync(
+  workspaceId: string,
+  channelId: string,
+): Promise<{ success: boolean; error?: string; channel?: SlackChannel }> {
+  const result = await verifyPrivateChannel(channelId);
+  if (!result.success) {
+    return { success: false, error: result.error || "No se pudo verificar el canal" };
+  }
+  if (!result.data?.is_member) {
+    return { success: false, error: "El bot no es miembro de este canal privado" };
+  }
+
+  const channel = result.data;
+
+  const { error: upsertError } = await supabase.from("app_slack_channels").upsert({
+    workspace_id: workspaceId,
+    channel_id: channel.id,
+    channel_name: channel.name,
+    is_private: true,
+    created_at: new Date().toISOString(),
+  }, {
+    onConflict: "workspace_id,channel_id",
+  });
+
+  if (upsertError) {
+    return { success: false, error: upsertError.message };
+  }
+
+  return { success: true, channel: { ...channel, is_private: true, is_member: true } };
 }
 
 export async function getSlackSourcesByWorkspace(
@@ -275,7 +436,7 @@ export async function getSlackSourcesByWorkspace(
     const start = `${dateStr}T00:00:00.000Z`;
     const end = getNextDayUtc(dateStr);
 
-    console.log(`[getSlackSourcesByWorkspace] Querying sources for workspace=${workspaceId} date=${dateStr} range=[${start}, ${end})`);
+    console.log(`[getSlackSourcesByWorkspace] Querying sources for workspace=${workspaceId} date=${dateStr}`);
 
     const { data, error } = await supabase
       .from("sources")
@@ -286,17 +447,11 @@ export async function getSlackSourcesByWorkspace(
       .lt("source_date", end);
 
     if (error) {
-      console.error(`[getSlackSourcesByWorkspace] DB error:`, error);
       return { success: false, error: error.message };
     }
 
-    console.log(`[getSlackSourcesByWorkspace] Found ${data?.length || 0} sources`);
-    if (data && data.length > 0) {
-      console.log(`[getSlackSourcesByWorkspace] Source titles: ${data.map((s: any) => s.title).join(", ")}`);
-    }
     return { success: true, data: data || [] };
   } catch (err) {
-    console.error(`[getSlackSourcesByWorkspace] Unexpected error:`, err);
     return { success: false, error: err instanceof Error ? err.message : "Error desconocido" };
   }
 }
