@@ -29,6 +29,7 @@ export const MODULES = [
   { key: "metrics", label: "Métricas", href: "/metrics" },
   { key: "alerts", label: "Alertas", href: "/alerts" },
   { key: "insights", label: "Insights", href: "/insights" },
+  { key: "feedback", label: "Feedback", href: "/feedback" },
 ] as const;
 
 export const ANALYSIS_TEAMS = [
@@ -113,23 +114,23 @@ function migrateConfig(raw: any): AnalysisConfig {
   const open = c.open || {};
   return {
     tasks: {
-      selected_products: tasks.selected_products || c.selected_products || [],
-      selected_teams: tasks.selected_teams || c.selected_teams || [],
-      filter_teams: tasks.filter_teams ?? c.filter_teams ?? false,
-      selected_responsibles: tasks.selected_responsibles || c.selected_responsibles || [],
-      custom_categories: tasks.custom_categories || c.custom_categories || [],
-      filter_active: tasks.filter_active ?? c.filter_active ?? true,
+      selected_products: tasks.selected_products ?? [],
+      selected_teams: tasks.selected_teams ?? [],
+      filter_teams: tasks.filter_teams ?? false,
+      selected_responsibles: tasks.selected_responsibles ?? [],
+      custom_categories: tasks.custom_categories ?? [],
+      filter_active: tasks.filter_active ?? true,
     },
     open: {
-      selected_products: open.selected_products || c.selected_products || [],
-      selected_teams: open.selected_teams || c.selected_teams || [],
-      filter_teams: open.filter_teams ?? c.filter_teams ?? false,
-      custom_categories: open.custom_categories || c.custom_categories || [],
+      selected_products: open.selected_products ?? [],
+      selected_teams: open.selected_teams ?? [],
+      filter_teams: open.filter_teams ?? false,
+      custom_categories: open.custom_categories ?? [],
     },
     filter_responsibles: c.filter_responsibles ?? false,
-    selected_responsibles: c.selected_responsibles || [],
-    active_modules: c.active_modules || MODULES.map(m => m.key),
-    source_types: c.source_types || SOURCE_TYPES.map(s => s.key),
+    selected_responsibles: c.selected_responsibles ?? [],
+    active_modules: c.active_modules ?? MODULES.map(m => m.key),
+    source_types: c.source_types ?? SOURCE_TYPES.map(s => s.key),
   };
 }
 
@@ -156,11 +157,20 @@ export interface SaveAnalysisConfig {
 }
 
 export async function updateAnalysisConfig(workspaceId: string, config: SaveAnalysisConfig): Promise<{ success: boolean; error?: string }> {
+  console.log('💾 UPDATE - config.tasks:', JSON.stringify(config.tasks));
   const existing = await getAnalysisConfig(workspaceId);
+  console.log('💾 UPDATE - existing.tasks:', JSON.stringify(existing.data?.tasks));
   const merged = existing.success && existing.data ? existing.data : migrateConfig({});
 
   const payload: AnalysisConfig = {
-    tasks: { ...merged.tasks, ...config.tasks },
+    tasks: {
+      selected_products: config.tasks?.selected_products ?? merged.tasks.selected_products,
+      selected_teams: config.tasks?.selected_teams ?? merged.tasks.selected_teams,
+      filter_teams: config.tasks?.filter_teams ?? merged.tasks.filter_teams,
+      selected_responsibles: config.tasks?.selected_responsibles ?? merged.tasks.selected_responsibles,
+      custom_categories: config.tasks?.custom_categories ?? merged.tasks.custom_categories,
+      filter_active: config.tasks?.filter_active ?? merged.tasks.filter_active,
+    },
     open: { ...merged.open, ...config.open },
     filter_responsibles: config.filter_responsibles ?? merged.filter_responsibles,
     selected_responsibles: config.selected_responsibles ?? merged.selected_responsibles,

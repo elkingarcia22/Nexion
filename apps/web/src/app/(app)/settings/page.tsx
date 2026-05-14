@@ -34,6 +34,17 @@ import {
   getTasks,
 } from "@/lib/services/task-service";
 
+const CATEGORY_ALIAS: Record<string, string> = {
+  matrix: "matriz_talento",
+  "360": "evaluacion_360",
+  hiring: "contratacion",
+  creator: "lms_creator",
+};
+
+function normalizeCategory(cat: string): string {
+  return CATEGORY_ALIAS[cat] || cat;
+}
+
 interface SlackChannel {
   id: string;
   name: string;
@@ -138,6 +149,9 @@ export default function SettingsPage() {
   const [geminiSaving, setGeminiSaving] = useState(false);
   const [geminiStatus, setGeminiStatus] = useState<"idle" | "success" | "error">("idle");
   const [geminiStatusMsg, setGeminiStatusMsg] = useState("");
+
+  // Drive state
+  const [driveSaving, setDriveSaving] = useState(false);
 
   const loadChannels = async (wsId: string) => {
     setSyncingChannels(true);
@@ -253,7 +267,7 @@ export default function SettingsPage() {
         // Load metrics to discover available categories
         const metResult = await getMetrics(wsResult.data.id);
         if (metResult.success && metResult.data) {
-          const cats = [...new Set(metResult.data.map((m: any) => m.category).filter((c: string) => c !== "general"))] as string[];
+          const cats = [...new Set(metResult.data.map((m: any) => normalizeCategory(m.category)).filter((c: string) => c !== "general"))] as string[];
           setMetAvailableCats(cats.length > 0 ? cats.sort() : ALL_PRODUCTS.map(p => p.key));
         } else {
           setMetAvailableCats(ALL_PRODUCTS.map(p => p.key));
@@ -261,8 +275,10 @@ export default function SettingsPage() {
 
         // Load analysis config
         const anConfigResult = await getAnalysisConfig(wsResult.data.id);
+        console.log('⚙️ SETTINGS - LOADED CONFIG:', JSON.stringify(anConfigResult.data));
         if (anConfigResult.success && anConfigResult.data) {
           const tasksConfig = anConfigResult.data.tasks;
+          console.log('⚙️ SETTINGS - TASKS CONFIG:', JSON.stringify(tasksConfig));
           const userDisplayName = sessionData.session.user?.user_metadata?.full_name
             || sessionData.session.user?.user_metadata?.name
             || sessionData.session.user?.email?.split("@")[0]
@@ -512,6 +528,7 @@ export default function SettingsPage() {
     const result = await updateAnalysisConfig(workspace.id, {
       tasks: anTasks,
     });
+    console.log('⚙️ SETTINGS - SAVE RESULT:', JSON.stringify(result));
 
     if (result.success) {
       setAnTasksStatus("success");
@@ -557,22 +574,24 @@ export default function SettingsPage() {
   const toggleOpenTeam = (teamKey: string) => {
     const team = ANALYSIS_TEAMS.find(t => t.key === teamKey);
     if (!team) return;
-    if (team.products.length === 0) {
-      setAnOpen(prev => ({
+    const teamIsSelected = anOpen.selected_teams.includes(teamKey);
+    setAnOpen(prev => {
+      const newSelectedTeams = teamIsSelected
+        ? prev.selected_teams.filter(t => t !== teamKey)
+        : [...prev.selected_teams, teamKey];
+      let newSelectedProducts = prev.selected_products;
+      if (team.products.length > 0) {
+        const allSelected = team.products.every(p => prev.selected_products.includes(p.key));
+        newSelectedProducts = allSelected
+          ? prev.selected_products.filter(c => !team.products.some(p => p.key === c))
+          : [...prev.selected_products, ...team.products.map(p => p.key).filter(k => !prev.selected_products.includes(k))];
+      }
+      return {
         ...prev,
-        selected_teams: prev.selected_teams.includes(teamKey)
-          ? prev.selected_teams.filter(t => t !== teamKey)
-          : [...prev.selected_teams, teamKey],
-      }));
-      return;
-    }
-    const allSelected = team.products.every(p => anOpen.selected_products.includes(p.key));
-    setAnOpen(prev => ({
-      ...prev,
-      selected_products: allSelected
-        ? prev.selected_products.filter(c => !team.products.some(p => p.key === c))
-        : [...prev.selected_products, ...team.products.map(p => p.key).filter(k => !prev.selected_products.includes(k))],
-    }));
+        selected_teams: newSelectedTeams,
+        selected_products: newSelectedProducts,
+      };
+    });
   };
 
   const addAnCustomCategory = (val: string) => {
@@ -604,22 +623,27 @@ export default function SettingsPage() {
   const toggleTasksTeam = (teamKey: string) => {
     const team = ANALYSIS_TEAMS.find(t => t.key === teamKey);
     if (!team) return;
-    if (team.products.length === 0) {
-      setAnTasks(prev => ({
+    const teamIsSelected = anTasks.selected_teams.includes(teamKey);
+    setAnTasks(prev => {
+      const newSelectedTeams = teamIsSelected
+        ? prev.selected_teams.filter(t => t !== teamKey)
+        : [...prev.selected_teams, teamKey];
+      let newSelectedProducts = prev.selected_products;
+      if (team.products.length > 0) {
+        if (teamIsSelected) {
+          // Desactivar: quitar productos de este equipo
+          newSelectedProducts = prev.selected_products.filter(c => !team.products.some(p => p.key === c));
+        } else {
+          // Activar: agregar productos de este equipo
+          newSelectedProducts = [...prev.selected_products, ...team.products.map(p => p.key).filter(k => !prev.selected_products.includes(k))];
+        }
+      }
+      return {
         ...prev,
-        selected_teams: prev.selected_teams.includes(teamKey)
-          ? prev.selected_teams.filter(t => t !== teamKey)
-          : [...prev.selected_teams, teamKey],
-      }));
-      return;
-    }
-    const allSelected = team.products.every(p => anTasks.selected_products.includes(p.key));
-    setAnTasks(prev => ({
-      ...prev,
-      selected_products: allSelected
-        ? prev.selected_products.filter(c => !team.products.some(p => p.key === c))
-        : [...prev.selected_products, ...team.products.map(p => p.key).filter(k => !prev.selected_products.includes(k))],
-    }));
+        selected_teams: newSelectedTeams,
+        selected_products: newSelectedProducts,
+      };
+    });
   };
 
   const addAnTasksResponsible = (name: string) => {
@@ -739,15 +763,23 @@ export default function SettingsPage() {
     setGeminiSaving(false);
   };
 
+  // ── Drive / Fuentes ──
+  const handleDriveSave = async () => {
+    if (!workspace) return;
+    setDriveSaving(true);
+    await updateAnalysisConfig(workspace.id, { source_types: activeSources });
+    setDriveSaving(false);
+  };
+
   const tabs = [
-    ...(activeSources.includes("slack") ? [{ id: "slack" as TabType, label: "Slack" }] : []),
-    { id: "drive" as TabType, label: "Google Drive" },
-    { id: "jira" as TabType, label: "Jira" },
+    { id: "modulos" as TabType, label: "Módulos" },
+    { id: "drive" as TabType, label: "Fuentes" },
+    { id: "gemini" as TabType, label: "Gemini AI" },
+    { id: "analisis" as TabType, label: "Análisis IA" },
     { id: "objetivos" as TabType, label: "Objetivos" },
     { id: "metricas" as TabType, label: "Métricas" },
-    { id: "analisis" as TabType, label: "Análisis IA" },
-    { id: "modulos" as TabType, label: "Módulos" },
-    { id: "gemini" as TabType, label: "Gemini AI" },
+    { id: "jira" as TabType, label: "Jira" },
+    ...(activeSources.includes("slack") ? [{ id: "slack" as TabType, label: "Slack" }] : []),
   ];
 
   if (loading) {
@@ -1005,6 +1037,15 @@ export default function SettingsPage() {
                 );
               })}
             </div>
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                onClick={handleDriveSave}
+                disabled={driveSaving}
+                className="px-6 py-3 bg-primary text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-primary/80 transition-all disabled:opacity-50"
+              >
+                {driveSaving ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
           </div>
         </section>
       )}
@@ -1095,7 +1136,7 @@ export default function SettingsPage() {
               <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
             </svg>
             <div>
-              <h2 className="text-lg font-semibold text-white">Módulos activos</h2>
+              <h2 className="text-lg font-semibold text-white">Módulos</h2>
               <p className="text-xs text-white/40">Selecciona qué módulos quieres mostrar en la navegación</p>
             </div>
           </div>
@@ -1388,40 +1429,27 @@ export default function SettingsPage() {
               </p>
               <div className="space-y-4">
                 {ANALYSIS_TEAMS.map(team => {
-                  const hasProducts = team.products.length > 0;
-                  const selectedCount = team.products.filter(p => anTasks.selected_products.includes(p.key)).length;
-                  const allSelected = hasProducts
-                    ? selectedCount === team.products.length
-                    : anTasks.selected_teams.includes(team.key);
-                  const noneSelected = hasProducts
-                    ? selectedCount === 0
-                    : !anTasks.selected_teams.includes(team.key);
+                  const teamIsSelected = anTasks.selected_teams.includes(team.key);
+                  const allSelected = teamIsSelected;
+                  const noneSelected = !teamIsSelected;
                   return (
                     <div key={team.key}>
                       <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] mb-1">
                         <button
                           onClick={() => toggleTasksTeam(team.key)}
                           className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${
-                            allSelected ? "bg-primary" : noneSelected ? "bg-white/10" : "bg-primary/50"
+                            allSelected ? "bg-primary" : "bg-white/10"
                           }`}
                         >
                           <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ${
                             allSelected ? "translate-x-5" : "translate-x-0"
                           }`} />
-                          {!allSelected && !noneSelected && (
-                            <span className="absolute inset-0 flex items-center justify-center">
-                              <span className="w-2 h-0.5 bg-white rounded" />
-                            </span>
-                          )}
                         </button>
                         <span className="text-xs font-bold text-white font-mono uppercase tracking-widest" style={{ color: team.color }}>
                           {team.label}
                         </span>
-                        {hasProducts && !allSelected && !noneSelected && (
-                          <span className="text-[9px] text-white/30 font-mono">{selectedCount}/{team.products.length}</span>
-                        )}
                       </div>
-                      {hasProducts && (
+                      {team.products.length > 0 && (
                         <div className="ml-8 space-y-1">
                           {team.products.map(prod => {
                             const productSelected = anTasks.selected_products.includes(prod.key);
@@ -1832,6 +1860,8 @@ export default function SettingsPage() {
           </section>
         </div>
       )}
+
+
     </div>
   );
 }

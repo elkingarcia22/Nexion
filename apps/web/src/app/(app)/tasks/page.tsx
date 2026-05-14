@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getTasks, createOrUpdateTask, deleteTask } from '@/lib/services/task-service';
 import { getOrCreateWorkspace } from '@/lib/services/workspace-service';
-import { categorizeItem, getResponsable } from '@/lib/services/categorization-service';
-import { ALL_PRODUCTS } from '@/lib/services/analysis-config-service';
+import { categorizeItem, getResponsable, deriveProductFromItem } from '@/lib/services/categorization-service';
+import { ALL_PRODUCTS, ANALYSIS_TEAMS, getAnalysisConfig } from '@/lib/services/analysis-config-service';
 import { TaskDrawer } from '@/components/day/TaskDrawer';
+import { TaskCard } from '@/components/tasks/TaskCard';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Badge } from '@/components/ui/Badge';
@@ -24,6 +25,7 @@ interface Task {
   reporter_id?: string;
   due_date?: string;
   team?: string;
+  product?: string;
   labels?: string[];
   subtasks?: any[];
   activity?: any[];
@@ -36,11 +38,10 @@ interface Task {
   created_at?: string;
   responsible?: string;
   origin?: string;
+  metadata?: any;
 }
 
-const TEAMS = ['Todas', 'Talent', 'Hiring', 'UX', 'Otras'];
 const STATUS_OPTIONS = ['Todas', 'Pendientes', 'En progreso', 'Completadas', 'Bloqueadas'];
-const PRODUCTS = ['Todos', ...ALL_PRODUCTS.map(p => p.label)];
 
 // Custom Select Component
 const CustomSelect = ({
@@ -123,6 +124,11 @@ export default function TasksPage() {
   const [responsableList, setResponsableList] = useState<string[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [productOptions, setProductOptions] = useState<string[]>(['Todos']);
+  const [teamOptions, setTeamOptions] = useState<string[]>(['Todas']);
+  const [configFilterActive, setConfigFilterActive] = useState(false);
+  const [configProductKeys, setConfigProductKeys] = useState<string[]>([]);
+  const [configTeamKeys, setConfigTeamKeys] = useState<string[]>([]);
   const [userName, setUserName] = useState<string>("");
   const [dueDateRange, setDueDateRange] = useState<{ start: Date; end: Date } | null>(null);
   const [createdDateRange, setCreatedDateRange] = useState<{ start: Date; end: Date } | null>(null);
@@ -130,12 +136,8 @@ export default function TasksPage() {
   // Helper functions for filter counts
   const getTeamCount = (team: string): number => {
     if (team === 'Todas') return tasks.length;
-    const teamMap: Record<string, string> = {
-      'Talent': 'talent',
-      'Hiring': 'hiring',
-      'UX': 'ux',
-      'Otras': 'otras'
-    };
+    const teamMap: Record<string, string> = Object.fromEntries(ANALYSIS_TEAMS.map(t => [t.label, t.key]));
+    teamMap['Otras'] = 'otras';
     return tasks.filter(t => categorizeItem(t) === teamMap[team]).length;
   };
 
@@ -179,6 +181,37 @@ export default function TasksPage() {
         console.log('📌 Workspace ID:', wsId);
         setWorkspaceId(wsId);
 
+        const configResult = await getAnalysisConfig(wsId);
+        console.log('🔧 CONFIG LOADED:', JSON.stringify({ success: configResult.success, data: configResult.data }));
+        const tasksCfg = configResult.success ? configResult.data?.tasks : undefined;
+        const selectedProductKeys = tasksCfg?.selected_products || [];
+        const selectedTeamKeys = tasksCfg?.selected_teams || [];
+        const filterActive = tasksCfg?.filter_active ?? true;
+        console.log('🔧 TASKS CONFIG:', JSON.stringify({ selectedProductKeys, selectedTeamKeys, filterActive }));
+
+        const available = selectedProductKeys.length > 0
+          ? ALL_PRODUCTS.filter(p => selectedProductKeys.includes(p.key)).map(p => p.label)
+          : ALL_PRODUCTS.map(p => p.label);
+        setProductOptions(['Todos', ...available]);
+
+        const hasProductSelection = selectedProductKeys.length > 0;
+        const hasTeamSelection = selectedTeamKeys.length > 0;
+        if (!hasProductSelection && !hasTeamSelection) {
+          setTeamOptions(['Todas', ...ANALYSIS_TEAMS.map(t => t.label), 'Otras']);
+        } else {
+          const teamsFromProducts = ANALYSIS_TEAMS.filter(t =>
+            t.products.some(p => selectedProductKeys.includes(p.key))
+          );
+          const teamsDirect = ANALYSIS_TEAMS.filter(t =>
+            t.products.length === 0 && selectedTeamKeys.includes(t.key)
+          );
+          const teamsToShow = [...teamsFromProducts, ...teamsDirect];
+          setTeamOptions(['Todas', ...teamsToShow.map(t => t.label), 'Otras']);
+        }
+        setConfigFilterActive(filterActive);
+        setConfigProductKeys(selectedProductKeys);
+        setConfigTeamKeys(selectedTeamKeys);
+
         // Load user's full name from profiles or metadata
         const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
         const userName = profile?.full_name || user.user_metadata?.full_name || "";
@@ -193,6 +226,11 @@ export default function TasksPage() {
         if (result.success && result.data) {
           console.log('✅ Tasks loaded:', result.data);
           console.log('🔍 Sample task structure:', result.data[0]);
+          result.data.forEach((t: Task) => {
+            const cat = categorizeItem(t);
+            const prod = deriveProductFromItem(t);
+            console.log(`📋 TASK: "${(t.title || '').substring(0, 50)}" team="${t.team}" category="${cat}" product="${prod}" metadata?.product="${t.metadata?.product || ''}"`);
+          });
           console.log('📋 Task fields check:', {
             hasTeam: result.data.some((t: Task) => t.team),
             hasResponsible: result.data.some((t: Task) => t.responsible),
@@ -233,14 +271,25 @@ export default function TasksPage() {
   useEffect(() => {
     let filtered = tasks;
 
+    // Config-based default filter (applied when filter_active and selections exist)
+    if (configFilterActive && configTeamKeys.length > 0) {
+      filtered = filtered.filter(t => {
+        const teamKey = categorizeItem(t);
+        return configTeamKeys.includes(teamKey);
+      });
+    } else if (configFilterActive && configProductKeys.length > 0) {
+      filtered = filtered.filter(t => {
+        const teamKey = categorizeItem(t);
+        return ANALYSIS_TEAMS.some(at => at.key === teamKey && at.products.some(p => configProductKeys.includes(p.key)));
+      });
+    } else {
+      console.log('🔧 CONFIG FILTER SKIPPED: filterActive=' + configFilterActive + ' productKeys=' + configProductKeys.length + ' teamKeys=' + configTeamKeys.length);
+    }
+
     // Team filter - use categorizeItem for dynamic categorization
     if (selectedTeam !== 'Todas') {
-      const teamMap: Record<string, string> = {
-        'Talent': 'talent',
-        'Hiring': 'hiring',
-        'UX': 'ux',
-        'Otras': 'otras'
-      };
+      const teamMap: Record<string, string> = Object.fromEntries(ANALYSIS_TEAMS.map(t => [t.label, t.key]));
+      teamMap['Otras'] = 'otras';
       const selectedTeamLower = teamMap[selectedTeam] || selectedTeam.toLowerCase();
       filtered = filtered.filter(t => categorizeItem(t) === selectedTeamLower);
     }
@@ -262,8 +311,11 @@ export default function TasksPage() {
       const product = ALL_PRODUCTS.find(p => p.label === selectedProduct);
       if (product) {
         filtered = filtered.filter(t => {
-          const team = (t.team || '').toLowerCase();
-          return team === product.key || team === product.label.toLowerCase();
+          const storedProduct = t.metadata?.product || deriveProductFromItem(t);
+          if (storedProduct) return storedProduct === product.key;
+          const teamKey = categorizeItem(t);
+          const team = ANALYSIS_TEAMS.find(at => at.key === teamKey);
+          return team?.products?.some(p => p.key === product.key);
         });
       }
     }
@@ -312,20 +364,20 @@ export default function TasksPage() {
     }
 
     setFilteredTasks(filtered);
-  }, [tasks, selectedTeam, selectedStatus, selectedProduct, selectedResponsable, searchQuery, dueDateRange, createdDateRange]);
+  }, [tasks, selectedTeam, selectedStatus, selectedProduct, selectedResponsable, searchQuery, dueDateRange, createdDateRange, configFilterActive, configProductKeys, configTeamKeys]);
 
   // Calculate KPIs
   const kpis = {
-    total: tasks.length,
-    pending: tasks.filter(t => {
+    total: filteredTasks.length,
+    pending: filteredTasks.filter(t => {
       const s = (t.status || '').toLowerCase();
       return ['todo', 'backlog', 'pending_review'].includes(s);
     }).length,
-    inProgress: tasks.filter(t => {
+    inProgress: filteredTasks.filter(t => {
       const s = (t.status || '').toLowerCase();
       return ['in_progress', 'review'].includes(s);
     }).length,
-    completed: tasks.filter(t => (t.status || '').toLowerCase() === 'done').length,
+    completed: filteredTasks.filter(t => (t.status || '').toLowerCase() === 'done').length,
   };
 
   const handleSaveTask = async (task: Task) => {
@@ -343,6 +395,21 @@ export default function TasksPage() {
       }
       setIsDrawerOpen(false);
       setSelectedTask(null);
+    }
+  };
+
+  const handleCompleteTask = async (task: Task) => {
+    if (!workspaceId) return;
+
+    const newStatus = task.status?.toLowerCase() === 'done' ? 'todo' : 'done';
+    const result = await createOrUpdateTask({
+      ...task,
+      workspace_id: workspaceId,
+      status: newStatus,
+    });
+
+    if (result.success) {
+      setTasks(tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
     }
   };
 
@@ -366,45 +433,6 @@ export default function TasksPage() {
     setSelectedTask(task);
     setIsCreating(false);
     setIsDrawerOpen(true);
-  };
-
-  const getStatusColor = (status?: string) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'done') return 'bg-green-500/20 border-green-500/20';
-    if (['in_progress', 'review'].includes(s)) return 'bg-blue-500/20 border-blue-500/20';
-    if (s === 'blocked') return 'bg-red-500/20 border-red-500/20';
-    return 'bg-white/5 border-white/10';
-  };
-
-  const getStatusCircleColor = (status?: string) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'done') return 'bg-green-500';
-    if (['in_progress', 'review'].includes(s)) return 'bg-blue-500';
-    if (s === 'blocked') return 'bg-red-500';
-    return 'bg-amber-500';
-  };
-
-  const getPriorityColor = (priority?: string) => {
-    const p = (priority || '').toLowerCase();
-    if (p === 'high') return 'text-rose-500';
-    if (p === 'medium') return 'text-amber-500';
-    return 'text-blue-400';
-  };
-
-  const statusLabel: Record<string, string> = {
-    'todo': 'Pendiente',
-    'backlog': 'Backlog',
-    'pending_review': 'Revisión',
-    'in_progress': 'En progreso',
-    'review': 'Revisión',
-    'done': 'Completada',
-    'blocked': 'Bloqueada'
-  };
-
-  const priorityLabel: Record<string, string> = {
-    'high': 'Alta',
-    'medium': 'Media',
-    'low': 'Baja'
   };
 
   if (loading) {
@@ -463,7 +491,7 @@ export default function TasksPage() {
           <CustomSelect
             value={selectedTeam}
             onChange={setSelectedTeam}
-            options={TEAMS}
+            options={teamOptions}
             placeholder="Equipo"
           />
 
@@ -471,7 +499,7 @@ export default function TasksPage() {
           <CustomSelect
             value={selectedProduct}
             onChange={setSelectedProduct}
-            options={PRODUCTS}
+            options={productOptions}
             placeholder="Producto"
           />
 
@@ -552,72 +580,19 @@ export default function TasksPage() {
           </a>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-2">
           {filteredTasks.map(task => (
             <div
               key={task.id}
-              className={`bg-[#161927]/50 border border-white/5 rounded-2xl p-5 hover:border-primary/40 transition-all cursor-pointer group/task ${getStatusColor(task.status)} ${
-                task.status?.toLowerCase() === 'done' ? 'opacity-60' : ''
-              }`}
               onClick={() => handleEditTask(task)}
+              className="cursor-pointer"
             >
-              {/* Header */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className={`w-3 h-3 rounded-full ${getStatusCircleColor(task.status)}`} />
-                <span className="text-white/60 text-xs uppercase">
-                  {statusLabel[task.status?.toLowerCase() || 'todo']}
-                </span>
-                {task.priority && (
-                  <span className={`text-xs font-semibold ml-auto ${getPriorityColor(task.priority)}`}>
-                    {priorityLabel[task.priority.toLowerCase()] || task.priority}
-                  </span>
-                )}
-              </div>
-
-              {/* Body */}
-              <h3 className="text-white font-semibold mb-3 text-sm leading-snug line-clamp-2">
-                {task.title}
-              </h3>
-
-              <div className="flex items-center gap-2 mb-4 flex-wrap">
-                {(categorizeItem(task) !== 'otras') && (
-                  <span className="text-xs bg-white/10 text-white/80 px-2 py-1 rounded capitalize">
-                    {categorizeItem(task)}
-                  </span>
-                )}
-              </div>
-
-              {/* Info Row */}
-              <div className="text-xs text-white/60 space-y-1 mb-4">
-                {(task.responsible || task.assignee_id) && (
-                  <p>Responsable: {task.responsible || task.assignee_id}</p>
-                )}
-                {task.due_date && (
-                  <p>Vence: {new Date(task.due_date).toLocaleDateString('es-ES')}</p>
-                )}
-              </div>
-
-              {/* Footer - Actions */}
-              <div className="flex items-center gap-2 pt-4 border-t border-white/10">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEditTask(task);
-                  }}
-                  className="px-3 py-1 text-xs bg-primary/20 text-primary rounded hover:bg-primary/30 transition-colors"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmDelete(task.id || '');
-                  }}
-                  className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors"
-                >
-                  Eliminar
-                </button>
-              </div>
+              <TaskCard
+                task={{ ...task, product: task.product || task.metadata?.product || deriveProductFromItem(task) }}
+                onEdit={handleEditTask}
+                onDelete={(id) => setConfirmDelete(id)}
+                onComplete={handleCompleteTask}
+              />
             </div>
           ))}
         </div>
