@@ -86,22 +86,60 @@ export default function OnboardingPage() {
     prevStep.current = currentStep;
   }, [currentStep]);
 
-  const loadSlack = useCallback(async (wsId: string) => {
+  const loadSlack = useCallback(async (wsId: string, userEmail?: string) => {
     setSlackLoading(true);
     try {
-      const channelsRes = await fetch("/api/slack?action=my-channels").then(r => r.json());
-      const publicChs = (channelsRes.success && channelsRes.data) ? channelsRes.data : [];
-      const prefsRes = await supabase.from("app_slack_channels").select("*").eq("workspace_id", wsId);
+      const channelsUrl = userEmail
+        ? `/api/slack?action=my-channels&userEmail=${encodeURIComponent(userEmail)}`
+        : "/api/slack?action=my-channels";
+      const [channelsRes, prefsRes] = await Promise.all([
+        fetch(channelsUrl).then(r => r.json()),
+        supabase.from("app_slack_channels").select("*").eq("workspace_id", wsId),
+      ]);
+      const publicChs = (channelsRes.ok && channelsRes.channels) ? channelsRes.channels : [];
       const prefsData = prefsRes.data || [];
       const prefsMap = new Map<string, boolean>();
       prefsData.forEach((p: any) => prefsMap.set(p.channel_id, p.enabled));
+      const dbChannels = prefsData.map((p: any) => ({
+        id: p.channel_id, name: p.channel_name, is_private: p.is_private, is_channel: true, is_member: true,
+      }));
+      const KNOWN_PRIVATE = [
+        { id: "C084AP7K4Q2", name: "triada-growth" },
+        { id: "C083FSV36KY", name: "ux_team_ubits" },
+        { id: "C0APCFJJ39V", name: "claude-masters" },
+        { id: "C09JV33J9PB", name: "growth-interno" },
+        { id: "C085E86CDEC", name: "talent-growth-implementation" },
+        { id: "C08VBKFA9ST", name: "hiring-team" },
+      ];
+      const verifyResults = await Promise.allSettled(
+        KNOWN_PRIVATE.map(async (kp) => {
+          const res = await fetch(`/api/slack?action=private-channel-info&channelId=${kp.id}`).then(r => r.json());
+          if (res.ok && res.channel?.is_member) {
+            if (userEmail) {
+              const membRes = await fetch(`/api/slack?action=check-channel-membership&channelId=${kp.id}&userEmail=${encodeURIComponent(userEmail)}`).then(r => r.json());
+              if (membRes.ok && membRes.isMember) return kp;
+              return null;
+            }
+            return kp;
+          }
+          return null;
+        })
+      );
+      for (const r of verifyResults) {
+        if (r.status === "fulfilled" && r.value) {
+          const kp = r.value;
+          if (!publicChs.some((c: any) => c.id === kp.id) && !dbChannels.some((c: any) => c.id === kp.id)) {
+            dbChannels.push({
+              id: kp.id, name: kp.name, is_channel: true, is_group: true, is_mpim: false,
+              is_private: true, is_member: true, num_members: 0,
+            });
+          }
+        }
+      }
       const seen = new Set<string>();
       const merged = [...publicChs.filter((c: any) => { if (seen.has(c.id)) return false; seen.add(c.id); return true; })];
-      prefsData.forEach((p: any) => {
-        if (!seen.has(p.channel_id)) {
-          merged.push({ id: p.channel_id, name: p.channel_name, is_private: p.is_private, is_channel: true, is_member: true });
-          seen.add(p.channel_id);
-        }
+      dbChannels.forEach((c: any) => {
+        if (!seen.has(c.id)) { merged.push(c); seen.add(c.id); }
       });
       setSlackChannels(merged);
       setSlackPrefs(prefsMap);
@@ -165,9 +203,9 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (workspace && currentStep === "slack") {
-      loadSlack(workspace.id);
+      loadSlack(workspace.id, user?.email);
     }
-  }, [currentStep, workspace, loadSlack]);
+  }, [currentStep, workspace, loadSlack, user?.email]);
 
   const saveStep = async (step: Step, data: any) => {
     setSaving(true);
@@ -775,18 +813,23 @@ export default function OnboardingPage() {
               </button>
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    saveStep("slack", { skip: true });
-                    setCurrentStep("complete");
-                  }}
+                  onClick={() => goNext("slack", { skip: true })}
                   className="px-4 py-3 text-white/40 hover:text-white text-[11px] font-black tracking-widest uppercase transition-colors"
                 >
                   Saltar
                 </button>
                 <button
-                  onClick={async () => {
-                    await saveStep("slack", { channels: Array.from(slackPrefs.entries()).map(([id, enabled]) => ({ id, enabled })) });
-                    if (!error) setCurrentStep("modules");
+                  onClick={() => {
+                    const channels = Array.from(slackPrefs.entries()).map(([id, enabled]) => {
+                      const ch = slackChannels.find(c => c.id === id);
+                      return {
+                        id,
+                        enabled,
+                        name: ch?.name || "",
+                        is_private: ch?.is_private || false,
+                      };
+                    });
+                    goNext("slack", { channels });
                   }}
                   disabled={saving}
                   className="px-6 py-3 bg-primary text-white text-[11px] font-black tracking-widest uppercase rounded-xl hover:bg-primary/80 disabled:opacity-50 transition-all"

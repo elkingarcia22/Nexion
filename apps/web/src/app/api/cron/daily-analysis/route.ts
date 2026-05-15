@@ -346,11 +346,15 @@ export async function POST(request: Request) {
       try {
         const { data: ws } = await supabase
           .from("workspaces")
-          .select("jira_config, gemini_api_key")
+          .select("jira_config, gemini_api_key, analysis_config")
           .eq("id", workspaceId)
           .single();
 
-        if (ws?.gemini_api_key) geminiApiKey = ws.gemini_api_key;
+        if (ws?.gemini_api_key) {
+          geminiApiKey = ws.gemini_api_key;
+        } else if ((ws?.analysis_config as any)?.gemini_api_key) {
+          geminiApiKey = (ws?.analysis_config as any).gemini_api_key;
+        }
 
         if (ws?.jira_config?.domain && ws?.jira_config?.email && ws?.jira_config?.api_token) {
           const auth = Buffer.from(`${ws.jira_config.email}:${ws.jira_config.api_token}`).toString("base64");
@@ -425,6 +429,147 @@ export async function POST(request: Request) {
 
       log.push(`Gemini: ${analysisResult.tasks?.length || 0} tareas, ${analysisResult.insights?.length || 0} insights`);
 
+      // ════════════════════════════════════════════════════════════════
+      // 🧠 CRON TRACEABILITY — Resultado crudo de Gemini ANTES de filtros
+      // ════════════════════════════════════════════════════════════════
+      console.log(`\n[CRON-TRACE] 🧩 ${"=".repeat(50)}`);
+      console.log(`[CRON-TRACE] 🧩  TRACEABILITY — Workspace ${workspaceId} para ${dateStr}`);
+      console.log(`[CRON-TRACE] 🧩 ${"=".repeat(50)}`);
+
+      const cronEntities = [
+        ...(analysisResult.tasks || []).map((e: any) => ({ ...e, _type: "TASK" })),
+        ...(analysisResult.insights || []).map((e: any) => ({ ...e, _type: "INSIGHT" })),
+        ...(analysisResult.metrics || []).map((e: any) => ({ ...e, _type: "METRIC" })),
+        ...(analysisResult.alerts || []).map((e: any) => ({ ...e, _type: "ALERT" })),
+        ...(analysisResult.feedback || []).map((e: any) => ({ ...e, _type: "FEEDBACK" })),
+      ];
+
+      // Category distribution
+      const cronCat: Record<string, { total: number; TASK: number; INSIGHT: number; METRIC: number; ALERT: number; FEEDBACK: number }> = {};
+      for (const e of cronEntities) {
+        const cat = e.category || "sin_categoria";
+        if (!cronCat[cat]) cronCat[cat] = { total: 0, TASK: 0, INSIGHT: 0, METRIC: 0, ALERT: 0, FEEDBACK: 0 };
+        cronCat[cat].total++;
+        const t = e._type as keyof typeof cronCat[string];
+        cronCat[cat][t]++;
+      }
+      console.log(`[CRON-TRACE] 📊 Distribución por categoría (cruda):`);
+      for (const [cat, g] of Object.entries(cronCat).sort((a, b) => b[1].total - a[1].total)) {
+        const parts = [];
+        if (g.TASK > 0) parts.push(`T:${g.TASK}`);
+        if (g.INSIGHT > 0) parts.push(`I:${g.INSIGHT}`);
+        if (g.METRIC > 0) parts.push(`M:${g.METRIC}`);
+        if (g.ALERT > 0) parts.push(`A:${g.ALERT}`);
+        if (g.FEEDBACK > 0) parts.push(`F:${g.FEEDBACK}`);
+        console.log(`[CRON-TRACE]   📁 ${cat.padEnd(25)} → ${g.total} [${parts.join(", ")}]`);
+      }
+
+      // Responsible distribution
+      const cronResp: Record<string, number> = {};
+      for (const e of cronEntities) {
+        const r = e.responsible || "sin_asignar";
+        cronResp[r] = (cronResp[r] || 0) + 1;
+      }
+      console.log(`[CRON-TRACE] 👤 Distribución por responsable:`);
+      for (const [r, c] of Object.entries(cronResp).sort((a, b) => b[1] - a[1])) {
+        console.log(`[CRON-TRACE]   👤 ${r.padEnd(20)} → ${c}`);
+      }
+
+      // Objective linking
+      const cronWithGoal = cronEntities.filter((e: any) => e.goal_id);
+      const cronWithJira = cronEntities.filter((e: any) => e.linked_jira_key);
+      const cronWithMetric = cronEntities.filter((e: any) => e.linked_metric_names?.length > 0);
+      console.log(`[CRON-TRACE] 🎯 Vinculación: ${cronWithGoal.length}/${cronEntities.length} a objetivos, ${cronWithJira.length}/${cronEntities.length} a Jira, ${cronWithMetric.length}/${cronEntities.length} a métricas`);
+
+      // Cross-entity per shared goal
+      if (cronWithGoal.length > 0) {
+        const goalTypes: Record<string, Set<string>> = {};
+        for (const e of cronWithGoal) {
+          if (!goalTypes[e.goal_id]) goalTypes[e.goal_id] = new Set();
+          goalTypes[e.goal_id].add(e._type);
+        }
+        const multi = Object.entries(goalTypes).filter(([, s]) => s.size > 1);
+        if (multi.length > 0) {
+          console.log(`[CRON-TRACE] 🔗 Asociaciones multi-tipo por objetivo:`);
+          for (const [gid, ts] of multi) {
+            console.log(`[CRON-TRACE]   🔗 ${gid.substring(0, 8)}... → ${[...ts].join(" ⟷ ")}`);
+          }
+        }
+      }
+
+      if (cronWithJira.length > 0) {
+        const jiraTypes: Record<string, Set<string>> = {};
+        for (const e of cronWithJira) {
+          if (!jiraTypes[e.linked_jira_key]) jiraTypes[e.linked_jira_key] = new Set();
+          jiraTypes[e.linked_jira_key].add(e._type);
+        }
+        const multi = Object.entries(jiraTypes).filter(([, s]) => s.size > 1);
+        if (multi.length > 0) {
+          console.log(`[CRON-TRACE] 🟢 Asociaciones multi-tipo por Jira:`);
+          for (const [jk, ts] of multi) {
+            console.log(`[CRON-TRACE]   🟢 ${jk.padEnd(12)} → ${[...ts].join(" ⟷ ")}`);
+          }
+        }
+      }
+
+      // Dump tasks
+      if (analysisResult.tasks?.length > 0) {
+        console.log(`[CRON-TRACE] 📋 Tareas (${analysisResult.tasks.length}):`);
+        analysisResult.tasks.forEach((t: any, i: number) => {
+          const assocs = [];
+          if (t.goal_id) assocs.push(`obj:${t.goal_id.substring(0, 8)}`);
+          if (t.linked_jira_key) assocs.push(`jira:${t.linked_jira_key}`);
+          if (t.linked_metric_names?.length > 0) assocs.push(`met:${t.linked_metric_names.join(",")}`);
+          console.log(`[CRON-TRACE]   ${i+1}. [${t.priority}] "${t.title?.substring(0, 50)}" cat:${t.category} resp:${t.responsible} asoc:[${assocs.join(", ") || "ninguna"}]`);
+        });
+      }
+
+      // Dump alerts
+      if (analysisResult.alerts?.length > 0) {
+        console.log(`[CRON-TRACE] 🚨 Alertas (${analysisResult.alerts.length}):`);
+        analysisResult.alerts.forEach((a: any, i: number) => {
+          const assocs = [];
+          if (a.goal_id) assocs.push(`obj:${a.goal_id.substring(0, 8)}`);
+          if (a.linked_jira_key) assocs.push(`jira:${a.linked_jira_key}`);
+          if (a.linked_metric_names?.length > 0) assocs.push(`met:${a.linked_metric_names.join(",")}`);
+          console.log(`[CRON-TRACE]   ${i+1}. [${a.priority}] "${a.title?.substring(0, 50)}" cat:${a.category} asoc:[${assocs.join(", ") || "ninguna"}]`);
+        });
+      }
+
+      // Dump insights
+      if (analysisResult.insights?.length > 0) {
+        console.log(`[CRON-TRACE] 💡 Insights (${analysisResult.insights.length}):`);
+        analysisResult.insights.forEach((ins: any, i: number) => {
+          const assocs = [];
+          if (ins.goal_id) assocs.push(`obj:${ins.goal_id.substring(0, 8)}`);
+          if (ins.linked_jira_key) assocs.push(`jira:${ins.linked_jira_key}`);
+          if (ins.linked_metric_names?.length > 0) assocs.push(`met:${ins.linked_metric_names.join(",")}`);
+          console.log(`[CRON-TRACE]   ${i+1}. "${ins.title?.substring(0, 50)}" cat:${ins.category} asoc:[${assocs.join(", ") || "ninguna"}]`);
+        });
+      }
+
+      // Dump feedback
+      if (analysisResult.feedback?.length > 0) {
+        console.log(`[CRON-TRACE] 💬 Feedback (${analysisResult.feedback.length}):`);
+        analysisResult.feedback.forEach((fb: any, i: number) => {
+          const assocs = [];
+          if (fb.goal_id) assocs.push(`obj:${fb.goal_id.substring(0, 8)}`);
+          if (fb.linked_jira_key) assocs.push(`jira:${fb.linked_jira_key}`);
+          console.log(`[CRON-TRACE]   ${i+1}. "${fb.title?.substring(0, 50)}" tipo:${fb.type} cat:${fb.category} asoc:[${assocs.join(", ") || "ninguna"}]`);
+        });
+      }
+
+      // Dump metrics
+      if (analysisResult.metrics?.length > 0) {
+        console.log(`[CRON-TRACE] 📈 Métricas (${analysisResult.metrics.length}):`);
+        analysisResult.metrics.forEach((m: any, i: number) => {
+          console.log(`[CRON-TRACE]   ${i+1}. "${m.title}" = ${m.value} (${m.change}) cat:${m.category}`);
+        });
+      }
+
+      console.log(`[CRON-TRACE] 🧩 ${"=".repeat(50)}\n`);
+      // ════════════════════════════════════════════════════════════════
+
       const hasResponsibleFilter = analysisConfig.filter_responsibles && analysisConfig.selected_responsibles?.length > 0;
 
       // Post-filter tasks with tasks config
@@ -457,6 +602,27 @@ export async function POST(request: Request) {
 
       if (hasTasksFilter || hasOpenFilter || hasResponsibleFilter) {
         log.push(`Filtros: ${analysisResult.tasks?.length || 0} tareas, ${analysisResult.insights?.length || 0} insights restantes`);
+
+        // ════════════════════════════════════════════════════════════════
+        // 🧠 CRON FILTER IMPACT TRACEABILITY
+        // ════════════════════════════════════════════════════════════════
+        console.log(`[CRON-TRACE] 🔍 FILTROS APLICADOS — Impacto:`);
+        if (hasTasksFilter) {
+          console.log(`[CRON-TRACE]   🏷️  Filtro de tareas por producto: [${resolvedTasks.join(", ")}]`);
+          console.log(`[CRON-TRACE]   📊 Tareas resultantes: ${analysisResult.tasks?.length || 0}`);
+        }
+        if (hasOpenFilter) {
+          console.log(`[CRON-TRACE]   🏷️  Filtro open por categoría: [${openFilterCategories.join(", ")}]`);
+          console.log(`[CRON-TRACE]   📊 Insights resultantes: ${analysisResult.insights?.length || 0}`);
+          console.log(`[CRON-TRACE]   📊 Alertas resultantes: ${analysisResult.alerts?.length || 0}`);
+          console.log(`[CRON-TRACE]   📊 Métricas resultantes: ${analysisResult.metrics?.length || 0}`);
+        }
+        if (hasResponsibleFilter) {
+          console.log(`[CRON-TRACE]   👤 Filtro por responsable: [${(analysisConfig.selected_responsibles || []).join(", ")}]`);
+          console.log(`[CRON-TRACE]   📊 Entidades resultantes: ${analysisResult.tasks?.length || 0} tareas, ${analysisResult.insights?.length || 0} insights`);
+        }
+        console.log(`[CRON-TRACE] 🔍 FIN FILTROS`);
+        // ════════════════════════════════════════════════════════════════
       }
 
       // 7. Save day summary

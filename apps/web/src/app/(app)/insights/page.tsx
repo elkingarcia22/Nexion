@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateWorkspace } from '@/lib/services/workspace-service';
 import { getInsights, Insight } from '@/lib/services/insight-service';
-import { ALL_PRODUCTS } from '@/lib/services/analysis-config-service';
+import { ALL_PRODUCTS, getAnalysisConfig } from '@/lib/services/analysis-config-service';
+import { deriveProductFromItem } from '@/lib/services/categorization-service';
+import { InsightCard } from '@/components/insights/InsightCard';
 
 const TEAMS = ['Todas', 'Talent', 'Hiring', 'UX', 'Otras'];
-const PRODUCTS = ['Todos', ...ALL_PRODUCTS.map(p => p.label)];
 
 const CustomSelect = ({
   value, onChange, options, placeholder = "Selecciona...", className = ""
@@ -45,13 +46,6 @@ const CustomSelect = ({
   );
 };
 
-const teamConfig: Record<string, { label: string; color: string; border: string }> = {
-  talent: { label: 'Talent', color: 'text-[#2ec6ff]', border: 'border-l-[#2ec6ff]' },
-  hiring: { label: 'Hiring', color: 'text-[#f49e04]', border: 'border-l-[#f49e04]' },
-  ux: { label: 'UX', color: 'text-purple-400', border: 'border-l-purple-500' },
-  otras: { label: 'Otras', color: 'text-white/40', border: 'border-l-white/10' },
-};
-
 export default function InsightsPage() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [filteredInsights, setFilteredInsights] = useState<Insight[]>([]);
@@ -59,8 +53,8 @@ export default function InsightsPage() {
   const [selectedTeam, setSelectedTeam] = useState('Todas');
   const [selectedProduct, setSelectedProduct] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [productOptions, setProductOptions] = useState<string[]>(['Todos']);
 
   const getTeam = (insight: Insight): string => {
     if (insight.category) {
@@ -82,6 +76,14 @@ export default function InsightsPage() {
         if (!wsResult.success || !wsResult.data) { setLoading(false); return; }
         const wsId = wsResult.data.id;
         setWorkspaceId(wsId);
+
+        const configResult = await getAnalysisConfig(wsId);
+        const selectedKeys = configResult.success ? configResult.data?.tasks?.selected_products || [] : [];
+        const available = selectedKeys.length > 0
+          ? ALL_PRODUCTS.filter(p => selectedKeys.includes(p.key)).map(p => p.label)
+          : ALL_PRODUCTS.map(p => p.label);
+        setProductOptions(['Todos', ...available]);
+
         const result = await getInsights(wsId);
         if (result.success && result.data) setInsights(result.data);
       } catch (error) {
@@ -100,10 +102,7 @@ export default function InsightsPage() {
     if (selectedProduct !== 'Todos') {
       const product = ALL_PRODUCTS.find(p => p.label === selectedProduct);
       if (product) {
-        filtered = filtered.filter(i => {
-          const cat = (i.category || '').toLowerCase();
-          return cat === product.key || cat === product.label.toLowerCase();
-        });
+        filtered = filtered.filter(i => (i.product || deriveProductFromItem(i)) === product.key);
       }
     }
     if (searchQuery) {
@@ -163,7 +162,7 @@ export default function InsightsPage() {
       <div className="bg-[#161927]/50 border border-white/5 rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           <CustomSelect value={selectedTeam} onChange={setSelectedTeam} options={TEAMS} placeholder="Equipo" />
-          <CustomSelect value={selectedProduct} onChange={setSelectedProduct} options={PRODUCTS} placeholder="Producto" />
+          <CustomSelect value={selectedProduct} onChange={setSelectedProduct} options={productOptions} placeholder="Producto" />
           {(selectedTeam !== 'Todas' || selectedProduct !== 'Todos' || searchQuery) && (
             <button onClick={() => { setSelectedTeam('Todas'); setSelectedProduct('Todos'); setSearchQuery(''); }} className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
               Limpiar
@@ -190,40 +189,10 @@ export default function InsightsPage() {
           <a href="/day/today" className="inline-block px-6 py-3 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary/80 transition-all">Ir a Análisis Diario</a>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredInsights.map((insight) => {
-            const team = getTeam(insight);
-            const tConfig = teamConfig[team] || teamConfig.otras;
-            const isExpanded = selectedInsight?.id === insight.id;
-
-            return (
-              <div key={insight.id} className={`bg-[#161927]/50 border border-white/5 rounded-2xl p-5 border-l-4 ${tConfig.border} transition-all cursor-pointer hover:border-white/10 ${isExpanded ? 'border-white/10' : ''}`}
-                onClick={() => setSelectedInsight(isExpanded ? null : insight)}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${tConfig.color}`}>{tConfig.label}</span>
-                  {insight.linked_jira_key && <span className="text-[9px] text-white/30 font-mono ml-auto">{insight.linked_jira_key}</span>}
-                </div>
-                {insight.summary_date && (
-                  <div className="text-[10px] text-white/30 font-mono mb-2">
-                    {new Date(insight.summary_date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                  </div>
-                )}
-                <h3 className="text-sm font-bold text-white mb-2 leading-snug">{insight.title}</h3>
-                {insight.description && (
-                  <div className={`text-xs text-white/60 leading-relaxed ${isExpanded ? '' : 'line-clamp-2'}`}>
-                    {insight.description}
-                  </div>
-                )}
-                {(insight.responsible || insight.goal_id) && (
-                  <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/5 text-[9px] text-white/30">
-                    {insight.responsible && <span>{insight.responsible}</span>}
-                    {insight.goal_id && <span>· Objetivo vinculado</span>}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="space-y-2">
+          {filteredInsights.map((insight) => (
+            <InsightCard key={insight.id} insight={insight} workspaceId={workspaceId || undefined} />
+          ))}
         </div>
       )}
     </div>

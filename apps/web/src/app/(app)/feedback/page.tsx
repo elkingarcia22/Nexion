@@ -3,13 +3,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getOrCreateWorkspace } from '@/lib/services/workspace-service';
-import { getAlerts, Alert } from '@/lib/services/alert-service';
+import { getFeedback, FeedbackItem } from '@/lib/services/feedback-service';
 import { ALL_PRODUCTS, getAnalysisConfig } from '@/lib/services/analysis-config-service';
 import { deriveProductFromItem } from '@/lib/services/categorization-service';
-import { AlertCard } from '@/components/alerts/AlertCard';
+import { FeedbackCard } from '@/components/feedback/FeedbackCard';
 
 const TEAMS = ['Todas', 'Talent', 'Hiring', 'UX', 'Otras'];
-const PRIORITY_OPTIONS = ['Todas', 'Crítica', 'Alta', 'Media'];
+const TYPE_OPTIONS = ['Todos', 'Producto', 'Laboral', 'Personal'];
 
 const CustomSelect = ({
   value, onChange, options, placeholder = "Selecciona...", className = ""
@@ -47,26 +47,32 @@ const CustomSelect = ({
   );
 };
 
-export default function AlertsPage() {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [filteredAlerts, setFilteredAlerts] = useState<Alert[]>([]);
+export default function FeedbackPage() {
+  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTeam, setSelectedTeam] = useState('Todas');
-  const [selectedPriority, setSelectedPriority] = useState('Todas');
+  const [selectedType, setSelectedType] = useState('Todos');
   const [selectedProduct, setSelectedProduct] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [productOptions, setProductOptions] = useState<string[]>(['Todos']);
 
-  const getTeam = (alert: Alert): string => {
-    if (alert.category) {
-      const cat = alert.category.toLowerCase();
+  const getTeam = (item: FeedbackItem): string => {
+    if (item.category) {
+      const cat = item.category.toLowerCase();
       if (cat === 'talent') return 'talent';
       if (cat === 'hiring') return 'hiring';
       if (cat === 'ux') return 'ux';
       return 'otras';
     }
     return 'otras';
+  };
+
+  const getType = (item: FeedbackItem): string => {
+    const t = (item.type || '').toLowerCase();
+    if (t === 'producto' || t === 'laboral' || t === 'personal') return t;
+    return 'producto';
   };
 
   useEffect(() => {
@@ -86,50 +92,50 @@ export default function AlertsPage() {
           : ALL_PRODUCTS.map(p => p.label);
         setProductOptions(['Todos', ...available]);
 
-        const result = await getAlerts(wsId);
-        if (result.success && result.data) setAlerts(result.data);
+        const result = await getFeedback(wsId);
+        if (result.success && result.data) setFeedbackItems(result.data);
       } catch (error) {
-        console.error('Error loading alerts:', error);
+        console.error('Error loading feedback:', error);
       } finally { setLoading(false); }
     };
     loadData();
   }, []);
 
   useEffect(() => {
-    let filtered = alerts;
+    let filtered = feedbackItems;
     if (selectedTeam !== 'Todas') {
       const teamMap: Record<string, string> = { 'Talent': 'talent', 'Hiring': 'hiring', 'UX': 'ux', 'Otras': 'otras' };
-      filtered = filtered.filter(a => getTeam(a) === (teamMap[selectedTeam] || selectedTeam.toLowerCase()));
+      filtered = filtered.filter(i => getTeam(i) === (teamMap[selectedTeam] || selectedTeam.toLowerCase()));
     }
-    if (selectedPriority !== 'Todas') {
-      const priorityMap: Record<string, string> = { 'Crítica': 'critica', 'Alta': 'alta', 'Media': 'media' };
-      filtered = filtered.filter(a => (a.priority || 'media').toLowerCase() === priorityMap[selectedPriority]);
+    if (selectedType !== 'Todos') {
+      const typeMap: Record<string, string> = { 'Producto': 'producto', 'Laboral': 'laboral', 'Personal': 'personal' };
+      filtered = filtered.filter(i => getType(i) === (typeMap[selectedType] || selectedType.toLowerCase()));
     }
     if (selectedProduct !== 'Todos') {
       const product = ALL_PRODUCTS.find(p => p.label === selectedProduct);
       if (product) {
-        filtered = filtered.filter(a => (a.product || deriveProductFromItem(a)) === product.key);
+        filtered = filtered.filter(i => (i.product || deriveProductFromItem(i)) === product.key);
       }
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(a => a.title.toLowerCase().includes(q) || (a.description || '').toLowerCase().includes(q));
+      filtered = filtered.filter(i => i.title.toLowerCase().includes(q) || (i.content || '').toLowerCase().includes(q));
     }
-    setFilteredAlerts(filtered);
-  }, [alerts, selectedTeam, selectedPriority, selectedProduct, searchQuery]);
+    setFilteredItems(filtered);
+  }, [feedbackItems, selectedTeam, selectedType, selectedProduct, searchQuery]);
 
   const kpis = {
-    total: alerts.length,
-    critica: alerts.filter(a => (a.priority || '').toLowerCase() === 'critica').length,
-    alta: alerts.filter(a => (a.priority || '').toLowerCase() === 'alta').length,
-    media: alerts.filter(a => (a.priority || '').toLowerCase() === 'media').length,
+    total: feedbackItems.length,
+    producto: feedbackItems.filter(i => getType(i) === 'producto').length,
+    laboral: feedbackItems.filter(i => getType(i) === 'laboral').length,
+    personal: feedbackItems.filter(i => getType(i) === 'personal').length,
   };
 
   if (loading) {
     return (
       <div className="text-center py-12">
         <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-white/40 mt-3">Cargando alertas...</p>
+        <p className="text-xs text-white/40 mt-3">Cargando feedback...</p>
       </div>
     );
   }
@@ -138,29 +144,29 @@ export default function AlertsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-white">Alertas</h1>
-          <p className="text-xs text-white/40 mt-1">Notificaciones críticas y seguimientos</p>
+          <h1 className="text-2xl font-black text-white">Feedback</h1>
+          <p className="text-xs text-white/40 mt-1">Opiniones y comentarios recogidos del equipo</p>
         </div>
-        <span className="text-[10px] text-white/30 bg-[#161927]/50 border border-white/5 px-4 py-2 rounded-xl font-mono">{alerts.length} alertas</span>
+        <span className="text-[10px] text-white/30 bg-[#161927]/50 border border-white/5 px-4 py-2 rounded-xl font-mono">{feedbackItems.length} comentarios</span>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-[#1a6bff]/10 to-transparent border border-primary/20 rounded-2xl p-5">
-          <div className="text-[10px] text-primary font-black uppercase tracking-widest mb-1">Total Alertas</div>
+          <div className="text-[10px] text-primary font-black uppercase tracking-widest mb-1">Total Feedback</div>
           <div className="text-2xl font-black text-white font-mono">{kpis.total}</div>
         </div>
-        <div className="bg-gradient-to-br from-[#ef4444]/10 to-transparent border border-red-500/20 rounded-2xl p-5">
-          <div className="text-[10px] text-red-400 font-black uppercase tracking-widest mb-1">Críticas</div>
-          <div className="text-2xl font-black text-white font-mono">{kpis.critica}</div>
-        </div>
-        <div className="bg-gradient-to-br from-[#f97316]/10 to-transparent border border-orange-500/20 rounded-2xl p-5">
-          <div className="text-[10px] text-orange-400 font-black uppercase tracking-widest mb-1">Altas</div>
-          <div className="text-2xl font-black text-white font-mono">{kpis.alta}</div>
+        <div className="bg-gradient-to-br from-[#10b981]/10 to-transparent border border-emerald-500/20 rounded-2xl p-5">
+          <div className="text-[10px] text-emerald-400 font-black uppercase tracking-widest mb-1">Producto</div>
+          <div className="text-2xl font-black text-white font-mono">{kpis.producto}</div>
         </div>
         <div className="bg-gradient-to-br from-[#3b82f6]/10 to-transparent border border-blue-500/20 rounded-2xl p-5">
-          <div className="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-1">Medias</div>
-          <div className="text-2xl font-black text-white font-mono">{kpis.media}</div>
+          <div className="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-1">Laboral</div>
+          <div className="text-2xl font-black text-white font-mono">{kpis.laboral}</div>
+        </div>
+        <div className="bg-gradient-to-br from-[#a855f7]/10 to-transparent border border-purple-500/20 rounded-2xl p-5">
+          <div className="text-[10px] text-purple-400 font-black uppercase tracking-widest mb-1">Personal</div>
+          <div className="text-2xl font-black text-white font-mono">{kpis.personal}</div>
         </div>
       </div>
 
@@ -168,38 +174,37 @@ export default function AlertsPage() {
       <div className="bg-[#161927]/50 border border-white/5 rounded-2xl p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           <CustomSelect value={selectedTeam} onChange={setSelectedTeam} options={TEAMS} placeholder="Equipo" />
+          <CustomSelect value={selectedType} onChange={setSelectedType} options={TYPE_OPTIONS} placeholder="Tipo" />
           <CustomSelect value={selectedProduct} onChange={setSelectedProduct} options={productOptions} placeholder="Producto" />
-          <CustomSelect value={selectedPriority} onChange={setSelectedPriority} options={PRIORITY_OPTIONS} placeholder="Prioridad" />
-          {(selectedTeam !== 'Todas' || selectedPriority !== 'Todas' || selectedProduct !== 'Todos' || searchQuery) && (
-            <button onClick={() => { setSelectedTeam('Todas'); setSelectedPriority('Todas'); setSelectedProduct('Todos'); setSearchQuery(''); }} className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
+          {(selectedTeam !== 'Todas' || selectedType !== 'Todos' || selectedProduct !== 'Todos' || searchQuery) && (
+            <button onClick={() => { setSelectedTeam('Todas'); setSelectedType('Todos'); setSelectedProduct('Todos'); setSearchQuery(''); }} className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">
               Limpiar
             </button>
           )}
-          <span className="ml-auto text-[10px] font-semibold text-white/30 font-mono">{filteredAlerts.length} resultados</span>
+          <span className="ml-auto text-[10px] font-semibold text-white/30 font-mono">{filteredItems.length} resultados</span>
         </div>
         <div className="relative">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-3 top-3 text-primary pointer-events-none">
             <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
           </svg>
-          <input type="text" placeholder="Buscar por título..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+          <input type="text" placeholder="Buscar por título o contenido..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-3 bg-[#161927]/50 border border-white/5 rounded-2xl text-sm text-white placeholder-white/40 focus:outline-none focus:border-primary/40 transition-colors" />
         </div>
       </div>
 
-      {/* Alerts Grid */}
-      {filteredAlerts.length === 0 ? (
+      {/* Feedback Grid */}
+      {filteredItems.length === 0 ? (
         <div className="text-center py-16 space-y-4 bg-[#161927]/50 border border-white/5 rounded-2xl">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto text-white/20">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
-          <p className="text-sm text-white/40">No hay alertas que coincidan con los filtros</p>
+          <p className="text-sm text-white/40">No hay feedback que coincida con los filtros</p>
           <a href="/day/today" className="inline-block px-6 py-3 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary/80 transition-all">Ir a Análisis Diario</a>
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredAlerts.map((alert) => (
-            <AlertCard key={alert.id} alert={alert} workspaceId={workspaceId || undefined} />
+          {filteredItems.map((item) => (
+            <FeedbackCard key={item.id} item={item} workspaceId={workspaceId || undefined} />
           ))}
         </div>
       )}

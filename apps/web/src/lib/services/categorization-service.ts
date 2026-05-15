@@ -6,9 +6,9 @@ export const CATEGORY_TO_TEAM: Record<string, string> = {
   'ux': 'ux',
   'learn': 'learning',
   'learning': 'learning',
-  'core ai': 'transversal',
-  'core_ia': 'transversal',
-  'operations': 'transversal',
+  'core ai': 'operaciones',
+  'core_ia': 'operaciones',
+  'operations': 'operaciones',
   'other': 'otras',
 };
 
@@ -126,11 +126,11 @@ export const categorizeItem = (item: any, objectives: any[] = [], jiraTasks: any
       !fullContext.includes("core ai") && !fullContext.includes("core_ia") && !fullContext.includes("core ia"))
     return 'core';
 
-  if (fullContext.includes("core ai") || fullContext.includes("core_ia") || fullContext.includes("core ia") ||
-      fullContext.includes("transversal") || fullContext.includes("chat_soporte") || fullContext.includes("chat de soporte") ||
-      fullContext.includes("planes_tareas") || fullContext.includes("planes y tareas") ||
-      fullContext.includes("app ubit") || fullContext.includes("app móvil"))
-    return 'transversal';
+if (fullContext.includes("core ai") || fullContext.includes("core_ia") || fullContext.includes("core ia") ||
+       fullContext.includes("operaciones") || fullContext.includes("chat_soporte") || fullContext.includes("chat de soporte") ||
+       fullContext.includes("planes_tareas") || fullContext.includes("planes y tareas") ||
+       fullContext.includes("app ubit") || fullContext.includes("app móvil"))
+     return 'operaciones';
 
   return 'otras';
 };

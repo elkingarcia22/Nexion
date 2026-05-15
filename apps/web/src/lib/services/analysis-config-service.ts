@@ -76,8 +76,8 @@ export const ANALYSIS_TEAMS = [
     ],
   },
   {
-    key: "transversal",
-    label: "Transversal",
+    key: "operaciones",
+    label: "Operaciones",
     color: "#8b5cf6",
     products: [
       { key: "app", label: "App" },

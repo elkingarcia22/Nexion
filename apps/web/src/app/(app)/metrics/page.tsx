@@ -24,15 +24,26 @@ function getCatStyle(category: string, index: number) {
   return CATEGORY_COLORS[index % CATEGORY_COLORS.length];
 }
 
+const CATEGORY_ALIAS: Record<string, string> = {
+  matrix: "matriz_talento",
+  "360": "evaluacion_360",
+  hiring: "contratacion",
+  creator: "lms_creator",
+};
+
+function normalizeCategory(cat: string): string {
+  return CATEGORY_ALIAS[cat] || cat;
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   objetivos: "Objetivos",
-  "360": "360",
+  evaluacion_360: "Evaluación 360",
   encuestas: "Encuestas",
-  matrix: "Matriz de Talento",
+  matriz_talento: "Matriz de Talento",
   learning: "Aprendizaje",
   learning_map: "Learning Map",
-  creator: "Creator",
-  hiring: "Contratación",
+  lms_creator: "LMS Creator",
+  contratacion: "Contratación",
   pyt: "PYT",
   core: "Core",
   asx: "ASX",
@@ -42,13 +53,13 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const PRODUCT_GROUPS = [
   { key: "objetivos", label: "Objetivos", icon: "○", category: "objetivos", color: "#2ec6ff" },
-  { key: "360", label: "360", icon: "◎", category: "360", color: "#2ec6ff" },
+  { key: "evaluacion_360", label: "Evaluación 360", icon: "◎", category: "evaluacion_360", color: "#2ec6ff" },
   { key: "encuestas", label: "Encuestas", icon: "□", category: "encuestas", color: "#2ec6ff" },
-  { key: "matrix", label: "Matriz de Talento", icon: "◇", category: "matrix", color: "#2ec6ff" },
+  { key: "matriz_talento", label: "Matriz de Talento", icon: "◇", category: "matriz_talento", color: "#2ec6ff" },
   { key: "learning", label: "Aprendizaje", icon: "△", category: "learning", color: "#2ec6ff" },
   { key: "learning_map", label: "Learning Map", icon: "♢", category: "learning_map", color: "#2ec6ff" },
-  { key: "creator", label: "Creator", icon: "♤", category: "creator", color: "#2ec6ff" },
-  { key: "hiring", label: "Contratación", icon: "▽", category: "hiring", color: "#f49e04" },
+  { key: "lms_creator", label: "LMS Creator", icon: "♤", category: "lms_creator", color: "#2ec6ff" },
+  { key: "contratacion", label: "Contratación", icon: "▽", category: "contratacion", color: "#f49e04" },
   { key: "pyt", label: "PYT", icon: "◈", category: "pyt", color: "#ec4899" },
   { key: "core", label: "Core", icon: "◆", category: "core", color: "#10b981" },
   { key: "asx", label: "ASX", icon: "⬡", category: "asx", color: "#8b5cf6" },
@@ -262,7 +273,6 @@ export default function MetricsPage() {
   const [activeTab, setActiveTab] = useState("General");
   const [period, setPeriod] = useState("Q2 2026");
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
-  const [seeding, setSeeding] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<{ date: string; source: string } | null>(null);
   const [metricsConfig, setMetricsConfig] = useState<MetricsConfig>({ selected_categories: [] });
 
@@ -295,7 +305,7 @@ export default function MetricsPage() {
           setLoading(false);
           return;
         }
-        setMetrics(result.data);
+        setMetrics(result.data.map(m => ({ ...m, category: normalizeCategory(m.category) })));
         const logsMap: Record<string, MetricDailyLog[]> = {};
         await Promise.all(
           result.data.map(async (m) => {
@@ -329,6 +339,13 @@ export default function MetricsPage() {
         } else {
           setLastUpdate(null);
         }
+        if (result.data.length === 0) {
+          await doSeedInternal(workspaceId);
+          const retry = await getMetrics(workspaceId, undefined, period);
+          if (retry.success && retry.data) {
+            setMetrics(retry.data.map(m => ({ ...m, category: normalizeCategory(m.category) })));
+          }
+        }
       } catch (e) {
         console.error("[Metrics] Error loading metrics:", e);
       }
@@ -337,7 +354,8 @@ export default function MetricsPage() {
   }, [workspaceId, period]);
 
   const nonGeneralCategories = useMemo(() => {
-    return [...new Set(metrics.filter(m => m.category !== "general").map(m => m.category))].sort();
+    const cats = [...new Set(metrics.filter(m => m.category !== "general").map(m => normalizeCategory(m.category)))].sort();
+    return cats;
   }, [metrics]);
 
   const tabs = useMemo(() => {
@@ -408,10 +426,7 @@ export default function MetricsPage() {
   const mau = metrics.find(m => m.name.includes("mensuales"))?.current_value;
   const nps = metrics.find(m => m.name === "NPS")?.current_value;
 
-  const seedMetrics = async () => {
-    if (!workspaceId) return;
-    setSeeding(true);
-
+  const doSeedInternal = async (wsId: string) => {
     const today = new Date().toISOString().split("T")[0];
 
     const q1Data = [
@@ -548,7 +563,7 @@ export default function MetricsPage() {
       previous_value: m.previous_value || null,
       unit: m.unit,
       description: m.description || (m.subcategory ? `Métrica de ${m.category} - ${m.subcategory.replace(/_/g, " ")}` : "Métrica general"),
-      workspace_id: workspaceId,
+      workspace_id: wsId,
       source: "pdf_seed",
       source_date: today,
       period,
@@ -560,7 +575,7 @@ export default function MetricsPage() {
       const { error: delErr } = await supabase
         .from("metrics")
         .delete()
-        .eq("workspace_id", workspaceId)
+        .eq("workspace_id", wsId)
         .eq("source", "pdf_seed");
       if (delErr) console.warn("[Seed] Delete existing warning:", delErr);
 
@@ -574,16 +589,10 @@ export default function MetricsPage() {
       const { error } = await supabase.from("metrics").insert(allInserts);
       if (error) {
         console.error("[Seed] Error:", error);
-        alert("Error al sembrar métricas: " + error.message);
-      } else {
-        const result = await getMetrics(workspaceId, undefined, period);
-        if (result.success && result.data) setMetrics(result.data);
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error("[Seed] Exception:", e);
-      alert("Error al sembrar métricas: " + (e.message || "desconocido"));
     }
-    setSeeding(false);
   };
 
   return (
@@ -602,15 +611,6 @@ export default function MetricsPage() {
               </span>
               <span className="text-[9px] text-white/20 font-mono">{lastUpdate.date}</span>
             </div>
-          )}
-          {metrics.length > 0 && (
-            <button
-              onClick={() => seedMetrics()}
-              disabled={seeding}
-              className="px-4 py-3 bg-[#161927]/80 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white hover:border-primary/30 transition-all disabled:opacity-50"
-            >
-              {seeding ? "Sembrando..." : "Re-sembrar métricas"}
-            </button>
           )}
         </div>
       </div>
@@ -723,16 +723,8 @@ export default function MetricsPage() {
           <p className="text-xs text-white/40 mt-3">Cargando métricas...</p>
         </div>
       ) : metrics.length === 0 ? (
-        <div className="text-center py-16 space-y-4">
-          <p className="text-sm text-white/40">No hay métricas configuradas aún.</p>
-          <p className="text-xs text-white/20">Puedes sembrar las métricas iniciales desde el PDF de Product Analytics.</p>
-          <button
-            onClick={() => seedMetrics()}
-            disabled={seeding}
-            className="px-6 py-3 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary/80 transition-all disabled:opacity-50"
-          >
-            {seeding ? "Sembrando..." : "Sembrar métricas desde PDF"}
-          </button>
+        <div className="text-center py-16">
+          <p className="text-sm text-white/40">No hay métricas disponibles.</p>
         </div>
       ) : activeTab === "General" ? (
         <div className="space-y-4">

@@ -27,26 +27,21 @@ export interface SlackMessage {
 
 export async function getSlackBotChannels(): Promise<{ success: boolean; data?: SlackChannel[]; error?: string }> {
   if (!API_BASE) {
-    console.warn("[getSlackBotChannels] API_BASE is empty");
     return { success: false, error: "API no disponible" };
   }
 
   try {
     const url = `${API_BASE}?action=my-channels`;
-    console.log(`[getSlackBotChannels] Fetching from: ${url}`);
     const response = await fetch(url);
     const data = await response.json();
 
     if (!data.ok) {
-      console.warn("[getSlackBotChannels] API error:", data.error);
       return { success: false, error: data.error || "Error de Slack" };
     }
 
     const channels = data.channels as SlackChannel[];
-    console.log(`[getSlackBotChannels] Returning ${channels.length} channels`);
     return { success: true, data: channels }
   } catch (err) {
-    console.error("[getSlackBotChannels] Network/fetch error:", err);
     return { success: false, error: err instanceof Error ? err.message : "Error desconocido" };
   }
 }
@@ -234,9 +229,9 @@ async function syncChannelSources(
     .eq("source_origin", "slack")
     .eq("external_source_id", channel.id)
     .eq("source_date", dateStr)
-    .single();
+    .maybeSingle();
 
-  if (lookupError && lookupError.code !== "PGRST116") {
+  if (lookupError) {
     console.warn(`[syncChannelSources] #${channel.name}: DB lookup error:`, lookupError);
   }
 
@@ -285,8 +280,10 @@ export async function syncSlackSourcesForDay(
   today.setHours(0, 0, 0, 0);
   const oldest = Math.floor(today.getTime() / 1000).toString();
 
-  today.setHours(23, 59, 59, 999);
-  const latest = Math.floor(today.getTime() / 1000).toString();
+  const nextDay = new Date(date);
+  nextDay.setDate(nextDay.getDate() + 1);
+  nextDay.setHours(0, 0, 0, 0);
+  const latest = Math.floor(nextDay.getTime() / 1000).toString();
 
   console.log(`[syncSlackSourcesForDay] Starting sync for workspace=${workspaceId} date=${dateStr}`);
 

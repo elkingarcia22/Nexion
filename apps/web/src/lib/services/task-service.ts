@@ -171,16 +171,6 @@ export async function getTasks(workspaceId: string, date?: string, userId?: stri
       }))
   }));
 
-  console.log('🔧 DEBUG getTasks - pipeline verification:');
-  console.log(`   DB rows: ${allTasks.length}, parents: ${parents.length}, subtasks: ${children.length}`);
-  console.log('   due_date coverage:', nestedTasks.filter((t: any) => t.due_date).length, '/', nestedTasks.length);
-  console.log('   due_date samples:', nestedTasks.slice(0, 3).map((t: any) => ({ title: t.title?.slice(0, 30), due_date: t.due_date })));
-  console.log('   status samples:', nestedTasks.slice(0, 5).map((t: any) => ({ title: t.title?.slice(0, 25), status: t.status })));
-  console.log('   jira_key coverage:', nestedTasks.filter((t: any) => t.linked_jira_key).length, 'tasks linked');
-  console.log('   goal_id coverage:', nestedTasks.filter((t: any) => t.goal_id).length, 'tasks linked to objectives');
-  console.log('   Responsible values:', nestedTasks.map((t: any) => t.responsible).filter(Boolean).slice(0, 5));
-  console.log('   Team values:', nestedTasks.map((t: any) => t.team).filter(Boolean).slice(0, 5));
-
   return { success: true, data: nestedTasks };
 }
 

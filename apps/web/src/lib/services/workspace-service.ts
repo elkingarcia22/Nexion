@@ -6,6 +6,10 @@ interface Workspace {
   slug: string;
   created_at: string;
   updated_at: string;
+  analysis_config?: Record<string, any>;
+  metrics_config?: Record<string, any>;
+  objectives_config?: Record<string, any>;
+  jira_config?: Record<string, any>;
 }
 
 export async function getOrCreateWorkspace(

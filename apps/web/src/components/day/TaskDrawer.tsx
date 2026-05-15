@@ -82,6 +82,17 @@ const CustomSelect = ({
 
 /* ─── Grouped Objective Select ──────────────────────────────────── */
 
+const TEAM_STYLES = [
+  { text: "text-blue-400", bg: "bg-blue-500/5", border: "border-blue-500/20" },
+  { text: "text-amber-400", bg: "bg-amber-500/5", border: "border-amber-500/20" },
+  { text: "text-emerald-400", bg: "bg-emerald-500/5", border: "border-emerald-500/20" },
+  { text: "text-purple-400", bg: "bg-purple-500/5", border: "border-purple-500/20" },
+  { text: "text-cyan-400", bg: "bg-cyan-500/5", border: "border-cyan-500/20" },
+  { text: "text-pink-400", bg: "bg-pink-500/5", border: "border-pink-500/20" },
+  { text: "text-orange-400", bg: "bg-orange-500/5", border: "border-orange-500/20" },
+  { text: "text-indigo-400", bg: "bg-indigo-500/5", border: "border-indigo-500/20" },
+];
+
 const GroupedObjectiveSelect = ({
   value,
   onChange,
@@ -105,8 +116,16 @@ const GroupedObjectiveSelect = ({
   }, []);
 
   const selectedObj = objectives.find(o => o.id === value);
-  const talentObjs = objectives.filter(o => o.team === "Talent");
-  const hiringObjs = objectives.filter(o => o.team === "Hiring");
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const obj of objectives) {
+      const team = obj.team || "Sin equipo";
+      if (!map.has(team)) map.set(team, []);
+      map.get(team)!.push(obj);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [objectives]);
 
   return (
     <div className="relative" ref={containerRef}>
@@ -137,43 +156,27 @@ const GroupedObjectiveSelect = ({
             Ninguno
           </button>
 
-          {talentObjs.length > 0 && (
-            <>
-              <div className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-blue-400 bg-blue-500/5 border-y border-white/5">
-                TALENT
+          {grouped.map(([team, objs], idx) => {
+            const style = TEAM_STYLES[idx % TEAM_STYLES.length];
+            return (
+              <div key={team}>
+                <div className={`px-4 py-2 text-[9px] font-black uppercase tracking-widest ${style.text} ${style.bg} border-y border-white/5`}>
+                  {team.toUpperCase()}
+                </div>
+                {objs.map(obj => (
+                  <button
+                    key={obj.id}
+                    onClick={() => { onChange(obj.id); setIsOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
+                      value === obj.id ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    {obj.title}
+                  </button>
+                ))}
               </div>
-              {talentObjs.map(obj => (
-                <button
-                  key={obj.id}
-                  onClick={() => { onChange(obj.id); setIsOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
-                    value === obj.id ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  {obj.title}
-                </button>
-              ))}
-            </>
-          )}
-
-          {hiringObjs.length > 0 && (
-            <>
-              <div className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/5 border-y border-white/5">
-                HIRING
-              </div>
-              {hiringObjs.map(obj => (
-                <button
-                  key={obj.id}
-                  onClick={() => { onChange(obj.id); setIsOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-left transition-colors ${
-                    value === obj.id ? "bg-primary text-white" : "text-white/60 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  {obj.title}
-                </button>
-              ))}
-            </>
-          )}
+            );
+          })}
         </div>
       )}
     </div>

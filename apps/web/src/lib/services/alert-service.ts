@@ -6,6 +6,7 @@ export interface Alert {
   description?: string;
   priority?: string;
   category?: string;
+  product?: string | null;
   responsible?: string;
   goal_id?: string;
   linked_jira_key?: string;

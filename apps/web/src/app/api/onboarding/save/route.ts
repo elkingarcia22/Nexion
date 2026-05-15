@@ -56,6 +56,38 @@ export async function POST(req: NextRequest) {
       }
       case "slack": {
         analysisConfig.onboarding_step = 7;
+        if (data.channels && Array.isArray(data.channels)) {
+          const slackToken = process.env.NEXT_PUBLIC_SLACK_BOT_TOKEN;
+          const upserts = [];
+          for (const ch of data.channels) {
+            let chName = ch.name || "";
+            let isPrivate = ch.is_private;
+            if (!chName && slackToken) {
+              try {
+                const infoRes = await fetch(`https://slack.com/api/conversations.info?channel=${ch.id}`, {
+                  headers: { Authorization: `Bearer ${slackToken}` },
+                });
+                const info = await infoRes.json();
+                if (info.ok && info.channel) {
+                  chName = info.channel.name;
+                  isPrivate = info.channel.is_private;
+                }
+              } catch {}
+            }
+            upserts.push({
+              workspace_id: workspaceId,
+              channel_id: ch.id,
+              channel_name: chName,
+              is_private: isPrivate ?? false,
+              enabled: ch.enabled !== false,
+            });
+          }
+          if (upserts.length > 0) {
+            await supabase.from("app_slack_channels").upsert(upserts, {
+              onConflict: "workspace_id,channel_id",
+            });
+          }
+        }
         break;
       }
       case "modules": {
@@ -67,11 +99,16 @@ export async function POST(req: NextRequest) {
         analysisConfig.onboarding_completed = true;
         analysisConfig.onboarding_completed_at = new Date().toISOString();
         const teams = analysisConfig.tasks?.selected_teams || [];
+        const products = analysisConfig.tasks?.selected_products || [];
+        const updates: Record<string, any> = {};
         if (teams.length > 0) {
-          await supabase.from("workspaces").update({
-            objectives_config: { spreadsheet_id: "", selected_teams: teams },
-            metrics_config: { selected_categories: teams },
-          }).eq("id", workspaceId);
+          updates.objectives_config = { spreadsheet_id: "", selected_teams: teams };
+        }
+        if (products.length > 0) {
+          updates.metrics_config = { selected_categories: products };
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabase.from("workspaces").update(updates).eq("id", workspaceId);
         }
         break;
       }

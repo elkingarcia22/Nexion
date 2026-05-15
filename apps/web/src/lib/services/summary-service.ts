@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { deriveProductFromItem } from "./categorization-service";
 
 interface DaySummary {
   sources_count: number;
@@ -154,11 +155,11 @@ export async function saveDayAnalysis(
         feedback_count: analysis.feedback?.length || 0,
         kpi_data: {
           summary_text: analysis.summary,
-          tasks: analysis.tasks || [],
-          insights: analysis.insights || [],
+          tasks: (analysis.tasks || []).map(t => ({ ...t, product: deriveProductFromItem(t) })),
+          insights: (analysis.insights || []).map(i => ({ ...i, product: deriveProductFromItem(i) })),
           metrics: analysis.metrics || [],
-          alerts: analysis.alerts || [],
-          feedback: analysis.feedback || [],
+          alerts: (analysis.alerts || []).map(a => ({ ...a, product: deriveProductFromItem(a) })),
+          feedback: (analysis.feedback || []).map(f => ({ ...f, product: deriveProductFromItem(f) })),
           tasks_count: analysis.tasks?.length || 0,
           insights_count: analysis.insights?.length || 0,
           alerts_count: analysis.alerts?.length || 0,
@@ -344,6 +345,7 @@ export async function saveDayAnalysis(
             auto_generated: true,
             team: teamValue,
             responsable: responsibleValue,
+            product: deriveProductFromItem(task),
             analysis_date: new Date().toISOString(),
             ...task.metadata
           },
@@ -351,6 +353,22 @@ export async function saveDayAnalysis(
           updated_at: new Date().toISOString(),
         };
       });
+
+      // LOG: Linking summary before insert
+      console.log(`\n📊 === LINKING SUMMARY (${tasksToInsert.length} tasks) ===`);
+      const withGoal = tasksToInsert.filter(t => t.goal_id).length;
+      const withJira = tasksToInsert.filter(t => t.linked_jira_key).length;
+      const withBoth = tasksToInsert.filter(t => t.goal_id && t.linked_jira_key).length;
+      const withNone = tasksToInsert.filter(t => !t.goal_id && !t.linked_jira_key).length;
+      console.log(`  ✅ With goal_id: ${withGoal}/${tasksToInsert.length}`);
+      console.log(`  ✅ With jira_key: ${withJira}/${tasksToInsert.length}`);
+      console.log(`  🔗 With both: ${withBoth}/${tasksToInsert.length}`);
+      console.log(`  ❌ With neither: ${withNone}/${tasksToInsert.length}`);
+      console.log("  ── Per-task detail ──");
+      tasksToInsert.forEach((t, i) => {
+        console.log(`  ${i + 1}. "${t.title.substring(0, 40)}" | goal:${t.goal_id ? t.goal_id.substring(0, 8) : '—'} | jira:${t.linked_jira_key || '—'}`);
+      });
+      console.log("================================\n");
 
       console.log(`💾 Inserting ${tasksToInsert.length} new tasks to task_proposals...`);
       console.log("   Sample task data:", tasksToInsert.slice(0, 2).map(t => ({
@@ -377,7 +395,192 @@ export async function saveDayAnalysis(
       console.log("⏭️  No tasks to insert");
     }
 
-    // 3. Persist Gemini-detected metrics to metrics table + metric_daily_logs + entity_links
+    // ════════════════════════════════════════════════════════════════
+    // 🧠 PERSISTENCE TRACEABILITY AUDIT
+    // ════════════════════════════════════════════════════════════════
+    console.log("\n" + "💾".repeat(20));
+    console.log("💾  PERSISTENCE TRACEABILITY AUDIT");
+    console.log("💾" + "=".repeat(57));
+
+    const allIncoming = [
+      ...(analysis.tasks || []).map((e: any) => ({ ...e, _type: "TASK" })),
+      ...(analysis.insights || []).map((e: any) => ({ ...e, _type: "INSIGHT" })),
+      ...(analysis.metrics || []).map((e: any) => ({ ...e, _type: "METRIC" })),
+      ...(analysis.alerts || []).map((e: any) => ({ ...e, _type: "ALERT" })),
+      ...(analysis.feedback || []).map((e: any) => ({ ...e, _type: "FEEDBACK" })),
+    ];
+
+    const SEP = "\n  " + "─".repeat(50);
+
+    // 3a. Team/Category grouping across ALL incoming entities
+    console.log(SEP);
+    console.log("📊  GRUPOS POR CATEGORÍA/EQUIPO (todos los tipos)");
+
+    // Product distribution per team
+    console.log(SEP);
+    console.log("🏷️  DISTRIBUCIÓN POR PRODUCTO (derivado vía deriveProductFromItem)");
+    const productGroups: Record<string, { total: number; TASK: number; INSIGHT: number; ALERT: number; FEEDBACK: number }> = {};
+    for (const e of allIncoming) {
+      const prod = deriveProductFromItem(e) || "sin_producto";
+      if (!productGroups[prod]) productGroups[prod] = { total: 0, TASK: 0, INSIGHT: 0, ALERT: 0, FEEDBACK: 0 };
+      productGroups[prod].total++;
+      const t = e._type as keyof typeof productGroups[string];
+      productGroups[prod][t]++;
+    }
+    for (const [prod, g] of Object.entries(productGroups).sort((a, b) => b[1].total - a[1].total)) {
+      const parts = [];
+      if (g.TASK > 0) parts.push(`Tareas:${g.TASK}`);
+      if (g.INSIGHT > 0) parts.push(`Insights:${g.INSIGHT}`);
+      if (g.ALERT > 0) parts.push(`Alertas:${g.ALERT}`);
+      if (g.FEEDBACK > 0) parts.push(`Feedback:${g.FEEDBACK}`);
+      console.log(`  🏷️  ${prod.padEnd(25)} → ${g.total} total [${parts.join(", ")}]`);
+    }
+    const catGroups: Record<string, { total: number; TASK: number; INSIGHT: number; METRIC: number; ALERT: number; FEEDBACK: number }> = {};
+    for (const e of allIncoming) {
+      const cat = e.category || e.team || "sin_categoria";
+      if (!catGroups[cat]) catGroups[cat] = { total: 0, TASK: 0, INSIGHT: 0, METRIC: 0, ALERT: 0, FEEDBACK: 0 };
+      catGroups[cat].total++;
+      const t = e._type as keyof typeof catGroups[string];
+      catGroups[cat][t]++;
+    }
+    for (const [cat, g] of Object.entries(catGroups).sort((a, b) => b[1].total - a[1].total)) {
+      const parts = [];
+      if (g.TASK > 0) parts.push(`Tareas:${g.TASK}`);
+      if (g.INSIGHT > 0) parts.push(`Insights:${g.INSIGHT}`);
+      if (g.METRIC > 0) parts.push(`Metrics:${g.METRIC}`);
+      if (g.ALERT > 0) parts.push(`Alertas:${g.ALERT}`);
+      if (g.FEEDBACK > 0) parts.push(`Feedback:${g.FEEDBACK}`);
+      console.log(`  📁 ${cat.padEnd(20)} → ${g.total} total [${parts.join(", ")}]`);
+    }
+
+    // 3b. Responsible grouping
+    console.log(SEP);
+    console.log("👤  GRUPOS POR RESPONSABLE");
+    const respGroups: Record<string, number> = {};
+    for (const e of allIncoming) {
+      const r = e.responsible || "sin_asignar";
+      respGroups[r] = (respGroups[r] || 0) + 1;
+    }
+    for (const [r, c] of Object.entries(respGroups).sort((a, b) => b[1] - a[1])) {
+      console.log(`  👤 ${r.padEnd(20)} → ${c} entidades`);
+    }
+
+    // 3c. Objective linking breakdown
+    console.log(SEP);
+    console.log("🎯  VINCULACIÓN A OBJETIVOS EN PERSISTENCIA");
+    const withGoal = allIncoming.filter((e: any) => e.goal_id);
+    const withoutGoal = allIncoming.filter((e: any) => !e.goal_id);
+    console.log(`  Vinculados a objetivo:   ${withGoal.length}/${allIncoming.length}`);
+    console.log(`  Sin objetivo:            ${withoutGoal.length}/${allIncoming.length}`);
+    if (withGoal.length > 0) {
+      const goalMap: Record<string, number> = {};
+      for (const e of withGoal) {
+        goalMap[e.goal_id] = (goalMap[e.goal_id] || 0) + 1;
+      }
+      for (const [gid, cnt] of Object.entries(goalMap)) {
+        console.log(`  🔗 ${gid.substring(0, 8)}... → ${cnt} entidades`);
+      }
+    }
+
+    // 3d. Jira linking breakdown
+    console.log(SEP);
+    console.log("🟢  VINCULACIÓN A JIRA EN PERSISTENCIA");
+    const withJira = allIncoming.filter((e: any) => e.linked_jira_key);
+    const withoutJira = allIncoming.filter((e: any) => !e.linked_jira_key);
+    console.log(`  Vinculados a Jira:       ${withJira.length}/${allIncoming.length}`);
+    console.log(`  Sin Jira:                ${withoutJira.length}/${allIncoming.length}`);
+    if (withJira.length > 0) {
+      const jiraMap: Record<string, number> = {};
+      for (const e of withJira) {
+        jiraMap[e.linked_jira_key] = (jiraMap[e.linked_jira_key] || 0) + 1;
+      }
+      for (const [jk, cnt] of Object.entries(jiraMap)) {
+        console.log(`  🔗 ${jk.padEnd(12)} → ${cnt} entidades`);
+      }
+    }
+
+    // 3e. Cross-entity association matrix (shared objectives/Jira/metrics)
+    console.log(SEP);
+    console.log("🔗  MATRIZ DE ASOCIACIÓN CRUZADA (persistencia)");
+    const allEntityTypes = ["TASK", "INSIGHT", "METRIC", "ALERT", "FEEDBACK"];
+
+    const sharedObj = new Set<string>();
+    for (const e of withGoal) {
+      const types = allIncoming.filter((o: any) => o.goal_id === e.goal_id).map((o: any) => o._type);
+      const uniqueTypes = [...new Set<string>(types)];
+      if (uniqueTypes.length > 1) {
+        sharedObj.add(`${e.goal_id.substring(0, 8)}: ${uniqueTypes.join(" ⟷ ")}`);
+      }
+    }
+    if (sharedObj.size > 0) {
+      console.log("  Por OBJETIVO compartido:");
+      for (const s of sharedObj) console.log(`    🔗 ${s}`);
+    } else {
+      console.log("  (sin asociaciones multi-tipo por objetivo compartido)");
+    }
+
+    const sharedJira = new Set<string>();
+    for (const e of withJira) {
+      const types = allIncoming.filter((o: any) => o.linked_jira_key === e.linked_jira_key).map((o: any) => o._type);
+      const uniqueTypes = [...new Set<string>(types)];
+      if (uniqueTypes.length > 1) {
+        sharedJira.add(`${e.linked_jira_key}: ${uniqueTypes.join(" ⟷ ")}`);
+      }
+    }
+    if (sharedJira.size > 0) {
+      console.log("  Por JIRA compartido:");
+      for (const s of sharedJira) console.log(`    🔗 ${s}`);
+    } else {
+      console.log("  (sin asociaciones multi-tipo por Jira compartido)");
+    }
+
+    const withMetric = allIncoming.filter((e: any) => e.linked_metric_names?.length > 0);
+    if (withMetric.length > 0) {
+      const metricMap: Record<string, Set<string>> = {};
+      for (const e of withMetric) {
+        for (const m of e.linked_metric_names) {
+          if (!metricMap[m]) metricMap[m] = new Set();
+          metricMap[m].add(e._type);
+        }
+      }
+      const multiMetric = Object.entries(metricMap).filter(([, s]) => s.size > 1);
+      if (multiMetric.length > 0) {
+        console.log("  Por MÉTRICA compartida:");
+        for (const [mn, ts] of multiMetric) {
+          console.log(`    📊 "${mn.substring(0, 30)}": ${[...ts].join(" ⟷ ")}`);
+        }
+      }
+    }
+
+    // 3f. Tasks traceability dump (all tasks with their associations)
+    if (analysis.tasks && analysis.tasks.length > 0) {
+      console.log(SEP);
+      console.log("📋  DUMP COMPLETO DE TAREAS CON ASOCIACIONES");
+      analysis.tasks.forEach((task: any, i: number) => {
+        const assocs = [];
+        if (task.goal_id) assocs.push(`OBJETIVO:${task.goal_id.substring(0, 8)}`);
+        if (task.linked_jira_key) assocs.push(`JIRA:${task.linked_jira_key}`);
+        if (task.linked_jira_subtask_id) assocs.push(`SUB:${task.linked_jira_subtask_id}`);
+        if (task.linked_metric_names?.length > 0) assocs.push(`MET:${task.linked_metric_names.join(",")}`);
+        const team = task.category || task.team || "—";
+        const resp = task.responsible || "—";
+        const due = task.due_date || "—";
+        console.log(`  ${i + 1}. [${task.priority}] "${task.title?.substring(0, 55)}"`);
+        console.log(`     equipo:${team} | resp:${resp} | vence:${due}`);
+        if (assocs.length > 0) {
+          console.log(`     → ${assocs.join(" | ")}`);
+        } else {
+          console.log(`     → (sin asociaciones)`);
+        }
+      });
+    }
+
+    console.log("\n" + "💾".repeat(20));
+    console.log("💾  FIN PERSISTENCE TRACEABILITY AUDIT");
+    console.log("💾" + "=".repeat(57) + "\n");
+    // ════════════════════════════════════════════════════════════════
+
+    // 4. Persist Gemini-detected metrics to metrics table + metric_daily_logs + entity_links
     const daySummaryId = data?.[0]?.id;
     if (daySummaryId && analysis.metrics && analysis.metrics.length > 0) {
       console.log(`\n📈 Processing ${analysis.metrics.length} metrics from Gemini for persistence...`);

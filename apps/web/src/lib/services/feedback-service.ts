@@ -1,21 +1,21 @@
 import { supabase } from "@/lib/supabase";
 
-export interface Insight {
+export interface FeedbackItem {
   id: number | string;
   title: string;
-  description?: string;
+  content?: string;
+  type?: string;
   category?: string;
   product?: string | null;
   responsible?: string;
   goal_id?: string;
-  linked_jira_key?: string;
   summary_date?: string;
 }
 
-export async function getInsights(
+export async function getFeedback(
   workspaceId: string,
   limitDays: number = 90
-): Promise<{ success: boolean; data?: Insight[]; error?: string }> {
+): Promise<{ success: boolean; data?: FeedbackItem[]; error?: string }> {
   try {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - limitDays);
@@ -32,20 +32,21 @@ export async function getInsights(
       return { success: false, error: error.message };
     }
 
-    const insights: Insight[] = [];
+    const feedback: FeedbackItem[] = [];
 
     for (const summary of summaries || []) {
       const kpi = summary.kpi_data || {};
-      const dayInsights = (kpi.insights || []).map((a: any, idx: number) => ({
+      const dayFeedback = (kpi.feedback || []).map((a: any, idx: number) => ({
         ...a,
-        id: `insight_${summary.summary_date}_${idx}`,
+        id: `feedback_${summary.summary_date}_${idx}`,
         summary_date: summary.summary_date,
         category: a.category || "Other",
+        type: a.type || "general",
       }));
-      insights.push(...dayInsights);
+      feedback.push(...dayFeedback);
     }
 
-    return { success: true, data: insights };
+    return { success: true, data: feedback };
   } catch (err) {
     return {
       success: false,

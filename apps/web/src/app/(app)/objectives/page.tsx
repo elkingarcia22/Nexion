@@ -21,6 +21,7 @@ export default function ObjectivesPage() {
   const [objectives, setObjectives] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [jiraCounts, setJiraCounts] = useState<Record<string, number>>({});
   const [jiraTasks, setJiraTasks] = useState<any[]>([]);
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -60,6 +61,24 @@ export default function ObjectivesPage() {
       const { data: objs } = await getObjectives(wsId);
       setObjectives(objs || []);
 
+      // DB-based count: tasks with real goal_id + jira_key (from re-linking)
+      const { data: taskData } = await supabase
+        .from("task_proposals")
+        .select("goal_id, linked_jira_key")
+        .not("goal_id", "is", null)
+        .not("linked_jira_key", "is", null);
+      const counts: Record<string, number> = {};
+      if (taskData) {
+        for (const t of taskData) {
+          const gid = t.goal_id;
+          if (gid && t.linked_jira_key) {
+            counts[gid] = (counts[gid] || 0) + 1;
+          }
+        }
+      }
+      setJiraCounts(counts);
+
+      // Jira API fallback: keyword matching for objectives not yet linked via DB
       const { data: wsData } = await supabase.from('workspaces').select('jira_config').eq('id', wsId).single();
       if (wsData?.jira_config) {
         const { fetchJiraIssues } = await import("@/lib/services/jira-service");
@@ -107,7 +126,8 @@ export default function ObjectivesPage() {
   const teamObjectives = useMemo(() => {
     let filtered = filteredObjectives;
     if (selectedTeams.length > 0) {
-      filtered = filtered.filter(o => selectedTeams.includes(o.team));
+      const normalizedTeams = selectedTeams.map(t => t.toLowerCase().trim());
+      filtered = filtered.filter(o => normalizedTeams.includes(o.team?.toLowerCase().trim()));
     }
     const byTeam: Record<string, any[]> = {};
     for (const o of filtered) {
@@ -119,11 +139,12 @@ export default function ObjectivesPage() {
   }, [filteredObjectives, selectedTeams]);
 
   const getJiraCount = (obj: any) => {
+    const dbCount = jiraCounts[obj.id] || 0;
+    if (dbCount > 0) return dbCount;
     if (!jiraTasks || jiraTasks.length === 0) return 0;
     const objTitle = (obj.title || "").toLowerCase();
     const objKeywords = objTitle.split(/[ ,./]/).filter((w: string) => w.length > 4);
     const objTeam = (obj.team || "").toLowerCase();
-
     return jiraTasks.filter(task => {
       const taskSummary = (task.fields.summary || "").toLowerCase();
       const matchesObj = objKeywords.length > 0 && objKeywords.every((kw: string) => taskSummary.includes(kw));

@@ -17,8 +17,20 @@ import { supabase } from "@/lib/supabase";
 import { getTasks, reorderTasks } from "@/lib/services/task-service";
 import { fetchJiraIssues } from "@/lib/services/jira-service";
 import { getMetrics } from "@/lib/services/metric-service";
+import { ANALYSIS_TEAMS, AnalysisConfig } from "@/lib/services/analysis-config-service";
+import { categorizeItem, getResponsable, isUserMatch, CATEGORY_TO_TEAM, deriveProductFromItem } from "@/lib/services/categorization-service";
 
-/* ─── Data ────────────────────────────────────────────────────── */
+/* ─── Source filter config ────────────────────────────────────── */
+
+const TYPE_FILTER_CONFIG: Record<string, { label: string; filter: (s: any) => boolean }> = {
+  notas_gemini: { label: "Notas de Gemini", filter: (s) => s.type === "NOTAS DE GEMINI" },
+  slack: { label: "Slack", filter: (s) => s.origin === "slack" },
+  google_docs: { label: "Google Docs", filter: (s) => s.origin === "google" && s.type !== "NOTAS DE GEMINI" },
+  sheets: { label: "Sheets", filter: (s) => s.format?.toUpperCase() === "SHEET" },
+  pdf: { label: "PDF", filter: (s) => s.format?.toUpperCase() === "PDF" },
+};
+
+const DAILY_ANALYSIS_HOUR = 19;
 
 const focusCards = [
   {
@@ -66,7 +78,7 @@ const tasks = [
   { id: 3, title: "Revisar propuesta de diseño para el panel móvil", tag: "DISEÑO", tagColor: "bg-purple-500/10 text-purple-700", date: "15 Oct, 2023", file: "Feedback_Cliente.txt", priority: "BAJA", priorityColor: "text-gray-400" },
 ];
 
-type SourceType = "FUENTE EXTERNA" | "NOTAS DE GEMINI" | "DOCUMENTO" | "SLACK";
+type SourceType = "FUENTE EXTERNA" | "NOTAS DE GEMINI" | "DOCUMENTO" | "SLACK" | "SHEET";
 
 interface Source {
   id: string | number;
@@ -165,43 +177,7 @@ const typeStyles: Record<SourceType, string> = {
   "NOTAS DE GEMINI": "bg-purple-500/10 text-purple-600",
   "DOCUMENTO": "bg-primary/100/10 text-blue-600",
   "SLACK": "bg-green-500/10 text-green-400",
-};
-
-/* ─── Shared Helpers ─────────────────────────────────────────── */
-
-const categorizeItem = (item: any, objectives: any[] = [], jiraTasks: any[] = []) => {
-  const context = String(item.team || item.category || "").toLowerCase();
-  const title = String(item.title || "").toLowerCase();
-  const content = String(item.description || item.content || item.comentario || "").toLowerCase();
-  const combinedText = `${context} ${title} ${content}`.toLowerCase();
-  
-  const linkedGoal = objectives.find(o => o.id === item.goal_id);
-  const goalContext = linkedGoal ? `${linkedGoal.title} ${linkedGoal.team}`.toLowerCase() : "";
-  
-  const linkedJira = jiraTasks.find(j => j.external_key === item.linked_jira_key);
-  const jiraContext = linkedJira ? `${linkedJira.title} ${linkedJira.team}`.toLowerCase() : "";
-  
-  const fullContext = `${combinedText} ${goalContext} ${jiraContext}`;
-
-  if ((fullContext.includes("talent") || fullContext.includes("culture") || fullContext.includes("growth") || 
-       fullContext.includes("nom 035") || fullContext.includes("nom-035")) && 
-      !fullContext.includes("hiring") && !fullContext.includes("utu") && !fullContext.includes("talent-os")) return 'talent';
-  
-  if (fullContext.includes("hiring") || fullContext.includes("utu") || fullContext.includes("talent-os") || fullContext.includes("recruit") ||
-      fullContext.includes("contratación") || fullContext.includes("reclutamiento")) return 'hiring';
-  
-  if (fullContext.includes("ux") || fullContext.includes("design") || fullContext.includes("diseño") || fullContext.includes("triada") ||
-      fullContext.includes("ux_team")) return 'ux';
-
-  return 'otras';
-};
-
-const getResponsable = (item: any): string => {
-  return item.responsible ||
-         item.assignee_name ||
-         item.metadata?.responsable ||
-         item.assignee?.displayName ||
-         "Sin asignar";
+  "SHEET": "bg-emerald-500/10 text-emerald-400",
 };
 
 const ResponsableSelector = ({ items, filter, setFilter, forceShow = false }: {
@@ -237,34 +213,112 @@ const ResponsableSelector = ({ items, filter, setFilter, forceShow = false }: {
   );
 };
 
+const getTeamLabel = (key: string) => {
+  if (key === 'otras') return 'Otras';
+  const team = ANALYSIS_TEAMS.find(t => t.key === key);
+  return team?.label?.toUpperCase() || key.toUpperCase();
+};
+
+const computeTeamKeys = (
+  config: AnalysisConfig | null,
+  section: 'tasks' | 'open',
+  items: any[],
+  objectives: any[],
+  jiraTasks: any[]
+): string[] => {
+  if (!config) {
+    const keys = ANALYSIS_TEAMS.map(t => t.key);
+    const withItems = keys.filter(k => items.some(it => categorizeItem(it, objectives, jiraTasks) === k));
+    withItems.push('otras');
+    return withItems;
+  }
+  const sectionConfig = section === 'tasks' ? config.tasks : config.open;
+  if (section === 'tasks') {
+    const cats = (sectionConfig as any).custom_categories || [];
+    if (cats.length > 0) {
+      const result = [...cats];
+      if (!result.includes('otras')) result.push('otras');
+      return result;
+    }
+  }
+  const activeTeams = new Set<string>();
+  (sectionConfig.selected_teams || []).forEach(k => activeTeams.add(k));
+  const selectedProducts = sectionConfig.selected_products || [];
+  if (selectedProducts.length > 0) {
+    ANALYSIS_TEAMS.forEach(team => {
+      if (team.products.some(p => selectedProducts.includes(p.key))) {
+        activeTeams.add(team.key);
+      }
+    });
+  }
+  if (activeTeams.size > 0) {
+    const result = Array.from(activeTeams);
+    if (!result.includes('otras')) result.push('otras');
+    return result;
+  }
+  const keys = ANALYSIS_TEAMS.map(t => t.key);
+  keys.push('otras');
+  return keys;
+};
+
 /* ─── Components ─────────────────────────────────────────────── */
 
-function FeedbackTab({ items, objectives = [], jiraTasks = [], team, setTeam, responsableFilter, setResponsableFilter }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void, responsableFilter: string, setResponsableFilter: (r: string) => void }) {
+function FeedbackTab({ items, analysisConfig, objectives = [], jiraTasks = [], team, setTeam, responsableFilter, setResponsableFilter }: { items: any[], analysisConfig: AnalysisConfig | null, objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void, responsableFilter: string, setResponsableFilter: (r: string) => void }) {
+  const teamKeys = computeTeamKeys(analysisConfig, 'open', items, objectives, jiraTasks);
   const itemsByTeam = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
-  const filteredItems = responsableFilter === "todos"
+  const [selectedProduct, setSelectedProduct] = useState<string>('todos');
+  const teamProducts = ANALYSIS_TEAMS.find(t => t.key === team)?.products || [];
+  const productFiltered = selectedProduct === 'todos'
     ? itemsByTeam
-    : itemsByTeam.filter(it => getResponsable(it) === responsableFilter);
+    : itemsByTeam.filter(it => (it.product || deriveProductFromItem(it)) === selectedProduct);
+  const filteredItems = responsableFilter === "todos"
+    ? productFiltered
+    : productFiltered.filter(it => getResponsable(it) === responsableFilter);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b border-white/5 pb-4">
         <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">FEEDBACK Y COMENTARIOS</h3>
         <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-          {['talent', 'hiring', 'ux', 'otras'].map((t) => (
+          {teamKeys.map((t) => (
             <button 
               key={t}
-              onClick={() => setTeam(t as any)}
+              onClick={() => setTeam(t)}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 team === t ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
             >
-              {t === 'ux' ? 'UX TEAM' : t.toUpperCase()} ({items.filter(it => categorizeItem(it, objectives, jiraTasks) === t).length})
+              {getTeamLabel(t)} ({items.filter(it => categorizeItem(it, objectives, jiraTasks) === t).length})
             </button>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {teamProducts.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => setSelectedProduct('todos')}
+            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+              selectedProduct === 'todos' ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/50'
+            }`}
+          >
+            Todos ({itemsByTeam.length})
+          </button>
+          {teamProducts.map(p => (
+            <button
+              key={p.key}
+              onClick={() => setSelectedProduct(p.key)}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                selectedProduct === p.key ? 'bg-primary/20 text-primary' : 'text-white/30 hover:text-white/50'
+              }`}
+            >
+              {p.label} ({itemsByTeam.filter(it => (it.product || deriveProductFromItem(it)) === p.key).length})
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item, i) => {
           const linkedGoal = objectives.find(o => o.id === item.goal_id);
           const linkedJira = jiraTasks.find(j => j.external_key === item.linked_jira_key);
@@ -313,6 +367,7 @@ function FeedbackTab({ items, objectives = [], jiraTasks = [], team, setTeam, re
 
 function TasksTab({
   items,
+  analysisConfig,
   objectives = [],
   onTaskClick,
   onAddTask,
@@ -324,17 +379,19 @@ function TasksTab({
   setResponsableFilter
 }: {
   items: any[],
+  analysisConfig: AnalysisConfig | null,
   objectives: any[],
   onTaskClick: (task: any) => void,
   onAddTask: () => void,
   onReorder: (newItems: any[]) => void,
   onDelete: (id: string) => void,
-  jiraSubTab: 'talent' | 'hiring' | 'ux' | 'otras',
-  setJiraSubTab: (tab: 'talent' | 'hiring' | 'ux' | 'otras') => void,
+  jiraSubTab: string,
+  setJiraSubTab: (tab: string) => void,
   responsableFilter: string,
   setResponsableFilter: (r: string) => void
 }) {
-
+  const taskItemsOnly = items.filter((it: any) => it.origin !== 'jira');
+  const teamKeys = computeTeamKeys(analysisConfig, 'tasks', taskItemsOnly, objectives, []);
 
   const jiraTasks = items.filter(it => it.origin === 'jira');
   
@@ -348,15 +405,17 @@ function TasksTab({
   const aiTasks = Array.from(new Map(allAiTasks.map(t => [t.id || `${t.origin}-${t.title}`, t])).values());
 
   const tasksByTeam = aiTasks.filter(task => categorizeItem(task, objectives, jiraTasks) === jiraSubTab);
-  const currentAiTasks = responsableFilter === "todos"
+  const [selectedProduct, setSelectedProduct] = useState<string>('todos');
+  const teamProducts = ANALYSIS_TEAMS.find(t => t.key === jiraSubTab)?.products || [];
+  const productFiltered = selectedProduct === 'todos'
     ? tasksByTeam
-    : tasksByTeam.filter(task => getResponsable(task) === responsableFilter);
+    : tasksByTeam.filter(task => (task.product || deriveProductFromItem(task)) === selectedProduct);
+  const currentAiTasks = responsableFilter === "todos"
+    ? productFiltered
+    : productFiltered.filter(task => getResponsable(task) === responsableFilter);
   
   const baseForCounts = responsableFilter === "todos" ? aiTasks : aiTasks.filter(t => getResponsable(t) === responsableFilter);
-  const talentCount = baseForCounts.filter(t => categorizeItem(t, objectives, jiraTasks) === 'talent').length;
-  const hiringCount = baseForCounts.filter(t => categorizeItem(t, objectives, jiraTasks) === 'hiring').length;
-  const uxCount = baseForCounts.filter(t => categorizeItem(t, objectives, jiraTasks) === 'ux').length;
-  const otrasCount = baseForCounts.filter(t => categorizeItem(t, objectives, jiraTasks) === 'otras').length;
+  const teamCounts = Object.fromEntries(teamKeys.map(k => [k, baseForCounts.filter(t => categorizeItem(t, objectives, jiraTasks) === k).length]));
 
   const getPriorityTextColor = (priority: string) => {
     switch(priority?.toLowerCase()) {
@@ -394,40 +453,43 @@ function TasksTab({
             </div>
           </div>
           <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-            <button
-              onClick={() => { setJiraSubTab('talent'); }}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                jiraSubTab === 'talent' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              TALENT ({talentCount})
-            </button>
-            <button
-              onClick={() => { setJiraSubTab('hiring'); }}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                jiraSubTab === 'hiring' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              HIRING ({hiringCount})
-            </button>
-            <button
-              onClick={() => { setJiraSubTab('ux'); }}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                jiraSubTab === 'ux' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              UX TEAM ({uxCount})
-            </button>
-            <button
-              onClick={() => { setJiraSubTab('otras'); }}
-              className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                jiraSubTab === 'otras' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              OTRAS ({otrasCount})
-            </button>
+            {teamKeys.map((t) => (
+              <button
+                key={t}
+                onClick={() => setJiraSubTab(t)}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                  jiraSubTab === t ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                }`}
+              >
+                {getTeamLabel(t)} ({teamCounts[t] || 0})
+              </button>
+            ))}
           </div>
         </div>
+
+        {teamProducts.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setSelectedProduct('todos')}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                selectedProduct === 'todos' ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/50'
+              }`}
+            >
+              Todos ({tasksByTeam.length})
+            </button>
+            {teamProducts.map(p => (
+              <button
+                key={p.key}
+                onClick={() => setSelectedProduct(p.key)}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                  selectedProduct === p.key ? 'bg-primary/20 text-primary' : 'text-white/30 hover:text-white/50'
+                }`}
+              >
+                {p.label} ({tasksByTeam.filter(task => (task.product || deriveProductFromItem(task)) === p.key).length})
+              </button>
+            ))}
+          </div>
+        )}
 
         {responsableFilter === "todos" && (
           <ResponsableSelector items={tasksByTeam} filter={responsableFilter} setFilter={setResponsableFilter} />
@@ -565,30 +627,60 @@ function getSourceIcon(type: string) {
 }
 
 
-function InsightsTab({ items, objectives = [], jiraTasks = [], team, setTeam, responsableFilter, setResponsableFilter }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void, responsableFilter: string, setResponsableFilter: (r: string) => void }) {
+function InsightsTab({ items, analysisConfig, objectives = [], jiraTasks = [], team, setTeam, responsableFilter, setResponsableFilter }: { items: any[], analysisConfig: AnalysisConfig | null, objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void, responsableFilter: string, setResponsableFilter: (r: string) => void }) {
+  const teamKeys = computeTeamKeys(analysisConfig, 'open', items, objectives, jiraTasks);
   const itemsByTeam = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
-  const filteredItems = responsableFilter === "todos"
+  const [selectedProduct, setSelectedProduct] = useState<string>('todos');
+  const teamProducts = ANALYSIS_TEAMS.find(t => t.key === team)?.products || [];
+  const productFiltered = selectedProduct === 'todos'
     ? itemsByTeam
-    : itemsByTeam.filter(it => getResponsable(it) === responsableFilter);
+    : itemsByTeam.filter(it => (it.product || deriveProductFromItem(it)) === selectedProduct);
+  const filteredItems = responsableFilter === "todos"
+    ? productFiltered
+    : productFiltered.filter(it => getResponsable(it) === responsableFilter);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b border-white/5 pb-4">
         <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">INSIGHTS DEL DÍA</h3>
         <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-          {['talent', 'hiring', 'ux', 'otras'].map((t) => (
+          {teamKeys.map((t) => (
             <button 
               key={t}
-              onClick={() => setTeam(t as any)}
+              onClick={() => setTeam(t)}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 team === t ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
             >
-              {t === 'ux' ? 'UX TEAM' : t.toUpperCase()} ({items.filter(it => categorizeItem(it, objectives, jiraTasks) === t).length})
+              {getTeamLabel(t)} ({items.filter(it => categorizeItem(it, objectives, jiraTasks) === t).length})
             </button>
           ))}
         </div>
       </div>
+
+      {teamProducts.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => setSelectedProduct('todos')}
+            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+              selectedProduct === 'todos' ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/50'
+            }`}
+          >
+            Todos ({itemsByTeam.length})
+          </button>
+          {teamProducts.map(p => (
+            <button
+              key={p.key}
+              onClick={() => setSelectedProduct(p.key)}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                selectedProduct === p.key ? 'bg-primary/20 text-primary' : 'text-white/30 hover:text-white/50'
+              }`}
+            >
+              {p.label} ({itemsByTeam.filter(it => (it.product || deriveProductFromItem(it)) === p.key).length})
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item, i) => {
@@ -627,7 +719,8 @@ function InsightsTab({ items, objectives = [], jiraTasks = [], team, setTeam, re
   );
 }
 
-function MetricsTab({ items, objectives = [], platformMetrics = [], team, setTeam }: { items: any[], objectives: any[], platformMetrics?: any[], team: string, setTeam: (t: any) => void }) {
+function MetricsTab({ items, analysisConfig, objectives = [], platformMetrics = [], team, setTeam }: { items: any[], analysisConfig: AnalysisConfig | null, objectives: any[], platformMetrics?: any[], team: string, setTeam: (t: any) => void }) {
+  const teamKeys = computeTeamKeys(analysisConfig, 'open', items, objectives, []);
   const itemsWithPlatformMatch = items.map((it: any) => {
     const match = platformMetrics.find((m: any) =>
       m.name.toLowerCase().includes((it.title || "").toLowerCase()) ||
@@ -636,26 +729,55 @@ function MetricsTab({ items, objectives = [], platformMetrics = [], team, setTea
     return { ...it, _platformMetric: match || null };
   });
 
-  const filteredItems = itemsWithPlatformMatch.filter(it => categorizeItem(it, objectives) === team && it._platformMetric);
+  const teamAndMetricFiltered = itemsWithPlatformMatch.filter(it => categorizeItem(it, objectives) === team && it._platformMetric);
+  const [selectedProduct, setSelectedProduct] = useState<string>('todos');
+  const teamProducts = ANALYSIS_TEAMS.find(t => t.key === team)?.products || [];
+  const filteredItems = selectedProduct === 'todos'
+    ? teamAndMetricFiltered
+    : teamAndMetricFiltered.filter(it => (it.product || deriveProductFromItem(it)) === selectedProduct);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b border-white/5 pb-4">
         <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">MÉTRICAS DETECTADAS</h3>
         <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-          {['talent', 'hiring', 'ux', 'otras'].map((t) => (
+          {teamKeys.map((t) => (
             <button 
               key={t}
-              onClick={() => setTeam(t as any)}
+              onClick={() => setTeam(t)}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 team === t ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
             >
-              {t === 'ux' ? 'UX TEAM' : t.toUpperCase()} ({itemsWithPlatformMatch.filter(it => categorizeItem(it, objectives) === t && it._platformMetric).length})
+              {getTeamLabel(t)} ({itemsWithPlatformMatch.filter(it => categorizeItem(it, objectives) === t && it._platformMetric).length})
             </button>
           ))}
         </div>
       </div>
+
+      {teamProducts.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => setSelectedProduct('todos')}
+            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+              selectedProduct === 'todos' ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/50'
+            }`}
+          >
+            Todos ({teamAndMetricFiltered.length})
+          </button>
+          {teamProducts.map(p => (
+            <button
+              key={p.key}
+              onClick={() => setSelectedProduct(p.key)}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                selectedProduct === p.key ? 'bg-primary/20 text-primary' : 'text-white/30 hover:text-white/50'
+              }`}
+            >
+              {p.label} ({teamAndMetricFiltered.filter(it => (it.product || deriveProductFromItem(it)) === p.key).length})
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {filteredItems.map((item, i) => {
@@ -696,30 +818,60 @@ function MetricsTab({ items, objectives = [], platformMetrics = [], team, setTea
   );
 }
 
-function AlertsTab({ items, objectives = [], jiraTasks = [], team, setTeam, responsableFilter, setResponsableFilter }: { items: any[], objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void, responsableFilter: string, setResponsableFilter: (r: string) => void }) {
+function AlertsTab({ items, analysisConfig, objectives = [], jiraTasks = [], team, setTeam, responsableFilter, setResponsableFilter }: { items: any[], analysisConfig: AnalysisConfig | null, objectives: any[], jiraTasks: any[], team: string, setTeam: (t: any) => void, responsableFilter: string, setResponsableFilter: (r: string) => void }) {
+  const teamKeys = computeTeamKeys(analysisConfig, 'open', items, objectives, jiraTasks);
   const itemsByTeam = items.filter(it => categorizeItem(it, objectives, jiraTasks) === team);
-  const filteredItems = responsableFilter === "todos"
+  const [selectedProduct, setSelectedProduct] = useState<string>('todos');
+  const teamProducts = ANALYSIS_TEAMS.find(t => t.key === team)?.products || [];
+  const productFiltered = selectedProduct === 'todos'
     ? itemsByTeam
-    : itemsByTeam.filter(it => getResponsable(it) === responsableFilter);
+    : itemsByTeam.filter(it => (it.product || deriveProductFromItem(it)) === selectedProduct);
+  const filteredItems = responsableFilter === "todos"
+    ? productFiltered
+    : productFiltered.filter(it => getResponsable(it) === responsableFilter);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b border-white/5 pb-4">
         <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">ALERTAS DETECTADAS</h3>
         <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-          {['talent', 'hiring', 'ux', 'otras'].map((t) => (
+          {teamKeys.map((t) => (
             <button 
               key={t}
-              onClick={() => setTeam(t as any)}
+              onClick={() => setTeam(t)}
               className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 team === t ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
               }`}
             >
-              {t === 'ux' ? 'UX TEAM' : t.toUpperCase()} ({items.filter(it => categorizeItem(it, objectives, jiraTasks) === t).length})
+              {getTeamLabel(t)} ({items.filter(it => categorizeItem(it, objectives, jiraTasks) === t).length})
             </button>
           ))}
         </div>
       </div>
+
+      {teamProducts.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => setSelectedProduct('todos')}
+            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+              selectedProduct === 'todos' ? 'bg-white/10 text-white' : 'text-white/30 hover:text-white/50'
+            }`}
+          >
+            Todos ({itemsByTeam.length})
+          </button>
+          {teamProducts.map(p => (
+            <button
+              key={p.key}
+              onClick={() => setSelectedProduct(p.key)}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                selectedProduct === p.key ? 'bg-primary/20 text-primary' : 'text-white/30 hover:text-white/50'
+              }`}
+            >
+              {p.label} ({itemsByTeam.filter(it => (it.product || deriveProductFromItem(it)) === p.key).length})
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item, i) => {
@@ -781,7 +933,7 @@ export default function DayTodayPage() {
   const [loading, setLoading] = useState(true);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [formatFilter, setFormatFilter] = useState<string>("all");
+  const [enabledSourceTypes, setEnabledSourceTypes] = useState<string[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [driveSyncing, setDriveSyncing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -797,28 +949,36 @@ export default function DayTodayPage() {
   const [structuredTasks, setStructuredTasks] = useState<any[]>([]);
   const [objectives, setObjectives] = useState<any[]>([]);
   const [platformMetrics, setPlatformMetrics] = useState<any[]>([]);
-  const [jiraSubTab, setJiraSubTab] = useState<'talent' | 'hiring' | 'ux' | 'otras'>('talent');
+  const [analysisConfig, setAnalysisConfig] = useState<AnalysisConfig | null>(null);
+  const [countdown, setCountdown] = useState("");
+  const [jiraSubTab, setJiraSubTab] = useState<string>('talent');
+  const [statusSubTab, setStatusSubTab] = useState<string>('todas');
+  const [pendingTeamTab, setPendingTeamTab] = useState<string>('todas');
   const [responsableFilter, setResponsableFilter] = useState<string>("todos");
+  
+  // Reset status sub-tab when team tab changes
+  useEffect(() => { setStatusSubTab('todas'); }, [jiraSubTab]);
+  useEffect(() => { setStatusSubTab('todas'); }, [pendingTeamTab]);
   
   const userFullName = user?.user_metadata?.full_name || "Usuario";
   
   // Tasks assigned to current user (for tab badge)
   const userNameForMatch = useMemo(() => {
-    const byId = profiles.find(p => p.id === user?.id);
-    if (byId?.full_name) { console.log('🔍 userNameForMatch from profiles.id:', byId.full_name); return byId.full_name; }
-    const byEmail = profiles.find(p => p.email === user?.email);
-    if (byEmail?.full_name) { console.log('🔍 userNameForMatch from profiles.email:', byEmail.full_name); return byEmail.full_name; }
+    if (!user) return "Usuario";
+    const byId = profiles.find(p => p.id === user.id);
+    if (byId?.full_name) return byId.full_name;
+    const byEmail = profiles.find(p => p.email === user.email);
+    if (byEmail?.full_name) return byEmail.full_name;
     const fromMeta = user?.user_metadata?.full_name;
-    if (fromMeta) { console.log('🔍 userNameForMatch from metadata:', fromMeta); return fromMeta; }
-    const fromEmail = user?.email ? user.email.split('@')[0] : null;
-    console.log('🔍 userNameForMatch fallback to email prefix:', fromEmail, 'user:', user?.email);
+    if (fromMeta) return fromMeta;
+    const fromEmail = user.email ? user.email.split('@')[0] : null;
     return fromEmail || "Usuario";
   }, [profiles, user]);
   const userTaskCount = useMemo(() => {
     const name = userNameForMatch;
     if (name === "Usuario") return 0;
     const allTasks = summaryData?.tasks || [];
-    return allTasks.filter((t: any) => getResponsable(t) === name).length;
+    return allTasks.filter((t: any) => isUserMatch(t, name)).length;
   }, [summaryData?.tasks, userNameForMatch]);
   
   const fetchProfiles = async () => {
@@ -1222,17 +1382,35 @@ const mapDbSource = (s: any): Source => {
       }
       const wsId = wsResult.data.id;
       setWorkspaceId(wsId);
+      const rawConfig = wsResult.data.analysis_config || {};
+      const sourceTypes = rawConfig.source_types || [];
+      const localEnabledTypes = sourceTypes.length > 0 ? sourceTypes : ["notas_gemini", "slack", "google_docs", "sheets", "pdf"];
+      setEnabledSourceTypes(localEnabledTypes);
+      setAnalysisConfig({
+        tasks: {
+          selected_products: rawConfig.tasks?.selected_products || rawConfig.selected_products || [],
+          selected_teams: rawConfig.tasks?.selected_teams || rawConfig.selected_teams || [],
+          filter_teams: rawConfig.tasks?.filter_teams ?? rawConfig.filter_teams ?? false,
+          selected_responsibles: rawConfig.tasks?.selected_responsibles || rawConfig.selected_responsibles || [],
+          custom_categories: rawConfig.tasks?.custom_categories || rawConfig.custom_categories || [],
+          filter_active: rawConfig.tasks?.filter_active ?? rawConfig.filter_active ?? true,
+        },
+        open: {
+          selected_products: rawConfig.open?.selected_products || rawConfig.selected_products || [],
+          selected_teams: rawConfig.open?.selected_teams || rawConfig.selected_teams || [],
+          filter_teams: rawConfig.open?.filter_teams ?? rawConfig.filter_teams ?? false,
+          custom_categories: rawConfig.open?.custom_categories || rawConfig.custom_categories || [],
+        },
+        filter_responsibles: rawConfig.filter_responsibles ?? false,
+        selected_responsibles: rawConfig.selected_responsibles || [],
+        active_modules: rawConfig.active_modules || [],
+        source_types: rawConfig.source_types || [],
+      });
       loadStructuredTasks(wsId, wsResult.data);
       fetchProfiles();
       fetchPlatformMetrics(wsId);
-      // NOTE: Objetivos removidos de la carga inicial del tab Hoy
-      // Se cargan solo si es necesario para otras pestañas
 
       // 2. Load existing summary
-      const y = forDate.getFullYear();
-      const m = String(forDate.getMonth() + 1).padStart(2, "0");
-      const d = String(forDate.getDate()).padStart(2, "0");
-      const dateStr = `${y}-${m}-${d}`;
       const summaryResult = await getDaySummary(wsId, dateStr);
       if (summaryResult.success) {
         setSummaryData(summaryResult.data);
@@ -1297,7 +1475,7 @@ const mapDbSource = (s: any): Source => {
         await fetchAlerts(wsId, dateStr);
       }
 
-      // 5. Sync ONLY Gemini notes from Google Drive for today
+      // 5. Sync Gemini notes + Google Docs + Sheets from Google Drive for today
       if (fetchId !== currentFetchIdRef.current) return;
       setDriveSyncing(true);
 
@@ -1305,21 +1483,39 @@ const mapDbSource = (s: any): Source => {
         const driveResult = await fetchGoogleDriveFiles("all", dateStr);
 
         if (driveResult.success && driveResult.files && driveResult.files.length > 0) {
-          // FILTER: Only Gemini notes - title must contain "Notas de Gemini" or "Notes by Gemini" or just "Gemini"
-          const geminiNotesOnly = driveResult.files.filter((f: any) => {
+          const geminiNotesOnly: any[] = [];
+          const docsAndSheets: any[] = [];
+          const pdfs: any[] = [];
+
+          for (const f of driveResult.files) {
             const titleLower = f.name?.toLowerCase() || "";
-            const hasGeminiInTitle =
+            const isGemini =
               titleLower.includes("notas de gemini") ||
               titleLower.includes("notes by gemini") ||
               titleLower.includes("gemini notes") ||
-              titleLower.includes("notes by gemini") ||
               (titleLower.includes("gemini") && titleLower.includes("note"));
-            return hasGeminiInTitle;
-          });
 
-          if (geminiNotesOnly.length > 0) {
-            // Add to sources state
-            const geminiSources: Source[] = geminiNotesOnly.map((f: any) => ({
+            if (isGemini) {
+              geminiNotesOnly.push(f);
+            } else {
+              const mime = f.mimeType || "";
+              const isGoogleDoc = mime === "application/vnd.google-apps.document";
+              const isGoogleSheet = mime === "application/vnd.google-apps.spreadsheet";
+              const isPdf = mime === "application/pdf";
+              if (isGoogleDoc || isGoogleSheet) {
+                docsAndSheets.push(f);
+              } else if (isPdf) {
+                pdfs.push(f);
+              }
+            }
+          }
+
+          const newDriveSources: Source[] = [];
+
+          // Gemini notes (when enabled)
+          if (localEnabledTypes.includes("notas_gemini")) {
+            for (const f of geminiNotesOnly) {
+            newDriveSources.push({
               id: f.id,
               name: f.name,
               type: "NOTAS DE GEMINI" as SourceType,
@@ -1342,13 +1538,110 @@ const mapDbSource = (s: any): Source => {
                   <polyline points="14 2 14 8 20 8" />
                 </svg>
               ),
-            }));
+            });
+          }
+          }
 
+          // Google Docs (when enabled)
+          if (localEnabledTypes.includes("google_docs")) {
+            for (const f of docsAndSheets) {
+              if (f.mimeType !== "application/vnd.google-apps.document") continue;
+              newDriveSources.push({
+                id: f.id,
+                name: f.name,
+                type: "DOCUMENTO" as SourceType,
+                format: "DOC",
+                time: new Date(f.createdTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                checked: true,
+                url: f.webViewLink || null,
+                isManual: false,
+                displayTag: "DOC",
+                externalSourceId: f.id,
+                mimeType: f.mimeType || null,
+                origin: "google",
+                source_date: dateStr,
+                created_at: f.createdTime,
+                description: f.description || "",
+                metadata: { mimeType: f.mimeType, webViewLink: f.webViewLink },
+                icon: (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                ),
+              });
+            }
+          }
+
+          // Google Sheets (when enabled)
+          if (localEnabledTypes.includes("sheets")) {
+            for (const f of docsAndSheets) {
+              if (f.mimeType !== "application/vnd.google-apps.spreadsheet") continue;
+              newDriveSources.push({
+                id: f.id,
+                name: f.name,
+                type: "SHEET" as SourceType,
+                format: "SHEET",
+                time: new Date(f.createdTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                checked: true,
+                url: f.webViewLink || null,
+                isManual: false,
+                displayTag: "SHEET",
+                externalSourceId: f.id,
+                mimeType: f.mimeType || null,
+                origin: "google",
+                source_date: dateStr,
+                created_at: f.createdTime,
+                description: f.description || "",
+                metadata: { mimeType: f.mimeType, webViewLink: f.webViewLink },
+                icon: (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="9" y1="21" x2="9" y2="9" />
+                  </svg>
+                ),
+              });
+            }
+          }
+
+          // PDFs (when enabled)
+          if (localEnabledTypes.includes("pdf")) {
+            for (const f of pdfs) {
+              newDriveSources.push({
+                id: f.id,
+                name: f.name,
+                type: "DOCUMENTO" as SourceType,
+                format: "PDF",
+                time: new Date(f.createdTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                checked: true,
+                url: f.webViewLink || null,
+                isManual: false,
+                displayTag: "PDF",
+                externalSourceId: f.id,
+                mimeType: f.mimeType || null,
+                origin: "google",
+                source_date: dateStr,
+                created_at: f.createdTime,
+                description: f.description || "",
+                metadata: { mimeType: f.mimeType, webViewLink: f.webViewLink },
+                icon: (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f49e04" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
+                ),
+              });
+            }
+          }
+
+          if (newDriveSources.length > 0) {
             setSources((prevSources) => {
-              // Merge: DB sources + Gemini notes (no duplicates by ID)
               const allIds = new Set(prevSources.map(s => s.id));
-              const newGemini = geminiSources.filter(g => !allIds.has(g.id));
-              return [...prevSources, ...newGemini];
+              const toAdd = newDriveSources.filter(s => !allIds.has(s.id));
+              return [...prevSources, ...toAdd];
             });
           }
         }
@@ -1358,34 +1651,29 @@ const mapDbSource = (s: any): Source => {
         setDriveSyncing(false);
       }
 
-      // 6. Sync Slack messages for the day
+      // 6. Sync Slack messages for the day (when enabled)
       if (fetchId !== currentFetchIdRef.current) return;
 
-      try {
-        console.log("[fetchData] Starting Slack sync for", dateStr, "userToken:", !!slackUserToken);
-        const slackResult = await syncSlackSourcesForDay(wsId, forDate);
-        console.log("[fetchData] Slack sync result:", slackResult);
+      if (localEnabledTypes.includes("slack")) {
+        try {
+          const slackResult = await syncSlackSourcesForDay(wsId, forDate);
 
-        if (slackResult.success) {
-          const slackSourcesResult = await getSlackSourcesByWorkspace(wsId, forDate);
-          console.log("[fetchData] Slack sources from DB:", slackSourcesResult);
+          if (slackResult.success) {
+            const slackSourcesResult = await getSlackSourcesByWorkspace(wsId, forDate);
 
-          if (slackSourcesResult.success && slackSourcesResult.data && slackSourcesResult.data.length > 0) {
-            const slackSources: Source[] = slackSourcesResult.data.map((s: any) => mapDbSource(s));
+            if (slackSourcesResult.success && slackSourcesResult.data && slackSourcesResult.data.length > 0) {
+              const slackSources: Source[] = slackSourcesResult.data.map((s: any) => mapDbSource(s));
 
-            setSources((prevSources) => {
-              const allIds = new Set(prevSources.map(s => s.id));
-              const newSlack = slackSources.filter(s => !allIds.has(s.id));
-              return [...prevSources, ...newSlack];
-            });
-          } else {
-            console.log("[fetchData] No Slack sources found in DB for this date");
+              setSources((prevSources) => {
+                const allIds = new Set(prevSources.map(s => s.id));
+                const newSlack = slackSources.filter(s => !allIds.has(s.id));
+                return [...prevSources, ...newSlack];
+              });
+            }
           }
-        } else {
-          console.warn("[fetchData] Slack sync failed:", slackResult.error);
+        } catch (slackError) {
+          console.error("[fetchData] Slack sync error:", slackError);
         }
-      } catch (slackError) {
-        console.error("[fetchData] Slack sync error:", slackError);
       }
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -1452,6 +1740,23 @@ const mapDbSource = (s: any): Source => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, selectedDate, sources, summaryData]);
 
+  // Countdown to daily automatic analysis
+  useEffect(() => {
+    function updateCountdown() {
+      const now = new Date();
+      const target = new Date(now);
+      target.setHours(DAILY_ANALYSIS_HOUR, 0, 0, 0);
+      if (now >= target) target.setDate(target.getDate() + 1);
+      const diff = target.getTime() - now.getTime();
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setCountdown(`${h}h ${m}m`);
+    }
+    updateCountdown();
+    const id = setInterval(updateCountdown, 60000);
+    return () => clearInterval(id);
+  }, []);
+
   const handleAnalyzeDay = async () => {
     if (!workspaceId) {
       console.error("[AnalyzeDay] No workspaceId");
@@ -1477,7 +1782,6 @@ const mapDbSource = (s: any): Source => {
       const d = String(selectedDate.getDate()).padStart(2, "0");
       const dateStr = `${y}-${m}-${d}`;
       // 1. Fetch contents for all checked sources to provide context to Gemini
-      setIsAnalyzing(true);
       const sourcesWithContent = await Promise.all(checkedSources.map(async (s) => {
         let content = "";
 
@@ -1507,7 +1811,17 @@ const mapDbSource = (s: any): Source => {
       // Compute userName directly from user state to avoid initialization issues
       const currentUserName = user?.user_metadata?.full_name || summaryData?.profiles?.full_name || "Usuario";
 
-      console.log("[ANALYZE DAY] Sources to analyze:", sourcesWithContent.length, sourcesWithContent.map(s => ({ name: s.name, type: s.type, hasContent: !!s.content })));
+      console.log(" ");
+      console.log("═══════════════════════════════════════════════");
+      console.log("  ANÁLISIS DIARIO — INICIANDO");
+      console.log(`  Fecha: ${dateStr}`);
+      console.log(`  Usuario: ${currentUserName}`);
+      console.log(`  Workspace: ${workspaceId}`);
+      console.log(`  Fuentes: ${sourcesWithContent.length}`);
+      sourcesWithContent.forEach(s => console.log(`    → ${s.name} (${s.type}) [${s.content?.length || 0} chars]`));
+      console.log(`  Reuniones: ${calendarEvents?.length || 0}`);
+      console.log(`  Objetivos: ${objectives?.length || 0}`);
+      console.log("───────────────────────────────────────────────");
 
       const result = await analyzeDay({
         date: dateStr,
@@ -1523,17 +1837,28 @@ const mapDbSource = (s: any): Source => {
         }))
       });
 
-      console.log("[ANALYZE DAY] Gemini response:", { success: result.success, tasksCount: result.tasks?.length, insightsCount: result.insights?.length });
+      console.log("───────────────────────────────────────────────");
+      console.log("  RESPUESTA DE GEMINI");
+      console.log(`  Success: ${result.success}`);
+      if (result.error) console.log(`  Error: ${result.error}`);
+      console.log(`  Tasks: ${result.tasks?.length || 0}`);
+      console.log(`  Insights: ${result.insights?.length || 0}`);
+      console.log(`  Metrics: ${result.metrics?.length || 0}`);
+      console.log(`  Alerts: ${result.alerts?.length || 0}`);
+      console.log(`  Feedback: ${result.feedback?.length || 0}`);
+      if (result.summary) console.log(`  Summary: ${result.summary.substring(0, 200)}...`);
       if (result.tasks && result.tasks.length > 0) {
-        console.log("[ANALYZE DAY] First task sample:", result.tasks[0]);
+        console.log("  ── Tareas ──");
+        result.tasks.forEach((t: any, i: number) => console.log(`    ${i+1}. [${t.priority}] ${t.title} — ${t.responsible} — ${t.due_date || "sin fecha"}`));
       }
+      console.log("───────────────────────────────────────────────");
 
       if (!result.success) {
         throw new Error(result.error);
       }
 
       // 2. Save result to DB
-      console.log("[ANALYZE DAY] Saving to DB - tasks:", result.tasks?.length);
+      console.log("  GUARDANDO EN BASE DE DATOS...");
       await saveDayAnalysis(workspaceId, dateStr, {
         summary: result.summary || "",
         tasks: result.tasks,
@@ -1544,11 +1869,161 @@ const mapDbSource = (s: any): Source => {
         source_count: checkedSources.length,
       });
 
-      console.log("[ANALYZE DAY] Saved to DB successfully");
+      console.log("  ✓ Datos guardados exitosamente");
+
+      // ════════════════════════════════════════════════════════════════
+      // 🧠 UI TRACEABILITY AUDIT — Verificación final post-guardado
+      // ════════════════════════════════════════════════════════════════
+      console.log("\n" + "✅".repeat(20));
+      console.log("✅  POST-SAVE TRACEABILITY VERIFICATION");
+      console.log("✅" + "=".repeat(57));
+
+      const savedEntities = [
+        ...(result.tasks || []).map((e: any) => ({ ...e, _type: "TASK" })),
+        ...(result.insights || []).map((e: any) => ({ ...e, _type: "INSIGHT" })),
+        ...(result.metrics || []).map((e: any) => ({ ...e, _type: "METRIC" })),
+        ...(result.alerts || []).map((e: any) => ({ ...e, _type: "ALERT" })),
+        ...(result.feedback || []).map((e: any) => ({ ...e, _type: "FEEDBACK" })),
+      ];
+
+      console.log(`📦 Total entidades guardadas: ${savedEntities.length}`);
+      console.log(`   Tareas: ${result.tasks?.length || 0}`);
+      console.log(`   Insights: ${result.insights?.length || 0}`);
+      console.log(`   Métricas: ${result.metrics?.length || 0}`);
+      console.log(`   Alertas: ${result.alerts?.length || 0}`);
+      console.log(`   Feedback: ${result.feedback?.length || 0}`);
+
+      // Source → Entity contribution
+      console.log("\n📥 FUENTES ANALIZADAS:");
+      withContent.forEach(s => console.log(`   📄 ${s.name} (${s.content?.length || 0} chars)`));
+
+      // Category distribution per entity type
+      const uiCat: Record<string, Record<string, number>> = {};
+      for (const e of savedEntities) {
+        const cat = e.category || "sin_categoria";
+        if (!uiCat[cat]) uiCat[cat] = {};
+        uiCat[cat][e._type] = (uiCat[cat][e._type] || 0) + 1;
+      }
+      console.log("\n📊 DISTRIBUCIÓN FINAL POR CATEGORÍA/EQUIPO:");
+      for (const [cat, types] of Object.entries(uiCat).sort((a, b) => {
+        const sumA = Object.values(a[1]).reduce((s: number, v: any) => s + v, 0);
+        const sumB = Object.values(b[1]).reduce((s: number, v: any) => s + v, 0);
+        return sumB - sumA;
+      })) {
+        const detail = Object.entries(types).map(([t, c]) => `${c} ${t}`).join(", ");
+        console.log(`   📁 ${cat.padEnd(20)} → ${detail}`);
+      }
+
+      // Cross-entity associations
+      const uiWithGoal = savedEntities.filter((e: any) => e.goal_id);
+      const uiWithJira = savedEntities.filter((e: any) => e.linked_jira_key);
+      const uiWithMetric = savedEntities.filter((e: any) => e.linked_metric_names?.length > 0);
+      console.log(`\n🔗 ASOCIACIONES FINALES:`);
+      console.log(`   🎯 A objetivos: ${uiWithGoal.length}/${savedEntities.length}`);
+      console.log(`   🟢 A Jira:      ${uiWithJira.length}/${savedEntities.length}`);
+      console.log(`   📈 A métricas:  ${uiWithMetric.length}/${savedEntities.length}`);
+
+      if (uiWithGoal.length > 0) {
+        const shared: Record<string, Set<string>> = {};
+        for (const e of uiWithGoal) {
+          if (!shared[e.goal_id]) shared[e.goal_id] = new Set();
+          shared[e.goal_id].add(e._type);
+        }
+        const multi = Object.entries(shared).filter(([, s]) => s.size > 1);
+        if (multi.length > 0) {
+          console.log(`   🔗 Asociaciones multi-tipo por objetivo compartido:`);
+          for (const [gid, ts] of multi) {
+            console.log(`      🎯 ${gid.substring(0, 8)}... → ${[...ts].join(" ⟷ ")}`);
+          }
+        }
+      }
+
+      if (uiWithJira.length > 0) {
+        const shared: Record<string, Set<string>> = {};
+        for (const e of uiWithJira) {
+          if (!shared[e.linked_jira_key]) shared[e.linked_jira_key] = new Set();
+          shared[e.linked_jira_key].add(e._type);
+        }
+        const multi = Object.entries(shared).filter(([, s]) => s.size > 1);
+        if (multi.length > 0) {
+          console.log(`   🟢 Asociaciones multi-tipo por Jira compartido:`);
+          for (const [jk, ts] of multi) {
+            console.log(`      🟢 ${jk.padEnd(12)} → ${[...ts].join(" ⟷ ")}`);
+          }
+        }
+      }
+
+      // Full task dump
+      const logTasks = result.tasks;
+      if (logTasks && logTasks.length > 0) {
+        console.log(`\n📋 TAREAS CON ASOCIACIONES (${logTasks.length}):`);
+        logTasks.forEach((t: any, i: number) => {
+          const assocs = [];
+          if (t.goal_id) assocs.push(`OBJ:${t.goal_id.substring(0, 8)}`);
+          if (t.linked_jira_key) assocs.push(`JIRA:${t.linked_jira_key}`);
+          if (t.linked_jira_subtask_id) assocs.push(`SUB:${t.linked_jira_subtask_id}`);
+          if (t.linked_metric_names?.length > 0) assocs.push(`MET:${t.linked_metric_names.join(",")}`);
+          console.log(`   ${i+1}. [${t.priority}] "${t.title?.substring(0, 50)}"`);
+          console.log(`      eq:${t.category} | resp:${t.responsible} | ven:${t.due_date || "—"} | asoc:[${assocs.join(", ") || "ninguna"}]`);
+        });
+      }
+
+      // Full alerts dump
+      const logAlerts = result.alerts;
+      if (logAlerts && logAlerts.length > 0) {
+        console.log(`\n🚨 ALERTAS CON ASOCIACIONES (${logAlerts.length}):`);
+        logAlerts.forEach((a: any, i: number) => {
+          const assocs = [];
+          if (a.goal_id) assocs.push(`OBJ:${a.goal_id.substring(0, 8)}`);
+          if (a.linked_jira_key) assocs.push(`JIRA:${a.linked_jira_key}`);
+          if (a.linked_metric_names?.length > 0) assocs.push(`MET:${a.linked_metric_names.join(",")}`);
+          console.log(`   ${i+1}. [${a.priority}] "${a.title?.substring(0, 50)}" cat:${a.category} → ${assocs.join(", ") || "sin asoc"}`);
+        });
+      }
+
+      // Full insights dump
+      const logInsights = result.insights;
+      if (logInsights && logInsights.length > 0) {
+        console.log(`\n💡 INSIGHTS CON ASOCIACIONES (${logInsights.length}):`);
+        logInsights.forEach((ins: any, i: number) => {
+          const assocs = [];
+          if (ins.goal_id) assocs.push(`OBJ:${ins.goal_id.substring(0, 8)}`);
+          if (ins.linked_jira_key) assocs.push(`JIRA:${ins.linked_jira_key}`);
+          if (ins.linked_metric_names?.length > 0) assocs.push(`MET:${ins.linked_metric_names.join(",")}`);
+          console.log(`   ${i+1}. "${ins.title?.substring(0, 50)}" cat:${ins.category} → ${assocs.join(", ") || "sin asoc"}`);
+        });
+      }
+
+      // Full metrics dump
+      const logMetrics = result.metrics;
+      if (logMetrics && logMetrics.length > 0) {
+        console.log(`\n📈 MÉTRICAS (${logMetrics.length}):`);
+        logMetrics.forEach((m: any, i: number) => {
+          console.log(`   ${i+1}. "${m.title}" = ${m.value} (${m.change}) cat:${m.category}`);
+        });
+      }
+
+      // Full feedback dump
+      const logFeedback = result.feedback;
+      if (logFeedback && logFeedback.length > 0) {
+        console.log(`\n💬 FEEDBACK (${logFeedback.length}):`);
+        logFeedback.forEach((fb: any, i: number) => {
+          const assocs = [];
+          if (fb.goal_id) assocs.push(`OBJ:${fb.goal_id.substring(0, 8)}`);
+          console.log(`   ${i+1}. "${fb.title?.substring(0, 50)}" tipo:${fb.type} cat:${fb.category} → ${assocs.join(", ") || "sin asoc"}`);
+        });
+      }
+
+      console.log("\n" + "✅".repeat(20));
+      console.log("✅  FIN TRACEABILITY VERIFICATION");
+      console.log("✅" + "=".repeat(57) + "\n");
+      // ════════════════════════════════════════════════════════════════
 
       // 3. Refresh summary data from DB to show in UI
       const summaryResult = await getDaySummary(workspaceId, dateStr);
-      console.log("[ANALYZE DAY] Retrieved from DB:", { tasksCount: summaryResult.data?.tasks?.length });
+      console.log(`  ✓ Resumen recuperado: ${summaryResult.data?.tasks?.length || 0} tareas en DB`);
+      console.log("═══════════════════════════════════════════════");
+      console.log(" ");
       if (summaryResult.success) {
         setSummaryData(summaryResult.data);
       }
@@ -1635,9 +2110,9 @@ const mapDbSource = (s: any): Source => {
     setPrivateChannelSuccess(`Canal #${result.channel?.name} conectado exitosamente`);
     setChannelIdInput("");
 
-    const syncResult = await syncSlackSourcesForDay(workspaceId, new Date());
+    const syncResult = await syncSlackSourcesForDay(workspaceId, selectedDate);
     if (syncResult.success) {
-      const slackSourcesResult = await getSlackSourcesByWorkspace(workspaceId, new Date());
+      const slackSourcesResult = await getSlackSourcesByWorkspace(workspaceId, selectedDate);
       if (slackSourcesResult.success && slackSourcesResult.data) {
         setSources((prevSources) => {
           const allIds = new Set(prevSources.map(s => s.id));
@@ -1724,34 +2199,13 @@ const mapDbSource = (s: any): Source => {
   };
 
   const filteredSources = sources.filter((s) => {
-    // If user selected specific filters, apply them
-    if (typeFilter !== "all" || formatFilter !== "all") {
-      // Apply type filter
-      if (typeFilter !== "all") {
-        if (typeFilter === "FUENTE EXTERNA" && (s.origin !== "google" && s.origin !== "slack")) return false;
-        if (typeFilter === "NOTAS DE GEMINI" && s.type !== "NOTAS DE GEMINI") return false;
-      }
-
-      // Apply format filter
-      if (formatFilter !== "all") {
-        const fileType = s.format?.toUpperCase() || s.name?.split(".").pop()?.toUpperCase() || "";
-        if (fileType !== formatFilter) return false;
-      }
-
+    if (typeFilter !== "all") {
+      const filterFn = TYPE_FILTER_CONFIG[typeFilter]?.filter;
+      if (filterFn && !filterFn(s)) return false;
       return true;
     }
 
-    // Default: show Notas de Gemini + Slack sources + Fuentes Externas (manually added only)
-    const isGeminiNote = s.type === "NOTAS DE GEMINI";
-    const isSlackSource = s.origin === "slack";
-
-    // For external sources: exclude auto-synced from Drive, only show manually linked
-    const isAutoSynced = s.externalSourceId;
-    const isManuallyAdded = !s.externalSourceId;
-
-    const isExternalSource = (s.type === "FUENTE EXTERNA" || s.type === "DOCUMENTO") && isManuallyAdded;
-
-    return isGeminiNote || isExternalSource || isSlackSource;
+    return true;
   });
 
   const checkedCount = filteredSources.filter((s) => s.checked).length;
@@ -1774,7 +2228,7 @@ const mapDbSource = (s: any): Source => {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
             </svg>
-            Análisis automático en: <span className="font-semibold text-white">04h 22m</span>
+            Análisis automático en: <span className="font-semibold text-white">{countdown}</span>
           </div>
         </div>
 
@@ -1959,19 +2413,6 @@ const mapDbSource = (s: any): Source => {
           )}
 
           {!summaryData?.summary_text && isAnalyzing && (
-            <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-primary/20 p-10 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-6">
-                <svg className="animate-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="2">
-                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-                  <polyline points="21 3 21 8 16 8" />
-                </svg>
-              </div>
-              <p className="text-sm text-white/40 font-medium">Analizando tu día con IA...</p>
-              <p className="text-xs text-white/20 mt-1">Esto puede tardar unos segundos.</p>
-            </div>
-          )}
-
-          {!summaryData?.summary_text && isAnalyzing && manualAnalyzeActive && (
             <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-primary/20 p-10 text-center">
               <div className="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-6">
                 <svg className="animate-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="2">
@@ -2236,44 +2677,40 @@ const mapDbSource = (s: any): Source => {
               </h3>
             </div>
 
-            {/* Team filters */}
-            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 w-fit">
-              {(['talent', 'hiring', 'ux', 'otras'] as const).map(team => (
-                <button
-                  key={team}
-                  onClick={() => setJiraSubTab(team)}
-                  className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                    jiraSubTab === team ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
-                  }`}
-                >
-                  {team === 'ux' ? 'UX TEAM' : team.toUpperCase()}
-                </button>
-              ))}
-            </div>
-
             {(() => {
               const today = new Date();
               today.setHours(0, 0, 0, 0);
 
-              const jiraTasks = structuredTasks.filter((t: any) => t.origin === 'jira');
+              const allTeamKeys = [...ANALYSIS_TEAMS.map(t => t.key), 'otras'];
 
               const userPendingTasks = structuredTasks.filter((task: any) => {
-                const isObjective = task.title?.toLowerCase().startsWith('objetivo:') || task.goal_id;
-                if (isObjective) return false;
+                const title = (task.title || '').toLowerCase();
+                const desc = String(task.description || '').toLowerCase();
+
+                if (title.includes('objetivo') || desc.includes('objetivo')) return false;
+                if (title.includes('objetivo estratégico') || desc.includes('objetivo estratégico')) return false;
+                if (title.includes('okr') || desc.includes('okr')) return false;
+                if (title.includes('key result') || desc.includes('key result')) return false;
+                if (title.includes('iniciativa estratégica') || desc.includes('iniciativa estratégica')) return false;
+
                 const isDone = task.status?.toLowerCase().includes('done') || task.status?.toLowerCase().includes('finalizada');
                 if (isDone) return false;
-                const matchesUser = getResponsable(task) === userNameForMatch;
-                return matchesUser;
+                return isUserMatch(task, userNameForMatch);
               });
 
-              const teamTasks = userPendingTasks.filter((task: any) => {
-                const category = categorizeItem(task, objectives, jiraTasks);
-                return category === jiraSubTab;
-              });
+              const activeTeamTasks = pendingTeamTab === 'todas'
+                ? userPendingTasks
+                : userPendingTasks.filter(t => categorizeItem(t) === pendingTeamTab);
 
-              const overdue = teamTasks.filter((t: any) => t.due_date && new Date(t.due_date) < today);
-              const dueToday = teamTasks.filter((t: any) => t.due_date && new Date(t.due_date).toDateString() === today.toDateString());
-              const backlog = teamTasks.filter((t: any) => !overdue.includes(t) && !dueToday.includes(t));
+              const overdue = activeTeamTasks.filter((t: any) => t.due_date && new Date(t.due_date) < today);
+              const dueToday = activeTeamTasks.filter((t: any) => t.due_date && new Date(t.due_date).toDateString() === today.toDateString());
+              const backlog = activeTeamTasks.filter((t: any) => !overdue.includes(t) && !dueToday.includes(t));
+              const statusTabs = [
+                { key: 'todas', label: 'Todas', count: activeTeamTasks.length, color: 'text-white/60' },
+                { key: 'vencidas', label: 'Vencidas', count: overdue.length, color: 'text-red-400' },
+                { key: 'hoy', label: 'Hoy', count: dueToday.length, color: 'text-amber-400' },
+                { key: 'backlog', label: 'Backlog', count: backlog.length, color: 'text-white/40' },
+              ];
 
               const renderTaskCard = (task: any) => {
                 const isOverdue = overdue.includes(task);
@@ -2335,7 +2772,7 @@ const mapDbSource = (s: any): Source => {
                 );
               };
 
-              if (teamTasks.length === 0) {
+              if (userPendingTasks.length === 0) {
                 return (
                   <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-white/10 p-8 text-center mt-4">
                     <div className="w-12 h-12 rounded-2xl bg-green-500/5 flex items-center justify-center mx-auto mb-4">
@@ -2345,63 +2782,124 @@ const mapDbSource = (s: any): Source => {
                       </svg>
                     </div>
                     <p className="text-sm text-white/40 font-medium">¡Sin tareas pendientes!</p>
-                    <p className="text-xs text-white/20 mt-1">No tienes tareas asignadas en este equipo.</p>
+                    <p className="text-xs text-white/20 mt-1">No tienes tareas pendientes asignadas a ti.</p>
                   </div>
                 );
               }
 
+              if (activeTeamTasks.length === 0) {
+                return (
+                  <div className="bg-card/40 backdrop-blur-sm rounded-3xl border border-dashed border-white/10 p-8 text-center mt-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-500/5 flex items-center justify-center mx-auto mb-4">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a6bff" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-white/40 font-medium">Sin tareas en este equipo</p>
+                    <p className="text-xs text-white/20 mt-1">Prueba seleccionando otro equipo.</p>
+                  </div>
+                );
+              }
+
+              const STATUS_CONFIG: Record<string, { items: any[], label: string, dot: string, textColor: string, bgBadge: string, borderBadge: string }> = {
+                todas: { items: activeTeamTasks, label: 'Todas', dot: 'bg-white/30', textColor: 'text-white/60', bgBadge: 'bg-white/10', borderBadge: 'border-white/20' },
+                vencidas: { items: overdue, label: 'Vencidas', dot: 'bg-red-500', textColor: 'text-red-400', bgBadge: 'bg-red-500/10', borderBadge: 'border-red-500/20' },
+                hoy: { items: dueToday, label: 'Hoy', dot: 'bg-amber-400', textColor: 'text-amber-400', bgBadge: 'bg-amber-500/10', borderBadge: 'border-amber-500/20' },
+                backlog: { items: backlog, label: 'Backlog', dot: 'bg-white/30', textColor: 'text-white/40', bgBadge: 'bg-white/10', borderBadge: 'border-white/20' },
+              };
+              const activeStatus = STATUS_CONFIG[statusSubTab] || STATUS_CONFIG.todas;
+              const activeItems = activeStatus.items;
+
               return (
-                <div className="space-y-6">
-                  {overdue.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400">
-                          Vencidas
-                        </h4>
-                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">
-                          {overdue.length}
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {overdue.map(renderTaskCard)}
-                      </div>
-                    </div>
-                  )}
+                <div className="space-y-4">
+                  {/* Team tabs */}
+                  <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 w-fit flex-wrap">
+                    <button
+                      onClick={() => setPendingTeamTab('todas')}
+                      className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                        pendingTeamTab === 'todas' ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                      }`}
+                    >
+                      Todas ({userPendingTasks.length})
+                    </button>
+                    {allTeamKeys.map(tk => {
+                      const count = userPendingTasks.filter(t => categorizeItem(t) === tk).length;
+                      if (count === 0) return null;
+                      return (
+                        <button
+                          key={tk}
+                          onClick={() => setPendingTeamTab(tk)}
+                          className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                            pendingTeamTab === tk ? 'bg-blue-500 text-white shadow-lg' : 'text-white/40 hover:text-white/60'
+                          }`}
+                        >
+                          {getTeamLabel(tk)} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
 
-                  {dueToday.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-400">
-                          Hoy
-                        </h4>
-                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          {dueToday.length}
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {dueToday.map(renderTaskCard)}
-                      </div>
-                    </div>
-                  )}
+                  {/* Status sub-tabs */}
+                  <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 w-fit">
+                    {statusTabs.map(st => (
+                      <button
+                        key={st.key}
+                        onClick={() => setStatusSubTab(st.key)}
+                        className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                          statusSubTab === st.key ? 'bg-blue-500 text-white shadow-lg' : `${st.color} hover:text-white/80`
+                        }`}
+                      >
+                        {st.label} ({st.count})
+                      </button>
+                    ))}
+                  </div>
 
-                  {backlog.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-white/30" />
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">
-                          Backlog
-                        </h4>
-                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-white/10 text-white/40 border border-white/20">
-                          {backlog.length}
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {backlog.map(renderTaskCard)}
-                      </div>
+                  {/* Tasks */}
+                  {statusSubTab === 'todas' ? (
+                    <div className="space-y-6">
+                      {overdue.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400">Vencidas</h4>
+                            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">{overdue.length}</span>
+                          </div>
+                          <div className="space-y-2">{overdue.map(renderTaskCard)}</div>
+                        </div>
+                      )}
+                      {dueToday.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-400">Hoy</h4>
+                            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">{dueToday.length}</span>
+                          </div>
+                          <div className="space-y-2">{dueToday.map(renderTaskCard)}</div>
+                        </div>
+                      )}
+                      {backlog.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1.5 h-1.5 rounded-full bg-white/30" />
+                            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">Backlog</h4>
+                            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-white/10 text-white/40 border border-white/20">{backlog.length}</span>
+                          </div>
+                          <div className="space-y-2">{backlog.map(renderTaskCard)}</div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ) : activeItems.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`w-1.5 h-1.5 rounded-full ${activeStatus.dot}`} />
+                        <h4 className={`text-[10px] font-black uppercase tracking-widest ${activeStatus.textColor}`}>{activeStatus.label}</h4>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${activeStatus.bgBadge} ${activeStatus.textColor} ${activeStatus.borderBadge}`}>{activeItems.length}</span>
+                      </div>
+                      {activeItems.map(renderTaskCard)}
+                    </div>
+                  ) : null}
                 </div>
               );
             })()}
@@ -2431,25 +2929,6 @@ const mapDbSource = (s: any): Source => {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => fetchData(selectedDate)}
-                disabled={driveSyncing}
-                className={`p-2 rounded-lg transition-all ${
-                  driveSyncing 
-                    ? "bg-card/5 text-white/30 cursor-not-allowed" 
-                    : "bg-card border border-white/20 text-white/60 hover:text-primary hover:border-primary/50 shadow-sm"
-                }`}
-                title="Sincronizar"
-              >
-                <svg 
-                  className={`w-4 h-4 ${driveSyncing ? "animate-spin" : ""}`}
-                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                >
-                  <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                  <polyline points="21 3 21 8 16 8" />
-                </svg>
-              </button>
-
-              <button
                 onClick={() => setDrawerOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border-2 border-primary/30 text-primary hover:bg-primary/5 transition-all"
               >
@@ -2473,25 +2952,10 @@ const mapDbSource = (s: any): Source => {
                   className="appearance-none bg-card border border-white/30 text-sm text-white/70 font-medium rounded-lg pl-3 pr-8 py-2 cursor-pointer hover:border-white/60 focus:outline-none focus:border-primary transition-colors"
                 >
                   <option value="all">Tipo de recurso</option>
-                  <option value="FUENTE EXTERNA">Fuente Externa</option>
-                  <option value="NOTAS DE GEMINI">Notas de Gemini</option>
-                </select>
-                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
-              </div>
-
-              {/* Format filter */}
-              <div className="relative">
-                <select
-                  value={formatFilter}
-                  onChange={(e) => setFormatFilter(e.target.value)}
-                  className="appearance-none bg-card border border-white/30 text-sm text-white/70 font-medium rounded-lg pl-3 pr-8 py-2 cursor-pointer hover:border-white/60 focus:outline-none focus:border-primary transition-colors"
-                >
-                  <option value="all">Formato</option>
-                  <option value="PDF">PDF</option>
-                  <option value="DOCX">DOCX</option>
-                  <option value="DOC">DOC</option>
-                  <option value="SHEET">SHEET</option>
-                  <option value="TXT">TXT</option>
+                  {enabledSourceTypes.map(key => {
+                    const cfg = TYPE_FILTER_CONFIG[key];
+                    return cfg ? <option key={key} value={key}>{cfg.label}</option> : null;
+                  })}
                 </select>
                 <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/40" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9" /></svg>
               </div>
@@ -2630,7 +3094,7 @@ const mapDbSource = (s: any): Source => {
               ...summaryData,
               tasks: (summaryData.tasks || []).filter((t: any) => {
                 if (userNameForMatch === "Usuario") return true;
-                return getResponsable(t) === userNameForMatch;
+                return isUserMatch(t, userNameForMatch);
               })
             }}
             objectives={objectives}
@@ -2640,6 +3104,7 @@ const mapDbSource = (s: any): Source => {
       {activeTab === "feedback" && summaryData?.feedback && (
         <FeedbackTab
           items={summaryData.feedback}
+          analysisConfig={analysisConfig}
           objectives={objectives}
           jiraTasks={structuredTasks.filter((it: any) => it.origin === 'jira')}
           team={jiraSubTab}
@@ -2652,6 +3117,7 @@ const mapDbSource = (s: any): Source => {
       {activeTab === "tasks" && summaryData?.tasks && (
         <TasksTab
           items={summaryData.tasks}
+          analysisConfig={analysisConfig}
           objectives={objectives}
           onTaskClick={handleEditTask}
           onAddTask={handleAddTask}
@@ -2667,6 +3133,7 @@ const mapDbSource = (s: any): Source => {
       {activeTab === "insights" && summaryData?.insights && (
         <InsightsTab
           items={summaryData.insights}
+          analysisConfig={analysisConfig}
           objectives={objectives}
           jiraTasks={structuredTasks.filter((it: any) => it.origin === 'jira')}
           team={jiraSubTab}
@@ -2679,6 +3146,7 @@ const mapDbSource = (s: any): Source => {
       {activeTab === "metrics" && summaryData?.metrics && (
         <MetricsTab 
           items={summaryData.metrics} 
+          analysisConfig={analysisConfig}
           objectives={objectives}
           platformMetrics={platformMetrics}
           team={jiraSubTab}
@@ -2689,6 +3157,7 @@ const mapDbSource = (s: any): Source => {
       {activeTab === "alerts" && summaryData?.alerts && (
         <AlertsTab
           items={summaryData.alerts}
+          analysisConfig={analysisConfig}
           objectives={objectives}
           jiraTasks={structuredTasks.filter((it: any) => it.origin === 'jira')}
           team={jiraSubTab}
