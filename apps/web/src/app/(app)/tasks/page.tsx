@@ -132,6 +132,8 @@ export default function TasksPage() {
   const [userName, setUserName] = useState<string>("");
   const [dueDateRange, setDueDateRange] = useState<{ start: Date; end: Date } | null>(null);
   const [createdDateRange, setCreatedDateRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [objectives, setObjectives] = useState<any[]>([]);
 
   // Helper functions for filter counts
   const getTeamCount = (team: string): number => {
@@ -217,6 +219,16 @@ export default function TasksPage() {
         const userName = profile?.full_name || user.user_metadata?.full_name || "";
         setUserName(userName);
         console.log('👤 User name for filtering:', userName);
+
+        // Load profiles and objectives for TaskDrawer
+        const { data: allProfiles } = await supabase.from("profiles").select("id, full_name, avatar_url");
+        if (allProfiles) setProfiles(allProfiles);
+
+        const { data: allObjectives } = await supabase
+          .from("workspace_objectives")
+          .select("id, title, team")
+          .eq("workspace_id", wsId);
+        if (allObjectives) setObjectives(allObjectives);
 
         // Load tasks scoped to current user (by responsible name)
         const result = await getTasks(wsId, undefined, undefined, userName);
@@ -609,6 +621,10 @@ export default function TasksPage() {
           }}
           onSave={handleSaveTask}
           workspaceId={workspaceId || ''}
+          profiles={profiles}
+          objectives={objectives}
+          currentUserProfileId={userId || undefined}
+          configuredProductKeys={configProductKeys}
         />
       )}
 

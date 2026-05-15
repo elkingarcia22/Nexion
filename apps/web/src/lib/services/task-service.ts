@@ -19,6 +19,7 @@ export interface Task {
   parent_id?: string;
   linked_jira_key?: string;
   linked_jira_subtask_id?: string;
+  metadata?: Record<string, any>;
   updated_at?: string;
   created_at?: string;
 }

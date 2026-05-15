@@ -51,7 +51,7 @@ const PRODUCT_KEYWORDS = {
   core_ia: ['core ia', 'core ai', 'inteligencia artificial', 'modelo ia', 'gemini'],
   chat_soporte: ['chat soporte', 'chat de soporte', 'support chat', 'ayuda'],
   planes_tareas: ['plan', 'tarea', 'planes y tareas', 'task', 'project plan'],
-  contratacion: ['contratación', 'hiring', 'reclutamiento', 'vacante', 'candidate', 'entrevista'],
+  reclutamiento: ['contratación', 'hiring', 'reclutamiento', 'vacante', 'candidate', 'entrevista'],
 };
 
 const ANALYSIS_TEAMS = [
@@ -59,7 +59,7 @@ const ANALYSIS_TEAMS = [
   { key: "learning", label: "Learning", products: [{ key: "aprendizaje" }, { key: "lms_creator" }, { key: "certificados" }, { key: "assessments" }, { key: "learning_map" }] },
   { key: "core", label: "Core", products: [{ key: "gestion_usuarios" }, { key: "organigrama" }, { key: "personalizacion" }, { key: "roles_permisos" }, { key: "comunicaciones" }, { key: "api" }] },
   { key: "operaciones", label: "Operaciones", products: [{ key: "app" }, { key: "core_ia" }, { key: "chat_soporte" }, { key: "planes_tareas" }] },
-  { key: "hiring", label: "Hiring", products: [{ key: "contratacion" }] },
+  { key: "hiring", label: "Hiring", products: [{ key: "reclutamiento" }] },
   { key: "ux", label: "UX Team", products: [] },
 ];
 

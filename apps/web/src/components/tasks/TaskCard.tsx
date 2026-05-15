@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ObjectiveDetailDrawer } from '@/components/ui/ObjectiveDetailDrawer';
 
 type LinkedItemType = 'objective' | 'jira' | 'alert' | 'metric' | 'insight' | 'feedback';
 
@@ -233,6 +234,7 @@ function getPriorityColor(priority?: string) {
 export function TaskCard({ task, onEdit, onDelete, onComplete, linkedItems }: TaskCardProps) {
   const isDone = (task.status || '').toLowerCase() === 'done';
   const [selectedLinkedItem, setSelectedLinkedItem] = useState<LinkedItemType | null>(null);
+  const [selectedObjectiveId, setSelectedObjectiveId] = useState<string | null>(null);
 
   const linkedItemTypes: { type: LinkedItemType; visible: boolean }[] = [
     { type: 'objective', visible: !!(task.goal_id || linkedItems?.objective) },
@@ -251,7 +253,12 @@ export function TaskCard({ task, onEdit, onDelete, onComplete, linkedItems }: Ta
 
   const handleItemClick = (e: React.MouseEvent, type: LinkedItemType) => {
     e.stopPropagation();
-    setSelectedLinkedItem(type);
+    if (type === 'objective') {
+      const objId = linkedItems?.objective?.id || task.goal_id;
+      if (objId) setSelectedObjectiveId(objId);
+    } else {
+      setSelectedLinkedItem(type);
+    }
   };
 
   const getLinkedItemData = (type: LinkedItemType): LinkedItemData | undefined => {
@@ -375,7 +382,15 @@ export function TaskCard({ task, onEdit, onDelete, onComplete, linkedItems }: Ta
         </div>
       </div>
 
-      {/* Linked Item Drawer */}
+      {/* Objective Detail Drawer */}
+      {selectedObjectiveId && (
+        <ObjectiveDetailDrawer
+          objectiveId={selectedObjectiveId}
+          onClose={() => setSelectedObjectiveId(null)}
+        />
+      )}
+
+      {/* Linked Item Drawer (non-objective types) */}
       {selectedLinkedItem && (
         <LinkedItemDrawer
           type={selectedLinkedItem}

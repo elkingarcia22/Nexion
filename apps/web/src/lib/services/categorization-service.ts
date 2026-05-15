@@ -38,7 +38,7 @@ const PRODUCT_KEYWORDS: Record<string, string[]> = {
   core_ia: ['core ia', 'core ai', 'inteligencia artificial', 'modelo ia', 'gemini', 'ia'],
   chat_soporte: ['chat soporte', 'chat de soporte', 'support chat', 'ayuda'],
   planes_tareas: ['plan', 'tarea', 'planes y tareas', 'task', 'project plan'],
-  contratacion: ['contratación', 'hiring', 'reclutamiento', 'vacante', 'candidate', 'entrevista'],
+  reclutamiento: ['contratación', 'hiring', 'reclutamiento', 'vacante', 'candidate', 'entrevista'],
 };
 
 export const categorizeProduct = (item: any, teamKey: string): string | null => {

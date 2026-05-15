@@ -10,7 +10,7 @@ set category = 'evaluacion_360'
 where category = '360';
 
 update public.metrics
-set category = 'contratacion'
+set category = 'reclutamiento'
 where category = 'hiring';
 
 update public.metrics

@@ -5,7 +5,10 @@ import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { createOrUpdateTask } from "@/lib/services/task-service";
 import { fetchJiraIssues } from "@/lib/services/jira-service";
+import { deriveProductFromItem } from "@/lib/services/categorization-service";
+import { ALL_PRODUCTS } from "@/lib/services/analysis-config-service";
 import { DatePicker } from "../ui/DatePicker";
+import { ObjectiveDetailDrawer } from "@/components/ui/ObjectiveDetailDrawer";
 
 /* ─── Custom Components ─────────────────────────────────────── */
 
@@ -116,6 +119,12 @@ const GroupedObjectiveSelect = ({
   }, []);
 
   const selectedObj = objectives.find(o => o.id === value);
+
+  const buttonLabel = () => {
+    if (selectedObj) return selectedObj.title;
+    if (value) return "Cargando objetivos...";
+    return "Ninguno";
+  };
 
   const grouped = useMemo(() => {
     const map = new Map<string, any[]>();
@@ -465,7 +474,12 @@ interface TaskDrawerProps {
   objectives?: any[];
   currentUserProfileId?: string;
   jiraTasks?: any[];
+  configuredProductKeys?: string[];
 }
+
+const PRODUCT_OPTIONS = Array.from(
+  new Map(ALL_PRODUCTS.map(p => [p.key, { value: p.key, label: p.label }])).values()
+);
 
 const PRIORITIES = [
   { value: "highest", label: "Highest", color: "text-rose-600", bg: "bg-rose-50" },
@@ -544,8 +558,11 @@ export function TaskDrawer({
   profiles: propsProfiles = [],
   objectives: propsObjectives = [],
   currentUserProfileId,
-  jiraTasks = []
+  jiraTasks = [],
+  configuredProductKeys
 }: TaskDrawerProps) {
+  const [viewingObjectiveId, setViewingObjectiveId] = useState<string | null>(null);
+  const taskIdRef = useRef<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -560,6 +577,7 @@ export function TaskDrawer({
     subtasks: [] as any[],
     activity: [] as any[],
     goal_id: "",
+    product: "",
     linked_jira_key: "",
     linked_jira_subtask_id: "",
   });
@@ -608,8 +626,33 @@ export function TaskDrawer({
     }
   }, [jiraTasks, workspaceId]);
 
+  // Track task identity to prevent formData reset on unrelated re-renders
   useEffect(() => {
+    if (!open) return;
+
+    const currentId = task?.id || task?.external_key || null;
+    console.log(`[TaskDrawer] init effect — currentId="${currentId}" ref="${taskIdRef.current}" task=${!!task} open=${open}`, {
+      goal_id: task?.goal_id,
+      team: task?.team,
+      product: task?.product,
+      metadata_product: task?.metadata?.product,
+      title: task?.title
+    });
+
+    if (currentId === taskIdRef.current && task) {
+      console.log(`[TaskDrawer] init effect — SKIP (same task ${currentId})`);
+      return;
+    }
+    taskIdRef.current = currentId;
+
     if (task) {
+      console.log(`[TaskDrawer] init effect — setting formData from task ${currentId}`, {
+        goal_id: task.goal_id,
+        team: task.team,
+        product: task.product,
+        metadata_product: task.metadata?.product,
+        derived_product: deriveProductFromItem(task)
+      });
 
       const isJira = task.origin === 'jira';
 
@@ -665,10 +708,12 @@ export function TaskDrawer({
         }),
         activity: combinedActivity,
         goal_id: task.goal_id || "",
+        product: task.product || task.metadata?.product || deriveProductFromItem(task) || "",
         linked_jira_key: task.linked_jira_key || "",
         linked_jira_subtask_id: task.linked_jira_subtask_id || "",
       });
     } else {
+      console.log(`[TaskDrawer] init effect — RESET to defaults (new task)`);
       setFormData({
         title: "",
         description: "",
@@ -683,6 +728,7 @@ export function TaskDrawer({
         subtasks: [],
         activity: [],
         goal_id: "",
+        product: "",
         linked_jira_key: "",
         linked_jira_subtask_id: "",
       });
@@ -715,7 +761,9 @@ export function TaskDrawer({
         }
 
         // Use objectives from props or load if empty
+        let loadedObjectives: any[] = [];
         if (propsObjectives && propsObjectives.length > 0) {
+          loadedObjectives = propsObjectives;
           setObjectives(propsObjectives);
         } else {
           const { data: objectiveData } = await supabase
@@ -723,7 +771,20 @@ export function TaskDrawer({
             .select("id, title, team")
             .eq("workspace_id", workspaceId);
           if (objectiveData) {
+            loadedObjectives = objectiveData;
             setObjectives(objectiveData);
+          }
+        }
+
+        // If task has a goal_id not found in loaded objectives, fetch it separately
+        if (task?.goal_id && !loadedObjectives.some(o => o.id === task.goal_id)) {
+          const { data: missingObjective } = await supabase
+            .from("workspace_objectives")
+            .select("id, title, team")
+            .eq("id", task.goal_id)
+            .single();
+          if (missingObjective) {
+            setObjectives(prev => [...prev, missingObjective]);
           }
         }
       } catch (err) {
@@ -731,7 +792,7 @@ export function TaskDrawer({
       }
     }
     if (open) loadData();
-  }, [open, workspaceId, propsProfiles, propsObjectives, currentUserProfileId]);
+  }, [open, workspaceId, propsProfiles, propsObjectives, currentUserProfileId, task]);
 
   // Set default assignee if new task
   useEffect(() => {
@@ -817,6 +878,13 @@ export function TaskDrawer({
     }
     setNewLabel("");
   };
+
+  const resolvedProductOptions = useMemo(() => {
+    if (configuredProductKeys && configuredProductKeys.length > 0) {
+      return PRODUCT_OPTIONS.filter(p => configuredProductKeys.includes(p.value));
+    }
+    return PRODUCT_OPTIONS;
+  }, [configuredProductKeys]);
 
   // Memoized options for people selects to avoid hook rule violations
   const assigneeOptions = useMemo(() => {
@@ -916,10 +984,15 @@ export function TaskDrawer({
         }
       }
 
+      const { product: savedProduct, ...restFormData } = formData;
+      const metadata: Record<string, any> = { ...(task?.metadata || {}) };
+      if (savedProduct) metadata.product = savedProduct;
+      else delete metadata.product;
       const result = await createOrUpdateTask({
         id: task?.id,
         workspace_id: workspaceId,
-        ...formData,
+        ...restFormData,
+        metadata,
         activity: newActivity,
         proposal_status: "approved"
       });
@@ -1312,7 +1385,7 @@ export function TaskDrawer({
 
               <div className="space-y-3">
                 <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
-                  <UsersIcon /> Equipo / Producto
+                  <UsersIcon /> Equipo
                 </label>
                 <CustomSelect
                   value={formData.team}
@@ -1329,8 +1402,21 @@ export function TaskDrawer({
                   type="text"
                   value={formData.team}
                   onChange={(e) => setFormData(prev => ({ ...prev, team: e.target.value }))}
-                  placeholder="O escribe un nuevo equipo..."
+                  placeholder="Equipo personalizado..."
                   className="w-full px-4 py-2 bg-transparent border-b border-white/5 text-[10px] font-bold text-white placeholder:text-white/20 focus:border-primary transition-all"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/40"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                  Producto
+                </label>
+                <CustomSelect
+                  value={formData.product}
+                  onChange={(val) => setFormData(prev => ({ ...prev, product: val }))}
+                  options={resolvedProductOptions}
+                  placeholder="Seleccionar producto..."
                 />
               </div>
 
@@ -1497,6 +1583,13 @@ export function TaskDrawer({
           )}
         </div>
       </div>
+
+      {viewingObjectiveId && (
+        <ObjectiveDetailDrawer
+          objectiveId={viewingObjectiveId}
+          onClose={() => setViewingObjectiveId(null)}
+        />
+      )}
     </div>,
     document.body
   );

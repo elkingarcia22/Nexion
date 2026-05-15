@@ -91,7 +91,7 @@ export const ANALYSIS_TEAMS = [
     label: "Hiring",
     color: "#ec4899",
     products: [
-      { key: "contratacion", label: "Hiring" },
+      { key: "reclutamiento", label: "Reclutamiento" },
     ],
   },
   {

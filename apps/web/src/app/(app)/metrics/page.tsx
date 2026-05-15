@@ -27,7 +27,7 @@ function getCatStyle(category: string, index: number) {
 const CATEGORY_ALIAS: Record<string, string> = {
   matrix: "matriz_talento",
   "360": "evaluacion_360",
-  hiring: "contratacion",
+  hiring: "reclutamiento",
   creator: "lms_creator",
 };
 
@@ -43,7 +43,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   learning: "Aprendizaje",
   learning_map: "Learning Map",
   lms_creator: "LMS Creator",
-  contratacion: "Contratación",
+  reclutamiento: "Reclutamiento",
   pyt: "PYT",
   core: "Core",
   asx: "ASX",
@@ -59,7 +59,7 @@ const PRODUCT_GROUPS = [
   { key: "learning", label: "Aprendizaje", icon: "△", category: "learning", color: "#2ec6ff" },
   { key: "learning_map", label: "Learning Map", icon: "♢", category: "learning_map", color: "#2ec6ff" },
   { key: "lms_creator", label: "LMS Creator", icon: "♤", category: "lms_creator", color: "#2ec6ff" },
-  { key: "contratacion", label: "Contratación", icon: "▽", category: "contratacion", color: "#f49e04" },
+  { key: "reclutamiento", label: "Reclutamiento", icon: "▽", category: "reclutamiento", color: "#f49e04" },
   { key: "pyt", label: "PYT", icon: "◈", category: "pyt", color: "#ec4899" },
   { key: "core", label: "Core", icon: "◆", category: "core", color: "#10b981" },
   { key: "asx", label: "ASX", icon: "⬡", category: "asx", color: "#8b5cf6" },

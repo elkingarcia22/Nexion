@@ -37,7 +37,7 @@ import {
 const CATEGORY_ALIAS: Record<string, string> = {
   matrix: "matriz_talento",
   "360": "evaluacion_360",
-  hiring: "contratacion",
+  hiring: "reclutamiento",
   creator: "lms_creator",
 };
 

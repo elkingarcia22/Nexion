@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { syncObjectives, getObjectives, getObjectivesConfig } from "@/lib/services/objectives-service";
 import { getUserWorkspace } from "@/lib/services/workspace-service";
 import CreateObjectiveDrawer from "@/components/objectives/CreateObjectiveDrawer";
+import { ObjectiveDetailDrawer } from "@/components/ui/ObjectiveDetailDrawer";
 
 const TEAM_COLORS = [
   { accent: "purple", hex: "#8b5cf6", border: "border-purple-500/30", bg: "bg-purple-500/10", text: "text-purple-400", badgeBg: "bg-purple-500/10", badgeBorder: "border-purple-500/20", bar: "bg-purple-500", hoverBorder: "hover:border-purple-500/30", hoverText: "group-hover:text-purple-400" },
@@ -364,121 +365,10 @@ export default function ObjectivesPage() {
 
       {/* OBJECTIVE DETAIL DRAWER */}
       {selectedObjective && (
-        <div className="fixed inset-0 z-[5000] flex justify-end animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-[#1a1c2d]/60 backdrop-blur-sm" onClick={() => setSelectedObjective(null)} />
-          <div className="relative bg-bg w-full max-w-2xl h-screen shadow-2xl animate-in slide-in-from-right duration-500 flex flex-col border-l border-white/10">
-            <div className="p-10 bg-card border-b border-white/5 relative overflow-hidden">
-              <button
-                onClick={() => setSelectedObjective(null)}
-                className="absolute top-10 right-10 w-10 h-10 rounded-xl bg-card/5 flex items-center justify-center text-white/40 hover:bg-red-500/10 hover:text-red-500 transition-all z-20"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              </button>
-              <div className="space-y-4 pr-14 relative z-10">
-                <div className="flex items-center gap-3">
-                  <span className="px-4 py-1.5 bg-primary/10 text-primary text-[10px] font-black rounded-lg tracking-[0.2em] uppercase border border-primary/20">{selectedObjective.type || "ESTRATÉGICO"}</span>
-                  <span className="px-4 py-1.5 bg-card/5 text-white/40 text-[10px] font-black rounded-lg tracking-[0.2em] uppercase">{selectedObjective.quarter}</span>
-                  <span className="px-4 py-1.5 bg-card/5 text-white/40 text-[10px] font-black rounded-lg tracking-[0.2em] uppercase">{selectedObjective.team}</span>
-                </div>
-                <h2 className="text-3xl font-black text-white leading-[1.1] tracking-tight">{selectedObjective.title}</h2>
-                {selectedObjective.narrative && (
-                  <p className="text-sm text-white/50 italic leading-relaxed">"{selectedObjective.narrative}"</p>
-                )}
-                <p className="text-base text-white/70 font-medium">{selectedObjective.key_result}</p>
-              </div>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px] -mr-32 -mt-32" />
-            </div>
-
-            <div className="flex-1 overflow-y-auto no-scrollbar p-10 space-y-8">
-              {/* Owner & Team */}
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Responsables</h4>
-                <div className="flex flex-wrap gap-2">
-                  {(selectedObjective.owner || "").split(/[,\n]/).filter(Boolean).map((owner: string, i: number) => (
-                    <div key={i} className="flex items-center gap-3 px-4 py-2.5 bg-card rounded-xl border border-white/5">
-                      <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center text-primary text-[11px] font-black">{owner.trim()[0]}</div>
-                      <span className="text-xs font-bold text-white/70 uppercase">{owner.trim()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sub-tasks / KRs */}
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Key Results</h4>
-                <div className="bg-card rounded-2xl border border-white/5 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm font-bold text-white">{selectedObjective.key_result}</p>
-                    <span className="text-lg font-black font-mono text-primary">{selectedObjective.progress || 0}%</span>
-                  </div>
-                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${selectedObjective.progress || 0}%` }} />
-                  </div>
-                  {(selectedObjective.sub_tasks || []).length > 0 && (
-                    <div className="space-y-2 mt-6">
-                      {selectedObjective.sub_tasks.map((st: any, i: number) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-2.5 bg-card/50 rounded-xl border border-white/5">
-                          <div className={`w-5 h-5 rounded-md flex items-center justify-center ${st.status === "completed" ? "bg-green-500/20 text-green-500" : "bg-white/5 text-white/20"}`}>
-                            {st.status === "completed" ? (
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><path d="M20 6 9 17l-5-5"/></svg>
-                            ) : (
-                              <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                            )}
-                          </div>
-                          <span className={`text-xs font-medium ${st.status === "completed" ? "text-white/30 line-through" : "text-white/70"}`}>{st.title}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Jira stories */}
-              {(() => {
-                const count = getJiraCount(selectedObjective);
-                if (count === 0) return null;
-                return (
-                  <div className="space-y-3">
-                    <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Ejecución en Jira</h4>
-                    <div className="bg-card rounded-2xl border border-blue-500/20 p-6">
-                      <div className="flex items-center gap-2 text-blue-400">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.513 3.42c-.22.257-.384.453-.513.626-2.124 2.873-4.248 5.746-6.37 8.621l-.01.014c-.16.216-.32.433-.478.647-.23.312-.46.623-.68.914a1.21 1.21 0 0 0-.083.136c-.052.12-.07.243-.053.364.02.148.08.286.173.4.1.124.234.22.385.275.05.02.102.033.155.04.144.022.293.003.427-.054.12-.05.228-.124.316-.215.15-.152.296-.31.442-.465l1.636-1.745c1.64-1.75 3.28-3.5 4.92-5.25.103-.11.205-.22.308-.33.245-.26.492-.524.733-.781.082-.086.16-.175.244-.258.113-.113.242-.21.38-.288.16-.092.344-.132.525-.114.185.02.358.093.5.21.144.117.248.275.297.45.05.18.04.37-.027.545a1.13 1.13 0 0 1-.225.378c-.28.324-.57.64-.853.96l-3.324 3.754c-1.465 1.654-2.93 3.31-4.397 4.965l-.01.012c-.2.227-.402.454-.602.68-.266.3-.532.6-.8.895-.035.038-.07.078-.102.118a1.24 1.24 0 0 0-.173.34c-.046.183-.03.376.046.548a1.17 1.17 0 0 0 .584.622 1.2 1.2 0 0 0 .612.062c.162-.03.312-.1.436-.205.033-.028.065-.058.097-.088.167-.156.335-.31.503-.464l4.99-4.57c1.1-.99 2.21-1.98 3.32-2.96 1.1-.98 2.21-1.96 3.32-2.94.3-.26.6-.53.903-.79.13-.112.262-.224.39-.338a1.23 1.23 0 0 0 .324-.492c.052-.182.04-.377-.035-.55a1.19 1.19 0 0 0-.58-.655c-.198-.103-.424-.135-.644-.092a1.24 1.24 0 0 0-.55.26c-.15.118-.3.238-.45.358l-8.082 6.466c-1.127.901-2.254 1.802-3.38 2.703a1.08 1.08 0 0 1-.415.22c-.147.03-.3.02-.44-.035a1.14 1.14 0 0 1-.365-.21c-.11-.1-.19-.226-.233-.364a1.09 1.09 0 0 1 .017-.577c.05-.183.15-.347.284-.48L11.513 3.42z" /></svg>
-                        <span className="text-xs font-black">{count} historias de usuario vinculadas</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <div className="flex items-center gap-3 p-4 bg-card/30 rounded-2xl border border-white/5">
-                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Score:</span>
-                <span className="text-sm font-black font-mono text-white/60">{selectedObjective.score || 0}</span>
-                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest ml-4">Weight:</span>
-                <span className="text-sm font-black font-mono text-white/60">{selectedObjective.weight || 0}%</span>
-              </div>
-            </div>
-
-            <div className="p-10 bg-card border-t border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-card/5 flex items-center justify-center border border-white/10">
-                  <span className="text-lg font-black font-mono text-white">{selectedObjective.progress || 0}%</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] block mb-0.5">Progreso</span>
-                  <span className={`text-xs font-black ${selectedObjective.progress >= 70 ? "text-green-400" : selectedObjective.progress >= 10 ? "text-amber-400" : "text-white/40"}`}>
-                    {selectedObjective.progress >= 70 ? "ÓPTIMO" : selectedObjective.progress >= 10 ? "EN DESARROLLO" : "SIN AVANCE"}
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedObjective(null)}
-                className="px-8 py-3 bg-card text-white rounded-2xl text-[11px] font-black tracking-[0.2em] hover:bg-black transition-all uppercase"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
+        <ObjectiveDetailDrawer
+          objectiveId={selectedObjective.id}
+          onClose={() => setSelectedObjective(null)}
+        />
       )}
     </div>
   );

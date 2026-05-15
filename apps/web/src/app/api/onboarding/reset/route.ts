@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     await supabase.from("metrics").update({ category: "matriz_talento" }).eq("workspace_id", workspaceId).eq("category", "matrix");
     await supabase.from("metrics").update({ category: "evaluacion_360" }).eq("workspace_id", workspaceId).eq("category", "360");
-    await supabase.from("metrics").update({ category: "contratacion" }).eq("workspace_id", workspaceId).eq("category", "hiring");
+    await supabase.from("metrics").update({ category: "reclutamiento" }).eq("workspace_id", workspaceId).eq("category", "hiring");
     await supabase.from("metrics").update({ category: "lms_creator" }).eq("workspace_id", workspaceId).eq("category", "creator");
     await supabase.from("metrics").delete().eq("workspace_id", workspaceId).eq("source", "pdf_seed");
     await supabase.from("workspace_objectives").delete().eq("workspace_id", workspaceId);
