@@ -1,0 +1,1126 @@
+{
+  "newsletter": {
+    "id": "hr-radar",
+    "name": "HR Radar",
+    "description": "Boletín semanal con las noticias y tendencias más relevantes de RR. HH. y HR tech para los equipos de producto y negocio de Ubits.",
+    "schedule_label": "Miércoles · 8:00 a. m. (Bogotá)",
+    "slack_channel_id": "C0A34HW4HGR",
+    "model": "claude-haiku-4-5-20251001"
+  },
+  "sources": [
+    {
+      "source_key": "hr_dive",
+      "name": "HR Dive",
+      "url": "https://www.hrdive.com/feeds/news/",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Fuente original. Noticias de RR. HH. en EE. UU.: regulación, tendencias laborales y HR tech.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "regulación",
+          "tendencias"
+        ]
+      }
+    },
+    {
+      "source_key": "shrm_news",
+      "name": "SHRM News",
+      "url": "https://news.google.com/rss/search?q=site%3Ashrm.org/topics-tools/news%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Referente global de RR. HH. (SHRM). Se lee vía Google News restringido a shrm.org/topics-tools/news porque el sitio bloquea bots y eliminó su RSS.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "regulación",
+          "tendencias"
+        ],
+        "via": "google_news",
+        "outlet": "shrm.org"
+      }
+    },
+    {
+      "source_key": "hr_grapevine",
+      "name": "HR Grapevine",
+      "url": "https://www.hrgrapevine.com/rss",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Fuente original. Medio británico de RR. HH. con alto volumen; limitar ítems para evitar ruido.",
+      "metadata": {
+        "region": "uk",
+        "language": "en",
+        "tags": [
+          "tendencias",
+          "liderazgo"
+        ]
+      }
+    },
+    {
+      "source_key": "hr_morning",
+      "name": "HR Morning",
+      "url": "https://www.hrmorning.com/feed/",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Fuente original. Actualidad práctica de RR. HH. y cumplimiento normativo en EE. UU.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "regulación",
+          "compliance"
+        ]
+      }
+    },
+    {
+      "source_key": "personnel_today",
+      "name": "Personnel Today",
+      "url": "https://www.personneltoday.com/feed/",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Medio de referencia de RR. HH. en Reino Unido: empleo, regulación y tendencias.",
+      "metadata": {
+        "region": "uk",
+        "language": "en",
+        "tags": [
+          "regulación",
+          "tendencias"
+        ]
+      }
+    },
+    {
+      "source_key": "hrzone",
+      "name": "HRZone",
+      "url": "https://www.hrzone.com/rss",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Medio británico con enfoque en IA, cultura y transformación de RR. HH.",
+      "metadata": {
+        "region": "uk",
+        "language": "en",
+        "tags": [
+          "ia",
+          "cultura"
+        ]
+      }
+    },
+    {
+      "source_key": "hca_mag_us",
+      "name": "HRD America (HC Mag)",
+      "url": "https://www.hcamag.com/us/rss",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Noticias diarias para líderes de RR. HH. en EE. UU. (HRD). Alto volumen: limitar ítems.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "tendencias",
+          "regulación"
+        ]
+      }
+    },
+    {
+      "source_key": "hr_daily_advisor",
+      "name": "HR Daily Advisor",
+      "url": "https://hrdailyadvisor.hci.org/feed/",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Publicación diaria (HCI) sobre IA en contratación, cumplimiento y aprendizaje. El dominio blr.com duplica el mismo feed.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "compliance",
+          "ia",
+          "l&d"
+        ]
+      }
+    },
+    {
+      "source_key": "hr_brew",
+      "name": "HR Brew",
+      "url": "https://news.google.com/rss/search?q=site%3Ahr-brew.com/stories%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Medio de Morning Brew sobre RR. HH. en EE. UU. Se lee vía Google News (solo /stories) porque el sitio bloquea bots.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "tendencias"
+        ],
+        "via": "google_news",
+        "outlet": "hr-brew.com"
+      }
+    },
+    {
+      "source_key": "people_management",
+      "name": "People Management (CIPD)",
+      "url": "https://news.google.com/rss/search?q=site%3Apeoplemanagement.co.uk/article%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Revista del CIPD (Reino Unido). Se lee vía Google News restringido a /article porque no publica RSS; excluye ofertas de empleo.",
+      "metadata": {
+        "region": "uk",
+        "language": "en",
+        "tags": [
+          "cipd"
+        ],
+        "via": "google_news",
+        "outlet": "peoplemanagement.co.uk"
+      }
+    },
+    {
+      "source_key": "the_hr_director",
+      "name": "The HR Director",
+      "url": "https://www.thehrdirector.com/feed/",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Revista británica para directivos de RR. HH.; complementa la visión europea.",
+      "metadata": {
+        "region": "uk",
+        "language": "en",
+        "tags": [
+          "liderazgo",
+          "estrategia"
+        ]
+      }
+    },
+    {
+      "source_key": "hr_magazine_uk",
+      "name": "HR Magazine UK",
+      "url": "https://news.google.com/rss/search?q=site%3Ahrmagazine.co.uk%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "media_hr",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Medio británico de RR. HH. Se lee vía Google News porque bloquea el acceso automatizado.",
+      "metadata": {
+        "region": "uk",
+        "language": "en",
+        "tags": [
+          "tendencias"
+        ],
+        "via": "google_news",
+        "outlet": "hrmagazine.co.uk"
+      }
+    },
+    {
+      "source_key": "ethrworld_hrtech",
+      "name": "ETHRWorld HRTech",
+      "url": "https://hr.economictimes.indiatimes.com/rss/hrtech",
+      "source_type": "RSS",
+      "category": "hr_tech",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Fuente original. Noticias diarias de HR tech: lanzamientos, IA aplicada y movimientos de proveedores.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "hr_tech",
+          "ia"
+        ]
+      }
+    },
+    {
+      "source_key": "hr_tech_feed",
+      "name": "HR Tech Feed",
+      "url": "https://hrtechfeed.com/feed/",
+      "source_type": "RSS",
+      "category": "hr_tech",
+      "priority": "high",
+      "max_items": 6,
+      "is_active": true,
+      "notes": "Fuente original. Cobertura específica de lanzamientos, rondas de financiación y M&A de HR tech.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "hr_tech",
+          "funding",
+          "m&a"
+        ]
+      }
+    },
+    {
+      "source_key": "hro_today",
+      "name": "HRO Today",
+      "url": "https://www.hrotoday.com/feed/",
+      "source_type": "RSS",
+      "category": "hr_tech",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Outsourcing de RR. HH., RPO y proveedores de tecnología; útil para movimientos de mercado.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "hr_tech",
+          "rpo",
+          "proveedores"
+        ]
+      }
+    },
+    {
+      "source_key": "crunchbase_news",
+      "name": "Crunchbase News",
+      "url": "https://news.crunchbase.com/feed/",
+      "source_type": "RSS",
+      "category": "hr_tech",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Rondas de financiación y M&A de startups. Es generalista: el modelo debe quedarse solo con HR tech / workforce.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "funding",
+          "m&a"
+        ]
+      }
+    },
+    {
+      "source_key": "three_sixty_insights",
+      "name": "3Sixty Insights",
+      "url": "https://www.3sixtyinsights.com/feed/",
+      "source_type": "RSS",
+      "category": "hr_tech",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Analistas de HCM y HR tech; casos y análisis de mercado. Mezcla algo de contenido promocional.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "research",
+          "hcm"
+        ],
+        "subcategory": "research"
+      }
+    },
+    {
+      "source_key": "hr_exchange_network",
+      "name": "HR Exchange Network",
+      "url": "https://www.hrexchangenetwork.com/rss/articles",
+      "source_type": "RSS",
+      "category": "hr_tech",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Artículos sobre HR tech, talento y aprendizaje; calidad variable, prioridad baja.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "hr_tech",
+          "l&d"
+        ]
+      }
+    },
+    {
+      "source_key": "hr_executive",
+      "name": "HR Executive",
+      "url": "https://news.google.com/rss/search?q=site%3Ahrexecutive.com%20%28AI%20OR%20agentic%20OR%20%22artificial%20intelligence%22%29%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "ia_en_rrhh",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "HR Executive (EE. UU.), organizador de HR Tech Conference. Se lee vía Google News filtrado a IA y HR tech porque no publica RSS; da notas fechadas.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "hr_tech",
+          "ia",
+          "estrategia"
+        ],
+        "via": "google_news",
+        "outlet": "hrexecutive.com",
+        "subcategory": "media_hr"
+      }
+    },
+    {
+      "source_key": "unleash",
+      "name": "UNLEASH",
+      "url": "https://news.google.com/rss/search?q=site%3Aunleash.ai%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "ia_en_rrhh",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Medio líder de HR tech e IA en el trabajo (UNLEASH). Se lee vía Google News porque no tiene RSS y la portada no trae fechas.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "ia",
+          "hr_tech",
+          "futuro_del_trabajo"
+        ],
+        "via": "google_news",
+        "outlet": "unleash.ai",
+        "subcategory": "ai_in_hr"
+      }
+    },
+    {
+      "source_key": "reworked",
+      "name": "Reworked",
+      "url": "https://news.google.com/rss/search?q=site%3Areworked.co%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "ia_en_rrhh",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Medio de Simpler Media sobre lugar de trabajo digital, IA en el trabajo y experiencia del empleado (p. ej., integraciones de IA en plataformas HR). Se lee vía Google News porque no publica RSS.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "ia",
+          "employee_experience",
+          "hr_tech"
+        ],
+        "via": "google_news",
+        "outlet": "reworked.co"
+      }
+    },
+    {
+      "source_key": "one_useful_thing",
+      "name": "One Useful Thing (Ethan Mollick)",
+      "url": "https://www.oneusefulthing.org/feed",
+      "source_type": "RSS",
+      "category": "ia_en_rrhh",
+      "priority": "low",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Ensayos de Ethan Mollick (Wharton) sobre adopción de IA en el trabajo y en organizaciones. Bajo volumen, alta señal.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "ia",
+          "futuro_del_trabajo"
+        ]
+      }
+    },
+    {
+      "source_key": "hr_dive_talent",
+      "name": "HR Dive · Talent",
+      "url": "https://www.hrdive.com/feeds/topic/talent/",
+      "source_type": "RSS",
+      "category": "talento_reclutamiento",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Feed temático de talento de HR Dive: reclutamiento, experiencia del candidato y desarrollo. Se solapa en parte con el feed general de HR Dive (misma URL canónica, se deduplica).",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "talent_acquisition",
+          "reclutamiento"
+        ]
+      }
+    },
+    {
+      "source_key": "ere",
+      "name": "ERE Recruiting Intelligence",
+      "url": "https://www.ere.net/feed/",
+      "source_type": "RSS",
+      "category": "talento_reclutamiento",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Referencia en reclutamiento: tecnología de selección, IA en contratación y prácticas de TA.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "talent_acquisition",
+          "ia"
+        ],
+        "subcategory": "talent_acquisition"
+      }
+    },
+    {
+      "source_key": "indeed_hiring_lab",
+      "name": "Indeed Hiring Lab",
+      "url": "https://www.hiringlab.org/feed/",
+      "source_type": "RSS",
+      "category": "talento_reclutamiento",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Centro de investigación económica de Indeed: mercado laboral, demanda de habilidades de IA y salarios anunciados.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "mercado_laboral",
+          "research",
+          "reclutamiento"
+        ]
+      }
+    },
+    {
+      "source_key": "recruiting_brainfood",
+      "name": "Recruiting Brainfood (Hung Lee)",
+      "url": "https://recruitingbrainfood.substack.com/feed",
+      "source_type": "RSS",
+      "category": "talento_reclutamiento",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Newsletter semanal de Hung Lee, referente del sector de reclutamiento; curaduría de tendencias y HR tech de TA.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "talent_acquisition",
+          "curaduría"
+        ]
+      }
+    },
+    {
+      "source_key": "staffing_industry_analysts",
+      "name": "Staffing Industry Analysts",
+      "url": "https://news.google.com/rss/search?q=site%3Astaffingindustry.com%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "talento_reclutamiento",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Analistas de referencia del sector de staffing y soluciones de talento (M&A de staffing, mercado de contratación). Se lee vía Google News porque el sitio bloquea bots (403). Google News a veces reindexa páginas antiguas: la ventana de frescura las filtra.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "staffing",
+          "m&a",
+          "talent_acquisition"
+        ],
+        "via": "google_news",
+        "outlet": "staffingindustry.com"
+      }
+    },
+    {
+      "source_key": "chief_learning_officer",
+      "name": "Chief Learning Officer",
+      "url": "https://www.chieflearningofficer.com/feed/",
+      "source_type": "RSS",
+      "category": "aprendizaje",
+      "priority": "high",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Medio de referencia en L&D corporativo; muy alineado con el negocio de Ubits.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "l&d",
+          "liderazgo"
+        ],
+        "subcategory": "learning"
+      }
+    },
+    {
+      "source_key": "aihr_blog",
+      "name": "AIHR Blog",
+      "url": "https://www.aihr.com/blog/feed/",
+      "source_type": "RSS",
+      "category": "aprendizaje",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Fuente original. Academia de RR. HH. con contenido sobre IA, analítica de personas y desarrollo de habilidades.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "ia",
+          "people_analytics",
+          "l&d"
+        ],
+        "subcategory": "learning"
+      }
+    },
+    {
+      "source_key": "learning_guild",
+      "name": "The Learning Guild",
+      "url": "https://www.learningguild.com/rss",
+      "source_type": "RSS",
+      "category": "aprendizaje",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Comunidad profesional de L&D (organiza DevLearn): diseño instruccional, IA en formación y desarrollo de liderazgo. Incluye algunos webinars patrocinados: priorizar artículos.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "l&d",
+          "ia",
+          "diseño_instruccional"
+        ]
+      }
+    },
+    {
+      "source_key": "training_journal",
+      "name": "Training Journal",
+      "url": "https://www.trainingjournal.com/feed",
+      "source_type": "RSS",
+      "category": "aprendizaje",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Revista británica de formación y desarrollo; bajo volumen pero pertinente.",
+      "metadata": {
+        "region": "uk",
+        "language": "en",
+        "tags": [
+          "l&d"
+        ],
+        "subcategory": "learning"
+      }
+    },
+    {
+      "source_key": "josh_bersin",
+      "name": "Josh Bersin",
+      "url": "https://joshbersin.com/feed/",
+      "source_type": "RSS",
+      "category": "tendencias_trabajo",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Analista de referencia en HR tech y futuro del trabajo; análisis de proveedores, IA en RR. HH. y mercado.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "research",
+          "hr_tech",
+          "ia"
+        ],
+        "subcategory": "research"
+      }
+    },
+    {
+      "source_key": "lighthouse_research",
+      "name": "Lighthouse Research & Advisory",
+      "url": "https://lhra.io/feed/",
+      "source_type": "RSS",
+      "category": "tendencias_trabajo",
+      "priority": "high",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Firma de análisis de HR tech (Ben Eubanks); estudios, M&A del sector e IA en reclutamiento. Dominio actual lhra.io. En la ronda 2 respondió con timeout en una corrida y bien en la siguiente: se mantiene activa.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "research",
+          "m&a",
+          "talent_acquisition"
+        ],
+        "subcategory": "research"
+      }
+    },
+    {
+      "source_key": "gartner_hr_newsroom",
+      "name": "Gartner HR",
+      "url": "https://news.google.com/rss/search?q=site%3Agartner.com%20%28%22Gartner%20HR%22%20OR%20CHRO%20OR%20%22HR%20leaders%22%20OR%20%22talent%20acquisition%22%29%20-site%3Ajobs.gartner.com%20when%3A30d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "tendencias_trabajo",
+      "priority": "high",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Gartner HR: encuestas, predicciones y guías para CHRO. Se lee vía Google News filtrado a temas de RR. HH. (el sitio bloquea bots).",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "research"
+        ],
+        "via": "google_news",
+        "outlet": "gartner.com",
+        "subcategory": "research"
+      }
+    },
+    {
+      "source_key": "gallup_workplace",
+      "name": "Gallup Workplace",
+      "url": "https://news.google.com/rss/search?q=site%3Agallup.com/workplace%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "tendencias_trabajo",
+      "priority": "high",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Investigación de Gallup sobre engagement, liderazgo, trabajo híbrido e IA en el trabajo. Se lee vía Google News porque Gallup no ofrece RSS de Workplace y su página no trae fechas.",
+      "metadata": {
+        "region": "global",
+        "language": "en",
+        "tags": [
+          "research",
+          "engagement",
+          "liderazgo"
+        ],
+        "via": "google_news",
+        "outlet": "gallup.com"
+      }
+    },
+    {
+      "source_key": "fast_company_work_life",
+      "name": "Fast Company · Work Life",
+      "url": "https://www.fastcompany.com/work-life/rss",
+      "source_type": "RSS",
+      "category": "tendencias_trabajo",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Tendencias del trabajo, liderazgo y cultura desde un medio de negocio generalista.",
+      "metadata": {
+        "region": "us",
+        "language": "en",
+        "tags": [
+          "futuro_del_trabajo",
+          "cultura"
+        ],
+        "subcategory": "workforce_trends"
+      }
+    },
+    {
+      "source_key": "observatorio_rrhh",
+      "name": "Observatorio de RR. HH. (ORH)",
+      "url": "https://www.observatoriorh.com/feed",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Medio de referencia de RR. HH. en español (España): normativa, liderazgo y HR tech.",
+      "metadata": {
+        "region": "es",
+        "language": "es",
+        "tags": [
+          "normativa",
+          "liderazgo"
+        ]
+      }
+    },
+    {
+      "source_key": "amedirh",
+      "name": "AMEDIRH",
+      "url": "https://amedirh.com.mx/feed/",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Asociación Mexicana en Dirección de Recursos Humanos: IA en RR. HH., empleo y normativa laboral en México.",
+      "metadata": {
+        "region": "mx",
+        "language": "es",
+        "tags": [
+          "méxico",
+          "normativa",
+          "ia"
+        ]
+      }
+    },
+    {
+      "source_key": "info_capital_humano_pe",
+      "name": "Info Capital Humano",
+      "url": "https://www.infocapitalhumano.pe/feed/",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Principal medio de RR. HH. en Perú; eventos, IA aplicada y temas laborales.",
+      "metadata": {
+        "region": "pe",
+        "language": "es",
+        "tags": [
+          "perú",
+          "normativa",
+          "eventos"
+        ]
+      }
+    },
+    {
+      "source_key": "rh_management_cl",
+      "name": "RH Management",
+      "url": "https://www.rhmanagement.cl/feed",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Revista chilena de gestión de personas con cobertura regional (OIT, salud mental, empleo).",
+      "metadata": {
+        "region": "cl",
+        "language": "es",
+        "tags": [
+          "chile",
+          "bienestar",
+          "empleo"
+        ]
+      }
+    },
+    {
+      "source_key": "el_economista_capital_humano",
+      "name": "El Economista · Capital Humano",
+      "url": "https://news.google.com/rss/search?q=site%3Aeleconomista.com.mx/capital-humano%20when%3A14d&hl=es-419&gl=CO&ceid=CO:es-419",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Sección de capital humano de El Economista (México): empleo, normativa laboral (jornada de 40 horas) e IA en el trabajo. Se lee vía Google News.",
+      "metadata": {
+        "region": "mx",
+        "language": "es",
+        "tags": [
+          "méxico",
+          "empleo"
+        ],
+        "via": "google_news",
+        "outlet": "eleconomista.com.mx"
+      }
+    },
+    {
+      "source_key": "revista_empresarial_laboral",
+      "name": "Revista Empresarial & Laboral",
+      "url": "https://revistaempresarial.com/feed",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Revista colombiana de gestión humana y laboral; mezcla algo de contenido comercial.",
+      "metadata": {
+        "region": "co",
+        "language": "es",
+        "tags": [
+          "colombia",
+          "gestión_humana"
+        ]
+      }
+    },
+    {
+      "source_key": "contxto",
+      "name": "Contxto",
+      "url": "https://contxto.com/es/feed/",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Ecosistema startup LATAM en español; incluye sección de recursos humanos y rondas de HR tech regionales.",
+      "metadata": {
+        "region": "latam",
+        "language": "es",
+        "tags": [
+          "funding",
+          "startups",
+          "hr_tech"
+        ]
+      }
+    },
+    {
+      "source_key": "rrhh_digital",
+      "name": "RRHH Digital",
+      "url": "https://news.google.com/rss/search?q=site%3Arrhhdigital.com%20when%3A14d&hl=es-419&gl=CO&ceid=CO:es-419",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Medio español de RR. HH. de referencia. Se lee vía Google News porque el sitio bloquea el acceso automatizado. Incluye algo de contenido social/eventos: priorizar noticias.",
+      "metadata": {
+        "region": "es",
+        "language": "es",
+        "tags": [
+          "tendencias"
+        ],
+        "via": "google_news",
+        "outlet": "rrhhdigital.com"
+      }
+    },
+    {
+      "source_key": "equipos_talento",
+      "name": "Equipos & Talento",
+      "url": "https://news.google.com/rss/search?q=site%3Aequiposytalento.com%20when%3A14d&hl=es-419&gl=CO&ceid=CO:es-419",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Medio español de RR. HH. (nombramientos, empleo, HR tech). Se lee vía Google News porque bloquea el acceso automatizado.",
+      "metadata": {
+        "region": "es",
+        "language": "es",
+        "tags": [
+          "tendencias"
+        ],
+        "via": "google_news",
+        "outlet": "equiposytalento.com"
+      }
+    },
+    {
+      "source_key": "acrip",
+      "name": "ACRIP Colombia",
+      "url": "https://www.acrip.co/feed",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Federación colombiana de gestión humana; útil para cambios normativos laborales (decretos, circulares). Publica poco y mayormente webinars.",
+      "metadata": {
+        "region": "co",
+        "language": "es",
+        "tags": [
+          "colombia",
+          "normativa"
+        ]
+      }
+    },
+    {
+      "source_key": "expansion_mx_carrera",
+      "name": "Expansión · Carrera",
+      "url": "https://expansion.mx/rss/carrera",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Sección de carrera y empleo de Expansión (México). Mezcla temas de interés general: prioridad baja.",
+      "metadata": {
+        "region": "mx",
+        "language": "es",
+        "tags": [
+          "méxico",
+          "empleo"
+        ]
+      }
+    },
+    {
+      "source_key": "latamlist",
+      "name": "LatamList",
+      "url": "https://latamlist.com/feed/",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Rondas y lanzamientos de startups en LATAM; generalista, filtrar por HR tech / workforce.",
+      "metadata": {
+        "region": "latam",
+        "language": "en",
+        "tags": [
+          "funding",
+          "startups"
+        ]
+      }
+    }
+  ],
+  "report": {
+    "checked_at": "2026-09-29",
+    "summary": {
+      "ok_feed": 48,
+      "ok_html": 0,
+      "stale": 0,
+      "empty": 0,
+      "broken": 0
+    },
+    "fixed": [
+      {
+        "source_key": "shrm_news",
+        "old_url": "https://www.shrm.org/topics-tools/news",
+        "new_url": "https://news.google.com/rss/search?q=site%3Ashrm.org/topics-tools/news%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "SHRM bloquea bots y no tiene RSS; se recupera vía Google News restringido a su sección de noticias (10 notas frescas)."
+      },
+      {
+        "source_key": "hr_brew",
+        "old_url": "https://www.morningbrew.com/hr/rss",
+        "new_url": "https://news.google.com/rss/search?q=site%3Ahr-brew.com/stories%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "HR Brew bloquea bots (403); se recupera vía Google News restringido a /stories para evitar las páginas índice."
+      },
+      {
+        "source_key": "people_management",
+        "old_url": "https://www.peoplemanagement.co.uk/",
+        "new_url": "https://news.google.com/rss/search?q=site%3Apeoplemanagement.co.uk/article%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Sin RSS y portada con pocos links; se recupera vía Google News restringido a /article (excluye la bolsa de empleo)."
+      },
+      {
+        "source_key": "hr_magazine_uk",
+        "old_url": "https://www.hrmagazine.co.uk/feed",
+        "new_url": "https://news.google.com/rss/search?q=site%3Ahrmagazine.co.uk%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Bloquea bots (403); se recupera vía Google News con ~30 notas frescas."
+      },
+      {
+        "source_key": "gartner_hr_newsroom",
+        "old_url": "https://www.gartner.com/en/newsroom/rss",
+        "new_url": "https://news.google.com/rss/search?q=site%3Agartner.com%20%28%22Gartner%20HR%22%20OR%20CHRO%20OR%20%22HR%20leaders%22%20OR%20%22talent%20acquisition%22%29%20-site%3Ajobs.gartner.com%20when%3A30d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "El newsroom bloquea bots (403) y mezcla todas las industrias; se recupera vía Google News filtrado a contenido de RR. HH./CHRO y sin ofertas de empleo."
+      },
+      {
+        "source_key": "rrhh_digital",
+        "old_url": "https://www.rrhhdigital.com/rss",
+        "new_url": "https://news.google.com/rss/search?q=site%3Arrhhdigital.com%20when%3A14d&hl=es-419&gl=CO&ceid=CO:es-419",
+        "reason": "Feed con 403/timeout; se recupera vía Google News en español (~48 notas frescas)."
+      },
+      {
+        "source_key": "equipos_talento",
+        "old_url": "https://www.equiposytalento.com/rss/",
+        "new_url": "https://news.google.com/rss/search?q=site%3Aequiposytalento.com%20when%3A14d&hl=es-419&gl=CO&ceid=CO:es-419",
+        "reason": "Bloquea bots (403); se recupera vía Google News en español."
+      },
+      {
+        "source_key": "el_economista_capital_humano",
+        "old_url": "https://www.eleconomista.com.mx/rss/capital-humano",
+        "new_url": "https://news.google.com/rss/search?q=site%3Aeleconomista.com.mx/capital-humano%20when%3A14d&hl=es-419&gl=CO&ceid=CO:es-419",
+        "reason": "El RSS bloquea bots (403); se recupera vía Google News restringido a la sección Capital Humano."
+      },
+      {
+        "source_key": "hr_executive",
+        "old_url": "https://hrexecutive.com/",
+        "new_url": "https://news.google.com/rss/search?q=site%3Ahrexecutive.com%20%28AI%20OR%20agentic%20OR%20%22artificial%20intelligence%22%29%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "La portada HTML no da fechas; Google News entrega notas fechadas y se enfoca en IA/HR tech, su fuerte editorial."
+      },
+      {
+        "source_key": "unleash",
+        "old_url": "https://www.unleash.ai/",
+        "new_url": "https://news.google.com/rss/search?q=site%3Aunleash.ai%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "La portada HTML no da fechas y no hay RSS; Google News entrega ~10 notas fechadas."
+      }
+    ],
+    "deactivated": [],
+    "added": [
+      {
+        "source_key": "hr_dive_talent",
+        "url": "https://www.hrdive.com/feeds/topic/talent/",
+        "reason": "Feed oficial por tema; ~20 notas frescas de reclutamiento y talento en 14 días."
+      },
+      {
+        "source_key": "indeed_hiring_lab",
+        "url": "https://www.hiringlab.org/feed/",
+        "reason": "Fuente oficial de datos del mercado laboral y contratación (5 notas frescas)."
+      },
+      {
+        "source_key": "recruiting_brainfood",
+        "url": "https://recruitingbrainfood.substack.com/feed",
+        "reason": "Practicante de referencia en reclutamiento; edición semanal."
+      },
+      {
+        "source_key": "staffing_industry_analysts",
+        "url": "https://news.google.com/rss/search?q=site%3Astaffingindustry.com%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Bloquea bots (403); vía Google News entrega ~35 notas frescas."
+      },
+      {
+        "source_key": "reworked",
+        "url": "https://news.google.com/rss/search?q=site%3Areworked.co%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Sin RSS; vía Google News entrega ~27 notas frescas sobre IA en el trabajo."
+      },
+      {
+        "source_key": "one_useful_thing",
+        "url": "https://www.oneusefulthing.org/feed",
+        "reason": "Académico de referencia en IA aplicada al trabajo; feed directo."
+      },
+      {
+        "source_key": "gallup_workplace",
+        "url": "https://news.google.com/rss/search?q=site%3Agallup.com/workplace%20when%3A14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Sin RSS; vía Google News entrega notas fechadas de Gallup Workplace."
+      },
+      {
+        "source_key": "learning_guild",
+        "url": "https://www.learningguild.com/rss",
+        "reason": "Organización de referencia en L&D con feed propio (~10 notas frescas)."
+      }
+    ],
+    "duplicates_removed": 0,
+    "notes": [
+      "Antes las fuentes estaban fijas en el flujo de n8n; este catálogo pasa a ser la fuente de verdad.",
+      "Se descartaron duplicados detectados en la búsqueda: www.hrtechfeed.com (mismo feed que hrtechfeed.com), hrdailyadvisor.blr.com (mismo feed que hci.org) y el filtro ?topic de HR Dive.",
+      "Se descartaron por no aportar o estar obsoletos: Workforce.com (ahora es un sitio de software), BBC Worklife, WorkLife (Digiday), Training Industry, Capital Humano Emol (Chile) y Expansión España empleo (obsoletos), además de diarios generalistas (La República, Infobae, El Tiempo, Ámbito) por exceso de ruido.",
+      "No se incluyeron blogs de proveedores de HR tech (Buk, Rankmi, Humand, Eightfold) por ser contenido comercial/SEO; se pueden sumar si se quiere seguirlos como competidores.",
+      "Crunchbase News, LatamList y Contxto son generalistas de startups: el modelo debe filtrar solo noticias de HR tech y workforce.",
+      "Fuentes relevantes que bloquean acceso automatizado (SHRM, HR Brew, Gartner, Equipos & Talento, RRHH Digital, El Economista MX): se dejan inactivas para revisarlas si cambia su acceso.",
+      "Ronda 1 (2026-09-29): 26 fuentes añadidas, 2 URL corregidas y 12 desactivadas (SHRM, HR Brew, People Management, HR Magazine UK, Gartner, HR Technologist, RecruitingDaily, TechCrunch HR tech, RRHH Digital, Equipos & Talento, El Economista y Happy).",
+      "Ronda 2 (2026-09-29): limpieza y balance por pilares (media_hr, hr_tech, ia_en_rrhh, talento_reclutamiento, aprendizaje, tendencias_trabajo, latam). Se eliminaron 5 fuentes inactivas sin vuelta atrás; 10 fuentes bloqueadas o sin fechas se recuperan vía Google News (metadata.via = \"google_news\"); se añadieron 8 fuentes. La categoría fina anterior queda en metadata.subcategory. Cobertura final (14 días): media_hr 12/234, hr_tech 6/70, ia_en_rrhh 4/83, talento_reclutamiento 5/64, aprendizaje 4/26, tendencias_trabajo 5/32, latam 12/217.",
+      "Las consultas de Google News usan when:14d (Gartner when:30d por su bajo volumen). Google News reescribe los enlaces (news.google.com/rss/articles/...): al migrar el pipeline de HR Radar conviene resolver la URL original antes de deduplicar. HR Dive general y HR Dive · Talent comparten URLs canónicas y se deduplican.",
+      "No se añadieron blogs de proveedores de HR tech (Buk, Rankmi, Humand, Eightfold): viven en el boletín Radar de Producto."
+    ],
+    "removed": [
+      {
+        "source_key": "gethppy",
+        "url": "https://gethppy.com/feed",
+        "reason": "Feed obsoleto: la última publicación tiene más de un año (383 días) y el sitio no tiene reemplazo útil."
+      },
+      {
+        "source_key": "tlnt",
+        "url": "https://www.tlnt.com/feed/",
+        "reason": "Redundante: tlnt.com/feed ahora redirige y entrega exactamente los mismos artículos que ERE (ere.net), que se conserva."
+      },
+      {
+        "source_key": "hr_technologist",
+        "url": "https://www.hrtechnologist.com/feed/",
+        "reason": "Sitio caído (504/timeout) y Google News no registra publicaciones recientes: no hay vía de recuperación."
+      },
+      {
+        "source_key": "recruiting_daily",
+        "url": "https://recruitingdaily.com/feed/",
+        "reason": "Feed obsoleto: sin publicaciones en más de dos años (811 días)."
+      },
+      {
+        "source_key": "techcrunch_hr_tech",
+        "url": "https://techcrunch.com/tag/hr-tech/feed/",
+        "reason": "La etiqueta HR tech de TechCrunch lleva 145+ días sin publicaciones; la consulta alternativa en Google News es mayormente ruido (IA y ciberseguridad general). La cobertura de rondas queda en HR Tech Feed y Crunchbase News."
+      }
+    ]
+  }
+}

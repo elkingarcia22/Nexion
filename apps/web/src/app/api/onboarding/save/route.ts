@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getOptionalSlackToken } from "@/lib/secrets";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
       case "slack": {
         analysisConfig.onboarding_step = 7;
         if (data.channels && Array.isArray(data.channels)) {
-          const slackToken = process.env.NEXT_PUBLIC_SLACK_BOT_TOKEN;
+          const slackToken = await getOptionalSlackToken();
           const upserts = [];
           for (const ch of data.channels) {
             let chName = ch.name || "";

@@ -1,0 +1,1067 @@
+{
+  "newsletter": {
+    "id": "ia-news-day",
+    "name": "IA News Day",
+    "description": "2 pills diarias con las noticias de IA más útiles para Producto, UX, Automatización y Negocio.",
+    "schedule_label": "Lunes a viernes · 8:00 a. m. (Bogotá)",
+    "slack_channel_id": "C0A34HW4HGR",
+    "model": "claude-haiku-4-5-20251001"
+  },
+  "sources": [
+    {
+      "source_key": "openai_news",
+      "name": "OpenAI News",
+      "url": "https://openai.com/news/rss.xml",
+      "source_type": "RSS",
+      "category": "official",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Fuente oficial de OpenAI para announcements, producto, modelos y research.",
+      "metadata": {}
+    },
+    {
+      "source_key": "anthropic_news",
+      "name": "Anthropic News",
+      "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml",
+      "source_type": "RSS",
+      "category": "official",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Fuente oficial de Anthropic (Claude, anuncios, safety, enterprise) vía espejo RSS comunitario en GitHub, porque anthropic.com no expone feed. Si el espejo falla, usar https://www.anthropic.com/news como HTML.",
+      "metadata": {
+        "espejo_no_oficial": true,
+        "fallback_html": "https://www.anthropic.com/news",
+        "unofficial_feed": true,
+        "decision": "Aprobado por Elkin (2026-09-29): sin RSS oficial; se acepta el espejo comunitario Olshansk/rss-feeds por tener fechas reales. Revisar si el chequeo lo marca como stale o broken."
+      }
+    },
+    {
+      "source_key": "anthropic_research",
+      "name": "Anthropic Research",
+      "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_research.xml",
+      "source_type": "RSS",
+      "category": "analisis_research",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Research y alineación de Anthropic vía espejo RSS comunitario (con fechas). Fallback: https://www.anthropic.com/research.",
+      "metadata": {
+        "espejo_no_oficial": true,
+        "fallback_html": "https://www.anthropic.com/research",
+        "unofficial_feed": true,
+        "decision": "Aprobado por Elkin (2026-09-29): sin RSS oficial; se acepta el espejo comunitario Olshansk/rss-feeds por tener fechas reales. Revisar si el chequeo lo marca como stale o broken.",
+        "subcategory": "research"
+      }
+    },
+    {
+      "source_key": "google_ai_blog",
+      "name": "Google AI Blog",
+      "url": "https://blog.google/technology/ai/rss/",
+      "source_type": "RSS",
+      "category": "official",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Fuente oficial de Google AI.",
+      "metadata": {}
+    },
+    {
+      "source_key": "google_deepmind_blog",
+      "name": "Google DeepMind Blog",
+      "url": "https://deepmind.google/blog/rss.xml",
+      "source_type": "RSS",
+      "category": "official",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Modelos, research y avances de DeepMind.",
+      "metadata": {
+        "subcategory": "research"
+      }
+    },
+    {
+      "source_key": "microsoft_ai_blog",
+      "name": "Microsoft AI Blog",
+      "url": "https://www.microsoft.com/en-us/ai/blog/feed/",
+      "source_type": "RSS",
+      "category": "official",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Blog oficial de IA de Microsoft: Copilot, Azure AI, enterprise AI y partnerships.",
+      "metadata": {}
+    },
+    {
+      "source_key": "microsoft_research_ai",
+      "name": "Microsoft Research AI",
+      "url": "https://www.microsoft.com/en-us/research/feed/?facet%5Btax%5D%5Bmsr-research-area%5D%5B%5D=13556",
+      "source_type": "RSS",
+      "category": "analisis_research",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Research de IA de Microsoft (área AI del feed de MSR): feed sano y con publicaciones semanales; aporta research explicado desde un laboratorio de referencia.",
+      "metadata": {
+        "subcategory": "research"
+      }
+    },
+    {
+      "source_key": "meta_ai_blog",
+      "name": "Meta AI Blog",
+      "url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_meta_ai.xml",
+      "source_type": "RSS",
+      "category": "official",
+      "priority": "low",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Modelos abiertos (Llama), research y herramientas de Meta AI vía espejo RSS comunitario. Publica con poca frecuencia.",
+      "metadata": {
+        "espejo_no_oficial": true,
+        "unofficial_feed": true,
+        "decision": "Aprobado por Elkin (2026-09-29): sin RSS oficial; se acepta el espejo comunitario Olshansk/rss-feeds por tener fechas reales. Revisar si el chequeo lo marca como stale o broken."
+      }
+    },
+    {
+      "source_key": "nvidia_ai_blog",
+      "name": "NVIDIA AI Blog",
+      "url": "https://blogs.nvidia.com/blog/category/generative-ai/feed/",
+      "source_type": "RSS",
+      "category": "official",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "IA generativa, infraestructura, GPUs y enterprise AI desde el blog oficial de NVIDIA.",
+      "metadata": {}
+    },
+    {
+      "source_key": "mistral_news",
+      "name": "Mistral AI News",
+      "url": "https://mistral.ai/news/rss",
+      "source_type": "RSS",
+      "category": "official",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Modelos, producto y announcements de Mistral.",
+      "metadata": {}
+    },
+    {
+      "source_key": "techcrunch_ai",
+      "name": "TechCrunch AI",
+      "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Startups, negocio, lanzamientos y mercado IA.",
+      "metadata": {}
+    },
+    {
+      "source_key": "the_decoder",
+      "name": "The Decoder",
+      "url": "https://the-decoder.com/feed/",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Noticias de IA, producto, herramientas, modelos y aplicaciones.",
+      "metadata": {}
+    },
+    {
+      "source_key": "tldr_ai",
+      "name": "TLDR AI",
+      "url": "https://tldr.tech/api/rss/ai",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Radar diario; limitar porque cada item mezcla varias noticias.",
+      "metadata": {}
+    },
+    {
+      "source_key": "venturebeat_ai",
+      "name": "VentureBeat AI",
+      "url": "https://news.google.com/rss/search?q=site:venturebeat.com+AI+when:7d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Enterprise AI, agentes y negocio. Recuperada vía Google News (site:venturebeat.com) porque el feed propio está congelado y el general da 429.",
+      "metadata": {
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "mit_tech_review_ai",
+      "name": "MIT Technology Review AI",
+      "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed/",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Tendencias, riesgos, investigación aplicada y regulación.",
+      "metadata": {}
+    },
+    {
+      "source_key": "theverge_ai",
+      "name": "The Verge AI",
+      "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Producto, herramientas IA y consumo.",
+      "metadata": {}
+    },
+    {
+      "source_key": "wired_ai",
+      "name": "WIRED AI",
+      "url": "https://www.wired.com/feed/tag/ai/latest/rss",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "IA, sociedad, producto y riesgos.",
+      "metadata": {}
+    },
+    {
+      "source_key": "axios_ai",
+      "name": "Axios AI",
+      "url": "https://news.google.com/rss/search?q=site:axios.com+AI+when:7d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Señales de negocio, mercado y política de IA (Axios AI+). Recuperada vía Google News porque axios.com bloquea el feed (403).",
+      "metadata": {
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "semianalysis",
+      "name": "SemiAnalysis",
+      "url": "https://newsletter.semianalysis.com/feed",
+      "source_type": "RSS",
+      "category": "analisis_research",
+      "priority": "low",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Analista de referencia en infraestructura, chips y economía de la IA. Parte del contenido es de pago; el feed trae título y resumen. Limitado a 1 item por ser muy técnico.",
+      "metadata": {
+        "subcategory": "research"
+      }
+    },
+    {
+      "source_key": "mit_news_ai",
+      "name": "MIT News AI",
+      "url": "https://news.mit.edu/rss/topic/artificial-intelligence2",
+      "source_type": "RSS",
+      "category": "analisis_research",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Research aplicado y noticias académicas de IA.",
+      "metadata": {
+        "subcategory": "research"
+      }
+    },
+    {
+      "source_key": "latent_space",
+      "name": "Latent Space",
+      "url": "https://www.latent.space/feed",
+      "source_type": "RSS",
+      "category": "automatizacion_agentes",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Dev tools, agentes, análisis técnico y comunidad builder.",
+      "metadata": {
+        "subcategory": "dev_tools"
+      }
+    },
+    {
+      "source_key": "simon_willison",
+      "name": "Simon Willison",
+      "url": "https://simonwillison.net/atom/everything/",
+      "source_type": "RSS",
+      "category": "automatizacion_agentes",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "LLMs, prompts, agents, tooling y notas prácticas de ingeniería.",
+      "metadata": {
+        "subcategory": "dev_tools"
+      }
+    },
+    {
+      "source_key": "hugging_face_blog",
+      "name": "Hugging Face Blog",
+      "url": "https://huggingface.co/blog/feed.xml",
+      "source_type": "RSS",
+      "category": "automatizacion_agentes",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Modelos open source, tools, datasets y prácticas IA.",
+      "metadata": {
+        "subcategory": "dev_tools"
+      }
+    },
+    {
+      "source_key": "langchain_blog",
+      "name": "LangChain Blog",
+      "url": "https://blog.langchain.com/rss.xml",
+      "source_type": "RSS",
+      "category": "automatizacion_agentes",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Agentes, RAG, orchestration y aplicaciones LLM.",
+      "metadata": {
+        "subcategory": "dev_tools"
+      }
+    },
+    {
+      "source_key": "anthropic_engineering",
+      "name": "Anthropic Engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "HTML",
+      "category": "automatizacion_agentes",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Posts de ingeniería de Anthropic (agentes, Claude Code, evals). Se deja en HTML porque el espejo RSS comunitario está desactualizado (128 días).",
+      "metadata": {
+        "subcategory": "dev_tools"
+      }
+    },
+    {
+      "source_key": "xataka_ai",
+      "name": "Xataka IA",
+      "url": "https://www.xataka.com/tag/inteligencia-artificial/rss2.xml",
+      "source_type": "RSS",
+      "category": "espanol",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Fuente en español para aterrizar noticias de IA al equipo.",
+      "metadata": {
+        "subcategory": "spanish",
+        "language": "es"
+      }
+    },
+    {
+      "source_key": "hipertextual_ai",
+      "name": "Hipertextual IA",
+      "url": "https://hipertextual.com/feed",
+      "source_type": "RSS",
+      "category": "espanol",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Medio de tecnología en español; feed general, requiere filtro IA fuerte. Aporta cobertura en español al equipo.",
+      "metadata": {
+        "subcategory": "spanish",
+        "language": "es"
+      }
+    },
+    {
+      "source_key": "ars_technica_ai",
+      "name": "Ars Technica AI",
+      "url": "https://arstechnica.com/ai/feed/",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Cobertura de IA de Ars Technica: modelos, producto, riesgos y análisis con criterio técnico.",
+      "metadata": {}
+    },
+    {
+      "source_key": "zdnet_ai",
+      "name": "ZDNET AI",
+      "url": "https://www.zdnet.com/topic/artificial-intelligence/rss.xml",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "IA aplicada al trabajo: herramientas, adopción empresarial y guías prácticas.",
+      "metadata": {}
+    },
+    {
+      "source_key": "import_ai",
+      "name": "Import AI (Jack Clark)",
+      "url": "https://importai.substack.com/feed",
+      "source_type": "RSS",
+      "category": "analisis_research",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Newsletter semanal de Jack Clark (cofundador de Anthropic): research, policy y tendencias de IA explicadas.",
+      "metadata": {
+        "subcategory": "analysis"
+      }
+    },
+    {
+      "source_key": "one_useful_thing",
+      "name": "One Useful Thing (Ethan Mollick)",
+      "url": "https://www.oneusefulthing.org/feed",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "high",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Ethan Mollick sobre cómo usar la IA en el trabajo, la educación y la gestión; muy útil para Negocio y Producto.",
+      "metadata": {
+        "subcategory": "analysis"
+      }
+    },
+    {
+      "source_key": "bens_bites",
+      "name": "Ben's Bites",
+      "url": "https://www.bensbites.com/feed",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Newsletter diaria de producto IA: lanzamientos, herramientas y casos de uso para builders.",
+      "metadata": {
+        "subcategory": "analysis"
+      }
+    },
+    {
+      "source_key": "lennys_newsletter",
+      "name": "Lenny's Newsletter",
+      "url": "https://www.lennysnewsletter.com/feed",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Producto y crecimiento; cada vez más centrada en IA para PMs. Algunos posts son de pago (se usa título y resumen).",
+      "metadata": {
+        "subcategory": "product_ux"
+      }
+    },
+    {
+      "source_key": "nngroup",
+      "name": "Nielsen Norman Group",
+      "url": "https://www.nngroup.com/feed/rss/",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Investigación UX de referencia; publica con frecuencia sobre IA en UX y diseño de interfaces con IA. Filtrar por IA.",
+      "metadata": {
+        "subcategory": "product_ux"
+      }
+    },
+    {
+      "source_key": "github_blog_ai",
+      "name": "GitHub Blog · AI & ML",
+      "url": "https://github.blog/ai-and-ml/feed/",
+      "source_type": "RSS",
+      "category": "automatizacion_agentes",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Blog oficial de GitHub sobre Copilot, agentes de código y desarrollo con IA.",
+      "metadata": {
+        "subcategory": "official"
+      }
+    },
+    {
+      "source_key": "google_cloud_ai",
+      "name": "Google Cloud · AI & Machine Learning",
+      "url": "https://cloudblog.withgoogle.com/products/ai-machine-learning/rss/",
+      "source_type": "RSS",
+      "category": "official",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Anuncios de Vertex AI, Gemini Enterprise y agentes en Google Cloud; ángulo empresarial.",
+      "metadata": {}
+    },
+    {
+      "source_key": "apple_ml_research",
+      "name": "Apple Machine Learning Research",
+      "url": "https://machinelearning.apple.com/rss.xml",
+      "source_type": "RSS",
+      "category": "analisis_research",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Research oficial de Apple en ML e IA on-device.",
+      "metadata": {
+        "subcategory": "research"
+      }
+    },
+    {
+      "source_key": "n8n_blog",
+      "name": "n8n Blog",
+      "url": "https://blog.n8n.io/rss/",
+      "source_type": "RSS",
+      "category": "automatizacion_agentes",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Automatización con IA y agentes en n8n (la herramienta que usa Nexión); casos prácticos y lanzamientos.",
+      "metadata": {
+        "subcategory": "automation"
+      }
+    },
+    {
+      "source_key": "interconnects",
+      "name": "Interconnects (Nathan Lambert)",
+      "url": "https://www.interconnects.ai/feed",
+      "source_type": "RSS",
+      "category": "analisis_research",
+      "priority": "low",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Análisis de modelos abiertos, post-training y estrategia de los laboratorios; técnico.",
+      "metadata": {
+        "subcategory": "analysis"
+      }
+    },
+    {
+      "source_key": "stratechery",
+      "name": "Stratechery (Ben Thompson)",
+      "url": "https://stratechery.com/feed/",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "low",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Estrategia de negocio de las big tech y la IA. Parte del contenido es de pago; el feed público trae los artículos semanales.",
+      "metadata": {
+        "subcategory": "analysis"
+      }
+    },
+    {
+      "source_key": "elpais_tecnologia",
+      "name": "El País · Tecnología",
+      "url": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/tecnologia/portada",
+      "source_type": "RSS",
+      "category": "espanol",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Sección de tecnología de El País; buena cobertura de IA, regulación y sociedad en español. Requiere filtro IA.",
+      "metadata": {
+        "subcategory": "spanish",
+        "language": "es"
+      }
+    },
+    {
+      "source_key": "aws_ml_blog",
+      "name": "AWS Machine Learning Blog",
+      "url": "https://aws.amazon.com/blogs/machine-learning/feed/",
+      "source_type": "RSS",
+      "category": "official",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Blog oficial de AWS sobre Bedrock, agentes y casos enterprise de IA generativa. Publica mucho: limitado a 2 items.",
+      "metadata": {}
+    },
+    {
+      "source_key": "reuters_ai",
+      "name": "Reuters · IA",
+      "url": "https://news.google.com/rss/search?q=site:reuters.com+intitle:AI+when:7d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "media",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Cobertura de agencia sobre negocio, mercado y regulación de la IA. Vía Google News (Reuters no publica RSS público), filtrada a titulares con 'AI'.",
+      "metadata": {
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "hbr_ai",
+      "name": "Harvard Business Review · IA",
+      "url": "https://news.google.com/rss/search?q=site:hbr.org+intitle:AI+when:14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Gestión, adopción empresarial y estrategia con IA desde HBR. Vía Google News (hbr.org bloquea bots), filtrada a titulares con 'AI'.",
+      "metadata": {
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "mckinsey_ai",
+      "name": "McKinsey · IA",
+      "url": "https://news.google.com/rss/search?q=site:mckinsey.com+intitle:AI+when:14d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Estudios y perspectivas de McKinsey/QuantumBlack sobre economía y adopción empresarial de la IA. Vía Google News; ignorar ofertas de empleo.",
+      "metadata": {
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "exponential_view",
+      "name": "Exponential View (Azeem Azhar)",
+      "url": "https://www.exponentialview.co/feed",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Análisis de Azeem Azhar sobre IA, economía y estrategia empresarial; varias ediciones por semana.",
+      "metadata": {}
+    },
+    {
+      "source_key": "product_growth_aakash",
+      "name": "Product Growth (Aakash Gupta)",
+      "url": "https://www.news.aakashg.com/feed",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "low",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Newsletter de producto muy seguida, centrada en cómo los PMs trabajan con IA (herramientas, flujos, casos de equipos).",
+      "metadata": {}
+    },
+    {
+      "source_key": "ux_collective",
+      "name": "UX Collective",
+      "url": "https://uxdesign.cc/feed",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Publicación de referencia en diseño UX; muchos artículos sobre diseñar con y para IA. Feed general: requiere filtro IA.",
+      "metadata": {}
+    },
+    {
+      "source_key": "figma_blog",
+      "name": "Figma Blog",
+      "url": "https://www.figma.com/blog/feed/atom.xml",
+      "source_type": "RSS",
+      "category": "producto_ux_negocio",
+      "priority": "low",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Blog oficial de Figma: lanzamientos de IA para diseño y producto, y cómo cambian los flujos de diseño.",
+      "metadata": {}
+    },
+    {
+      "source_key": "normal_tech",
+      "name": "AI as Normal Technology (Narayanan y Kapoor)",
+      "url": "https://www.normaltech.ai/feed",
+      "source_type": "RSS",
+      "category": "analisis_research",
+      "priority": "low",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Análisis de Arvind Narayanan y Sayash Kapoor (Princeton) sobre capacidades reales, riesgos y adopción de la IA; contrapeso crítico al hype.",
+      "metadata": {}
+    },
+    {
+      "source_key": "sebastian_raschka",
+      "name": "Ahead of AI (Sebastian Raschka)",
+      "url": "https://magazine.sebastianraschka.com/feed",
+      "source_type": "RSS",
+      "category": "analisis_research",
+      "priority": "low",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Sebastian Raschka explica papers y técnicas de LLMs de forma didáctica.",
+      "metadata": {}
+    },
+    {
+      "source_key": "understanding_ai",
+      "name": "Understanding AI (Timothy B. Lee)",
+      "url": "https://www.understandingai.org/feed",
+      "source_type": "RSS",
+      "category": "analisis_research",
+      "priority": "low",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Periodismo explicativo de Timothy B. Lee sobre cómo funcionan y hacia dónde van los modelos de IA.",
+      "metadata": {}
+    },
+    {
+      "source_key": "wwwhatsnew_ia",
+      "name": "WWWhat's new",
+      "url": "https://wwwhatsnew.com/feed/",
+      "source_type": "RSS",
+      "category": "espanol",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Medio en español con fuerte foco en IA, herramientas y lanzamientos; feed general, filtrar temas no IA.",
+      "metadata": {
+        "language": "es"
+      }
+    }
+  ],
+  "report": {
+    "checked_at": "2026-09-29",
+    "summary": {
+      "ok_feed": 53,
+      "ok_html": 1,
+      "stale": 0,
+      "empty": 0,
+      "broken": 0
+    },
+    "fixed": [
+      {
+        "source_key": "anthropic_news",
+        "old_url": "https://www.anthropic.com/news/rss.xml",
+        "new_url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml",
+        "reason": "Anthropic no publica RSS oficial (404); se usa el espejo comunitario Olshansk/rss-feeds, con fechas y actualizado a diario."
+      },
+      {
+        "source_key": "anthropic_research",
+        "old_url": "https://www.anthropic.com/research",
+        "new_url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_research.xml",
+        "reason": "La página HTML no trae fechas; el espejo RSS comunitario sí, y está al día."
+      },
+      {
+        "source_key": "microsoft_ai_blog",
+        "old_url": "https://blogs.microsoft.com/ai/feed/",
+        "new_url": "https://www.microsoft.com/en-us/ai/blog/feed/",
+        "reason": "El feed antiguo de blogs.microsoft.com/ai devuelve 410; el blog de IA de Microsoft vive ahora en microsoft.com/en-us/ai/blog."
+      },
+      {
+        "source_key": "meta_ai_blog",
+        "old_url": "https://ai.meta.com/blog/rss/",
+        "new_url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_meta_ai.xml",
+        "reason": "ai.meta.com no expone RSS (400/404); se usa el espejo comunitario. Meta publica poco (último post hace ~65 días)."
+      },
+      {
+        "source_key": "nvidia_ai_blog",
+        "old_url": "https://blogs.nvidia.com/blog/category/deep-learning/feed/",
+        "new_url": "https://blogs.nvidia.com/blog/category/generative-ai/feed/",
+        "reason": "La categoría deep-learning llevaba 83 días sin publicar; la categoría generative-ai está al día."
+      },
+      {
+        "source_key": "mistral_news",
+        "old_url": "https://mistral.ai/news/rss.xml",
+        "new_url": "https://mistral.ai/news/rss",
+        "reason": "La URL rss.xml devuelve 404; el feed real está en /news/rss (descubierto por el checker)."
+      },
+      {
+        "source_key": "techcrunch_ai",
+        "old_url": "https://techcrunch.com/tag/artificial-intelligence/feed/",
+        "new_url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+        "reason": "El feed por tag llevaba 48 días sin items nuevos; el feed de la categoría IA publica a diario."
+      },
+      {
+        "source_key": "theverge_ai",
+        "old_url": "https://www.theverge.com/ai-artificial-intelligence/rss/index.xml",
+        "new_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+        "reason": "La ruta antigua devuelve 404; The Verge movió los feeds por sección a /rss/<sección>/index.xml."
+      },
+      {
+        "source_key": "semianalysis",
+        "old_url": "https://semianalysis.com/feed/",
+        "new_url": "https://newsletter.semianalysis.com/feed",
+        "reason": "El feed de semianalysis.com está congelado (378 días); la publicación activa está en newsletter.semianalysis.com."
+      },
+      {
+        "source_key": "arxiv_cl",
+        "old_url": "https://export.arxiv.org/rss/cs.CL",
+        "new_url": "https://rss.arxiv.org/rss/cs.CL",
+        "reason": "export.arxiv.org devolvió el feed vacío; rss.arxiv.org es el endpoint actual y trae items."
+      },
+      {
+        "source_key": "stanford_hai",
+        "old_url": "https://hai.stanford.edu/news/rss.xml",
+        "new_url": "https://hai.stanford.edu/news",
+        "reason": "El feed rss.xml responde HTML vacío; no hay RSS público. Se apunta a la página de noticias (HTML sin fechas)."
+      },
+      {
+        "source_key": "langchain_blog",
+        "old_url": "https://blog.langchain.com/rss/",
+        "new_url": "https://blog.langchain.com/rss.xml",
+        "reason": "La URL /rss/ devolvía HTML; el feed real es /rss.xml (descubierto por el checker)."
+      },
+      {
+        "source_key": "hipertextual_ai",
+        "old_url": "https://hipertextual.com/tag/inteligencia-artificial/feed",
+        "new_url": "https://hipertextual.com/feed",
+        "reason": "El feed por tag devuelve 410; se usa el feed general del medio (tecnología en español, mucha cobertura de IA)."
+      },
+      {
+        "source_key": "llamaindex_blog",
+        "old_url": "https://www.llamaindex.ai/blog/rss.xml",
+        "new_url": "https://www.llamaindex.ai/blog",
+        "reason": "No existe RSS (rss.xml y /feed dan 404); solo HTML sin fechas."
+      },
+      {
+        "source_key": "venturebeat_ai",
+        "old_url": "https://venturebeat.com/category/ai/feed/",
+        "new_url": "https://news.google.com/rss/search?q=site:venturebeat.com+AI+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "El feed propio lleva 33 días sin items y el general responde 429; Google News restringido a venturebeat.com trae la cobertura enterprise AI del día."
+      },
+      {
+        "source_key": "axios_ai",
+        "old_url": "https://www.axios.com/technology/artificial-intelligence/rss.xml",
+        "new_url": "https://news.google.com/rss/search?q=site:axios.com+AI+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "El feed por sección da 403; Google News restringido a axios.com y 'AI' entrega solo su cobertura de IA, fresca."
+      },
+      {
+        "source_key": "stanford_hai",
+        "old_url": "https://hai.stanford.edu/news",
+        "new_url": "https://news.google.com/rss/search?q=site:hai.stanford.edu/news+when:14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "El HTML no trae fechas; Google News restringido a hai.stanford.edu/news sí trae fechas y noticias recientes."
+      }
+    ],
+    "deactivated": [],
+    "added": [
+      {
+        "source_key": "ars_technica_ai",
+        "url": "https://arstechnica.com/ai/feed/",
+        "reason": "Feed específico de IA, diario; reemplaza al feed genérico techlab."
+      },
+      {
+        "source_key": "zdnet_ai",
+        "url": "https://www.zdnet.com/topic/artificial-intelligence/rss.xml",
+        "reason": "Medio reconocido con feed de IA diario, útil para Negocio y Automatización."
+      },
+      {
+        "source_key": "import_ai",
+        "url": "https://importai.substack.com/feed",
+        "reason": "Analista de referencia, feed con fechas y al día."
+      },
+      {
+        "source_key": "one_useful_thing",
+        "url": "https://www.oneusefulthing.org/feed",
+        "reason": "Referente sobre adopción práctica de IA en organizaciones."
+      },
+      {
+        "source_key": "bens_bites",
+        "url": "https://www.bensbites.com/feed",
+        "reason": "Newsletter de IA muy seguida, con feed diario orientado a producto y herramientas."
+      },
+      {
+        "source_key": "lennys_newsletter",
+        "url": "https://www.lennysnewsletter.com/feed",
+        "reason": "Referencia #1 de Product Management, con mucho contenido sobre IA en producto."
+      },
+      {
+        "source_key": "nngroup",
+        "url": "https://www.nngroup.com/feed/rss/",
+        "reason": "Aporta el ángulo UX que faltaba, con feed activo."
+      },
+      {
+        "source_key": "github_blog_ai",
+        "url": "https://github.blog/ai-and-ml/feed/",
+        "reason": "Fuente oficial de producto IA para desarrollo, feed al día."
+      },
+      {
+        "source_key": "google_cloud_ai",
+        "url": "https://cloudblog.withgoogle.com/products/ai-machine-learning/rss/",
+        "reason": "Complementa google_ai_blog con lanzamientos enterprise."
+      },
+      {
+        "source_key": "apple_ml_research",
+        "url": "https://machinelearning.apple.com/rss.xml",
+        "reason": "Laboratorio oficial que faltaba, con feed activo."
+      },
+      {
+        "source_key": "n8n_blog",
+        "url": "https://blog.n8n.io/rss/",
+        "reason": "Cubre el eje Automatización con una herramienta que el equipo ya usa."
+      },
+      {
+        "source_key": "interconnects",
+        "url": "https://www.interconnects.ai/feed",
+        "reason": "Analista de referencia sobre modelos; feed semanal."
+      },
+      {
+        "source_key": "stratechery",
+        "url": "https://stratechery.com/feed/",
+        "reason": "Analista de negocio de referencia sobre la industria IA."
+      },
+      {
+        "source_key": "elpais_tecnologia",
+        "url": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/tecnologia/portada",
+        "reason": "Medio de referencia en español con feed diario."
+      },
+      {
+        "source_key": "aws_ml_blog",
+        "url": "https://aws.amazon.com/blogs/machine-learning/feed/",
+        "reason": "Faltaba AWS entre los proveedores oficiales; feed diario con fechas."
+      },
+      {
+        "source_key": "reuters_ai",
+        "url": "https://news.google.com/rss/search?q=site:reuters.com+intitle:AI+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Agencia de referencia para negocio y regulación; sin RSS propio, se usa Google News."
+      },
+      {
+        "source_key": "hbr_ai",
+        "url": "https://news.google.com/rss/search?q=site:hbr.org+intitle:AI+when:14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Referente de negocio y management sobre adopción de IA; recuperada vía Google News."
+      },
+      {
+        "source_key": "mckinsey_ai",
+        "url": "https://news.google.com/rss/search?q=site:mckinsey.com+intitle:AI+when:14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Consultora de referencia en adopción empresarial de IA; sin RSS útil, se usa Google News."
+      },
+      {
+        "source_key": "exponential_view",
+        "url": "https://www.exponentialview.co/feed",
+        "reason": "Analista reconocido en IA y negocio; feed con 5 items en 7 días."
+      },
+      {
+        "source_key": "product_growth_aakash",
+        "url": "https://www.news.aakashg.com/feed",
+        "reason": "Refuerza el ángulo Producto con casos prácticos de IA para PMs."
+      },
+      {
+        "source_key": "ux_collective",
+        "url": "https://uxdesign.cc/feed",
+        "reason": "Aporta volumen diario al ángulo UX, que solo tenía NN/g."
+      },
+      {
+        "source_key": "figma_blog",
+        "url": "https://www.figma.com/blog/feed/atom.xml",
+        "reason": "Fuente oficial de la herramienta de diseño que usa el equipo; ángulo UX con IA."
+      },
+      {
+        "source_key": "normal_tech",
+        "url": "https://www.normaltech.ai/feed",
+        "reason": "Analistas académicos de referencia; research explicado."
+      },
+      {
+        "source_key": "sebastian_raschka",
+        "url": "https://magazine.sebastianraschka.com/feed",
+        "reason": "Research explicado por un practicante reconocido."
+      },
+      {
+        "source_key": "understanding_ai",
+        "url": "https://www.understandingai.org/feed",
+        "reason": "Explicador de referencia; complementa Import AI e Interconnects."
+      },
+      {
+        "source_key": "wwwhatsnew_ia",
+        "url": "https://wwwhatsnew.com/feed/",
+        "reason": "Suma volumen diario en español."
+      }
+    ],
+    "duplicates_removed": 0,
+    "notes": [
+      "Catálogo final: 57 fuentes, 37 activas y 20 inactivas. Todas las activas quedan en ok_feed salvo anthropic_engineering (ok_html, sin feed fresco disponible).",
+      "Anthropic y Meta no publican RSS oficial: anthropic_news, anthropic_research y meta_ai_blog usan el espejo comunitario Olshansk/rss-feeds (GitHub). Es una dependencia no oficial; si deja de actualizarse, volver al HTML indicado en metadata.fallback_html.",
+      "Fuentes con feed sano pero que se mantienen desactivadas por decisión editorial (ruido, paywall o demasiado técnicas): microsoft_research_ai, the_information_ai, semianalysis, berkeley_ai_research, arxiv_ai, arxiv_cl, reddit_artificial, hackernews_ai_search.",
+      "meta_ai_blog (65 días) y microsoft_ai_blog (13 días) publican poco; están activas pero rara vez aportarán noticias de los últimos 7 días.",
+      "No hay duplicados por URL canónica. openai_sitemap se desactivó por redundante con openai_news (no se borra) y ars_technica_techlab se sustituye por ars_technica_ai.",
+      "Feeds generales que requieren filtro IA fuerte en el prompt: hipertextual_ai, elpais_tecnologia, nngroup, lennys_newsletter, stratechery.",
+      "Decisión 2026-09-29: se mantienen los feeds no oficiales de Anthropic (News, Research) y Meta AI desde Olshansk/rss-feeds.",
+      "Ronda 2 (2026-09-29): se borraron 15 fuentes inactivas sin recuperación posible (ver report.removed). El catálogo queda con 54 fuentes, todas activas: 53 ok_feed y 1 ok_html (anthropic_engineering, sin feed).",
+      "Ronda 2: las categorías se reagrupan en 6 pilares (official, media, automatizacion_agentes, producto_ux_negocio, analisis_research, espanol); la categoría anterior queda en metadata.subcategory cuando cambió.",
+      "Ronda 2: venturebeat_ai, axios_ai y stanford_hai se recuperan vía Google News (metadata.via = google_news); se añaden por la misma vía reuters_ai, hbr_ai y mckinsey_ai. Google News redirige los enlaces a través de news.google.com.",
+      "Ronda 2: se reactivan microsoft_research_ai y semianalysis (feeds sanos) en analisis_research para no dejar fuentes inactivas.",
+      "Cobertura final (7 días): official 10 fuentes/51 frescas, media 11/231, automatizacion_agentes 7/51, producto_ux_negocio 11/54, analisis_research 11/46, espanol 4/51. one_useful_thing dio timeout puntual en la corrida final (funcionó en la anterior).",
+      "Filtro IA fuerte en el prompt para feeds generales: hipertextual_ai, elpais_tecnologia, wwwhatsnew_ia, ux_collective, nngroup, lennys_newsletter, stratechery; en stanford_hai descartar items con título genérico 'Stanford HAI' y en mckinsey_ai las ofertas de empleo."
+    ],
+    "removed": [
+      {
+        "source_key": "openai_sitemap",
+        "url": "https://openai.com/sitemap.xml",
+        "reason": "Redundante con openai_news (RSS oficial) y el sitemap no produce historias legibles."
+      },
+      {
+        "source_key": "stability_ai_news",
+        "url": "https://stability.ai/news/rss.xml",
+        "reason": "stability.ai bloquea el acceso automatizado (HTTP 450) y Google News casi no indexa su sitio (1 item en 14 días); poco valor para el boletín."
+      },
+      {
+        "source_key": "ars_technica_techlab",
+        "url": "https://feeds.arstechnica.com/arstechnica/technology-lab",
+        "reason": "Reemplazada por ars_technica_ai, el feed específico de IA de Ars Technica."
+      },
+      {
+        "source_key": "the_information_ai",
+        "url": "https://www.theinformation.com/feed",
+        "reason": "Medio de pago (paywall): el feed solo entrega titulares sin contenido legible para el equipo."
+      },
+      {
+        "source_key": "berkeley_ai_research",
+        "url": "https://bair.berkeley.edu/blog/feed.xml",
+        "reason": "Research muy técnico que publica cada ~2 meses (último post hace 62 días); no aporta a un boletín diario."
+      },
+      {
+        "source_key": "arxiv_ai",
+        "url": "https://export.arxiv.org/rss/cs.AI",
+        "reason": "Preprints crudos: demasiado técnico y ruidoso (50 papers al día) para Producto, UX y Negocio."
+      },
+      {
+        "source_key": "arxiv_cl",
+        "url": "https://rss.arxiv.org/rss/cs.CL",
+        "reason": "Preprints crudos de NLP: demasiado técnico y ruidoso para la audiencia del boletín."
+      },
+      {
+        "source_key": "papers_with_code",
+        "url": "https://paperswithcode.com/feeds/latest.xml",
+        "reason": "El sitio cerró; la URL ya no es un feed y redirige a HTML."
+      },
+      {
+        "source_key": "replicate_blog",
+        "url": "https://replicate.com/blog/rss",
+        "reason": "Blog de proveedor sin publicaciones en 168 días."
+      },
+      {
+        "source_key": "modal_blog",
+        "url": "https://modal.com/blog/rss.xml",
+        "reason": "No tiene feed RSS (404 en rss.xml y feed.xml) y es infraestructura muy técnica."
+      },
+      {
+        "source_key": "llamaindex_blog",
+        "url": "https://www.llamaindex.ai/blog",
+        "reason": "Solo HTML sin fechas y redundante con LangChain y Latent Space."
+      },
+      {
+        "source_key": "genbeta_ai",
+        "url": "https://www.genbeta.com/tag/inteligencia-artificial/rss2.xml",
+        "reason": "El medio dejó de actualizar sus feeds (último item hace 311 días)."
+      },
+      {
+        "source_key": "reddit_artificial",
+        "url": "https://www.reddit.com/r/artificial/.rss",
+        "reason": "Comunidad ruidosa sin curaduría y con rate limit (429)."
+      },
+      {
+        "source_key": "reddit_localllama",
+        "url": "https://www.reddit.com/r/LocalLLaMA/.rss",
+        "reason": "Comunidad ruidosa y muy técnica; Reddit además limita las peticiones."
+      },
+      {
+        "source_key": "hackernews_ai_search",
+        "url": "https://hnrss.org/newest?q=AI",
+        "reason": "Búsqueda sin curaduría: muy ruidosa para un boletín de 2 pills."
+      },
+      {
+        "source_key": "stanford_hai",
+        "url": "https://news.google.com/rss/search?q=site:hai.stanford.edu/news+when:14d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Vía Google News trae ítems titulados solo \"Stanford HAI\", sin titular útil; research ya cubierto por analisis_research (11 fuentes)."
+      }
+    ]
+  }
+}

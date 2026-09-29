@@ -1,0 +1,1149 @@
+{
+  "newsletter": {
+    "id": "radar-producto",
+    "name": "Radar de Producto",
+    "description": "Benchmark semanal de lo que lanzan los competidores de HR tech, enfocado en las líneas de producto de Ubits.",
+    "schedule_label": "Martes · 8:00 a. m. (Bogotá)",
+    "slack_channel_id": "C0A34HW4HGR",
+    "model": "claude-haiku-4-5-20251001"
+  },
+  "sources": [
+    {
+      "source_key": "ashby_product_updates",
+      "name": "Ashby · Product updates",
+      "url": "https://www.ashbyhq.com/product-updates/feed.xml",
+      "source_type": "RSS",
+      "category": "reclutamiento",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Changelog oficial de Ashby vía RSS; publica varias mejoras por semana del ATS.",
+      "metadata": {
+        "competitor": "Ashby",
+        "product": "reclutamiento",
+        "content_kind": "product_updates"
+      }
+    },
+    {
+      "source_key": "bamboohr_product_updates",
+      "name": "BambooHR · Product updates",
+      "url": "https://www.bamboohr.com/product-updates/feed",
+      "source_type": "RSS",
+      "category": "suites_hcm",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Feed oficial de product updates de BambooHR (IA, onboarding, vistas de manager).",
+      "metadata": {
+        "competitor": "BambooHR",
+        "product": "suites_hcm",
+        "content_kind": "product_updates",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "culture_amp_product_updates",
+      "name": "Culture Amp · Product updates",
+      "url": "https://updates.cultureamp.com/",
+      "source_type": "HTML",
+      "category": "encuestas_clima",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Newsfeed público de producto de Culture Amp (Intercom, sin RSS). Pocos items por lectura pero oficiales.",
+      "metadata": {
+        "competitor": "Culture Amp",
+        "product": "encuestas_clima",
+        "content_kind": "product_updates",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "factorial_product_launches",
+      "name": "Factorial HR · Product updates",
+      "url": "https://factorialhr.com/product-launches",
+      "source_type": "HTML",
+      "category": "suites_hcm",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Página oficial de lanzamientos de Factorial (One, LMS, gastos…); competidor directo en LATAM y España.",
+      "metadata": {
+        "competitor": "Factorial HR",
+        "product": "suites_hcm",
+        "content_kind": "product_updates",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "lattice_product_updates",
+      "name": "Lattice · Product updates",
+      "url": "https://lattice.com/product-updates",
+      "source_type": "HTML",
+      "category": "objetivos_desempeno",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Página oficial de releases de Lattice; mezcla links de navegación con las notas de temporada.",
+      "metadata": {
+        "competitor": "Lattice",
+        "product": "objetivos_desempeno",
+        "content_kind": "product_updates",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "teamtailor_product_updates",
+      "name": "Teamtailor · Product updates",
+      "url": "https://updates.teamtailor.com/rss",
+      "source_type": "RSS",
+      "category": "reclutamiento",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Changelog oficial de Teamtailor vía RSS; alta frecuencia de mejoras en ATS y Co-pilot.",
+      "metadata": {
+        "competitor": "Teamtailor",
+        "product": "reclutamiento",
+        "content_kind": "product_updates"
+      }
+    },
+    {
+      "source_key": "360learning_blog",
+      "name": "360Learning · Blog",
+      "url": "https://360learning.com/blog/",
+      "source_type": "HTML",
+      "category": "aprendizaje",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Listado del blog de 360Learning; incluye los anuncios de producto (AI Companion, skills).",
+      "metadata": {
+        "competitor": "360Learning",
+        "product": "aprendizaje",
+        "content_kind": "blog"
+      }
+    },
+    {
+      "source_key": "deel_product_updates",
+      "name": "Deel · Newsroom",
+      "url": "https://news.google.com/rss/search?q=intitle:Deel+(launches+OR+introduces+OR+unveils+OR+announces)+when:90d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "compensacion",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Cobertura de prensa de lanzamientos y adquisiciones de Deel vía Google News (Deel no publica un listado de product updates con feed).",
+      "metadata": {
+        "competitor": "Deel",
+        "product": "compensacion",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "eightfold_newsroom",
+      "name": "Eightfold AI · Blog",
+      "url": "https://eightfold.ai/feed/",
+      "source_type": "RSS",
+      "category": "reclutamiento",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Feed oficial del blog de Eightfold AI (agentes de talento, AI Interviewer, auditorías de sesgo).",
+      "metadata": {
+        "competitor": "Eightfold AI",
+        "product": "reclutamiento",
+        "content_kind": "blog"
+      }
+    },
+    {
+      "source_key": "greenhouse_newsroom",
+      "name": "Greenhouse · Newsroom",
+      "url": "https://www.greenhouse.com/newsroom/",
+      "source_type": "HTML",
+      "category": "reclutamiento",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Newsroom oficial de Greenhouse: lanzamientos de IA, MCP y adquisiciones.",
+      "metadata": {
+        "competitor": "Greenhouse",
+        "product": "reclutamiento",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "hibob_newsroom",
+      "name": "HiBob · Newsroom",
+      "url": "https://news.google.com/rss/search?q=intitle%3AHiBob+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "suites_hcm",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Cobertura de prensa de HiBob vía Google News acotada al título: el newsroom oficial responde 429 a lectores automáticos. Trae rondas, alianzas (Galileo) y lanzamientos.",
+      "metadata": {
+        "competitor": "HiBob",
+        "product": "suites_hcm",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "icims_newsroom",
+      "name": "iCIMS · Newsroom",
+      "url": "https://www.icims.com/company/corporate-newsroom/",
+      "source_type": "HTML",
+      "category": "reclutamiento",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Newsroom de iCIMS: cobertura de prensa e informes propios sobre IA en reclutamiento.",
+      "metadata": {
+        "competitor": "iCIMS",
+        "product": "reclutamiento",
+        "content_kind": "press"
+      }
+    },
+    {
+      "source_key": "moodle_workplace_product_updates",
+      "name": "Moodle Workplace · Newsroom",
+      "url": "https://moodle.com/feed/",
+      "source_type": "RSS",
+      "category": "aprendizaje",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Feed oficial de noticias de Moodle (integraciones certificadas, partners, LMS).",
+      "metadata": {
+        "competitor": "Moodle Workplace",
+        "product": "aprendizaje",
+        "content_kind": "press"
+      }
+    },
+    {
+      "source_key": "oracle_hcm_product_updates",
+      "name": "Oracle HCM · Blog",
+      "url": "https://blogs.oracle.com/oraclehcm/rss",
+      "source_type": "RSS",
+      "category": "suites_hcm",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Feed oficial del blog de Oracle Cloud HCM (nómina, seguridad laboral, skills). Publica poco.",
+      "metadata": {
+        "competitor": "Oracle HCM",
+        "product": "suites_hcm",
+        "content_kind": "blog",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "phenom_newsroom",
+      "name": "Phenom · Newsroom",
+      "url": "https://news.google.com/rss/search?q=%22Phenom%22+(hiring+OR+%22talent+experience%22+OR+HR)+when:60d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "reclutamiento",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Cobertura de prensa de Phenom vía Google News, acotada a contexto HR (agentes de IA, WorkOps).",
+      "metadata": {
+        "competitor": "Phenom",
+        "product": "reclutamiento",
+        "content_kind": "press",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "successfactors_product_updates",
+      "name": "SAP SuccessFactors · Product updates",
+      "url": "https://pages.community.sap.com/topics/successfactors/product-release-road-map",
+      "source_type": "HTML",
+      "category": "suites_hcm",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Road map de SAP SuccessFactors: lista los agentes de IA planificados (HR Service, Succession, Payroll).",
+      "metadata": {
+        "competitor": "SAP SuccessFactors",
+        "product": "suites_hcm",
+        "content_kind": "product_updates",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "teamtailor_productnews",
+      "name": "Teamtailor · Product updates",
+      "url": "https://www.teamtailor.com/en/productnews/",
+      "source_type": "HTML",
+      "category": "reclutamiento",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Anuncios de producto destacados de Teamtailor; complementa el changelog RSS.",
+      "metadata": {
+        "competitor": "Teamtailor",
+        "product": "reclutamiento",
+        "content_kind": "product_updates"
+      }
+    },
+    {
+      "source_key": "adp_newsroom",
+      "name": "ADP · Newsroom",
+      "url": "https://mediacenter.adp.com/press-releases?pagetemplate=rss",
+      "source_type": "RSS",
+      "category": "suites_hcm",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Feed oficial de press releases de ADP; mucho contenido corporativo/financiero, por eso prioridad baja.",
+      "metadata": {
+        "competitor": "ADP",
+        "product": "suites_hcm",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "degreed_blog",
+      "name": "Degreed · Blog",
+      "url": "https://degreed.com/experience/feed/",
+      "source_type": "RSS",
+      "category": "aprendizaje",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Feed oficial del blog de Degreed (coaching con IA, medición del aprendizaje).",
+      "metadata": {
+        "competitor": "Degreed",
+        "product": "aprendizaje",
+        "content_kind": "blog"
+      }
+    },
+    {
+      "source_key": "leapsome_blog",
+      "name": "Leapsome · Blog",
+      "url": "https://www.leapsome.com/blog/rss.xml",
+      "source_type": "RSS",
+      "category": "objetivos_desempeno",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Feed oficial del blog de Leapsome; mayormente contenido editorial sobre desempeño y objetivos.",
+      "metadata": {
+        "competitor": "Leapsome",
+        "product": "objetivos_desempeno",
+        "content_kind": "blog"
+      }
+    },
+    {
+      "source_key": "personio_blog",
+      "name": "Personio · Newsroom",
+      "url": "https://news.google.com/rss/search?q=intitle:Personio+when:90d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "suites_hcm",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Cobertura de prensa de Personio vía Google News (el sitio bloquea lectores automáticos).",
+      "metadata": {
+        "competitor": "Personio",
+        "product": "suites_hcm",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "ravio_blog",
+      "name": "Ravio · Blog",
+      "url": "https://ravio.com/blog",
+      "source_type": "HTML",
+      "category": "compensacion",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": false,
+      "notes": "Blog de Ravio (benchmarks de compensación en Europa). Inactiva por 429 (rate limit) en chequeos sucesivos; Google News no trae cobertura. Reactivar si responde desde producción.",
+      "metadata": {
+        "competitor": "Ravio",
+        "product": "compensacion",
+        "content_kind": "blog",
+        "subcategory": "administracion_compensacion"
+      }
+    },
+    {
+      "source_key": "rippling_blog",
+      "name": "Rippling · Blog",
+      "url": "https://www.rippling.com/blog",
+      "source_type": "HTML",
+      "category": "compensacion",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Blog oficial de Rippling: anuncios de producto (Helpdesk, AI Governance).",
+      "metadata": {
+        "competitor": "Rippling",
+        "product": "compensacion",
+        "content_kind": "blog",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "ukg_blog",
+      "name": "UKG · Newsroom",
+      "url": "https://www.ukg.com/about-us/newsroom/rss",
+      "source_type": "RSS",
+      "category": "suites_hcm",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Feed oficial del newsroom de UKG (Bryte AI, analistas, clientes).",
+      "metadata": {
+        "competitor": "UKG",
+        "product": "suites_hcm",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "workday_blog",
+      "name": "Workday · Newsroom",
+      "url": "https://newsroom.workday.com/press-releases?pagetemplate=rss",
+      "source_type": "RSS",
+      "category": "suites_hcm",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Feed oficial de press releases de Workday (incluye Sana y lanzamientos de IA).",
+      "metadata": {
+        "competitor": "Workday",
+        "product": "suites_hcm",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "hibob_api_changelog",
+      "name": "HiBob · Product updates",
+      "url": "https://apidocs.hibob.com/changelog.rss",
+      "source_type": "RSS",
+      "category": "suites_hcm",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Changelog de la API de HiBob vía RSS: anticipa funcionalidades (AI CV matching, Skills API).",
+      "metadata": {
+        "competitor": "HiBob",
+        "product": "suites_hcm",
+        "content_kind": "product_updates",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "sap_successfactors_news",
+      "name": "SAP SuccessFactors · Newsroom",
+      "url": "https://news.sap.com/tags/sap-successfactors/feed/",
+      "source_type": "RSS",
+      "category": "suites_hcm",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Feed oficial de SAP News filtrado por SuccessFactors: lanzamientos, nómina autónoma, analistas.",
+      "metadata": {
+        "competitor": "SAP SuccessFactors",
+        "product": "suites_hcm",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr"
+      }
+    },
+    {
+      "source_key": "docebo_newsroom",
+      "name": "Docebo · Newsroom",
+      "url": "https://www.docebo.com/company/newsroom/",
+      "source_type": "HTML",
+      "category": "aprendizaje",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Newsroom oficial de Docebo (AgentHub, plataforma AI-first); competidor LMS directo.",
+      "metadata": {
+        "competitor": "Docebo",
+        "product": "aprendizaje",
+        "content_kind": "press"
+      }
+    },
+    {
+      "source_key": "lattice_blog",
+      "name": "Lattice · Blog",
+      "url": "https://lattice.com/blog",
+      "source_type": "HTML",
+      "category": "objetivos_desempeno",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Blog oficial de Lattice con anuncios (adquisición de Pando, competencias de IA).",
+      "metadata": {
+        "competitor": "Lattice",
+        "product": "objetivos_desempeno",
+        "content_kind": "blog"
+      }
+    },
+    {
+      "source_key": "coursera_blog",
+      "name": "Coursera · Blog",
+      "url": "https://blog.coursera.org/feed/",
+      "source_type": "RSS",
+      "category": "aprendizaje",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Feed oficial de Coursera: anuncios de plataforma de skills (Project Helix) y certificados; competidor en contenidos corporativos.",
+      "metadata": {
+        "competitor": "Coursera",
+        "product": "aprendizaje",
+        "content_kind": "blog"
+      }
+    },
+    {
+      "source_key": "crehana_news",
+      "name": "Crehana · Newsroom",
+      "url": "https://news.google.com/rss/search?q=intitle:Crehana+when:180d&hl=es-419&gl=PE&ceid=PE:es-419",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Crehana es competidor directo de Ubits en LATAM (aprendizaje y gestión de talento). Sin newsroom propio: Google News acotado al título.",
+      "metadata": {
+        "competitor": "Crehana",
+        "product": "aprendizaje",
+        "content_kind": "press",
+        "subcategory": "aprendizaje",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "buk_news",
+      "name": "Buk · Newsroom",
+      "url": "https://news.google.com/rss/search?q=intitle:Buk+when:90d&hl=es-419&gl=CL&ceid=CL:es-419",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Buk no publica novedades con feed; Google News acotado al título captura lanzamientos (Luk) y estudios. Incluye también notas corporativas.",
+      "metadata": {
+        "competitor": "Buk",
+        "product": "suites_hcm",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "humand_news",
+      "name": "Humand · Newsroom",
+      "url": "https://news.google.com/rss/search?q=%22Humand%22+%28RRHH+OR+empleados+OR+startup+OR+Galper%C3%ADn+OR+plataforma+OR+%22recursos+humanos%22%29+when%3A90d&hl=es-419&gl=CO&ceid=CO:es-419",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Humand (Argentina, app de comunicación interna y RRHH) sin newsroom con feed. Google News en español con términos de RRHH en lugar de solo el título, que llevaba 97 días sin notas. Puede traer algo de ruido.",
+      "metadata": {
+        "competitor": "Humand",
+        "product": "suites_hcm",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "factorial_news",
+      "name": "Factorial HR · Newsroom",
+      "url": "https://news.google.com/rss/search?q=intitle:Factorial+(RRHH+OR+lanza+OR+IA)+when:90d&hl=es-419&gl=MX&ceid=MX:es-419",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Prensa en español sobre Factorial (adquisiciones, lanzamientos de IA); complementa su página de lanzamientos.",
+      "metadata": {
+        "competitor": "Factorial HR",
+        "product": "suites_hcm",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "rankmi_news",
+      "name": "Rankmi · Newsroom",
+      "url": "https://news.google.com/rss/search?q=%22Rankmi%22+when:180d&hl=es-419&gl=CL&ceid=CL:es-419",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Rankmi (Chile: desempeño, 360, clima). Su blog es SEO; Google News captura estudios y anuncios.",
+      "metadata": {
+        "competitor": "Rankmi",
+        "product": "objetivos_desempeno",
+        "content_kind": "press",
+        "subcategory": "objetivos_desempeno",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "talana_news",
+      "name": "Talana · Newsroom",
+      "url": "https://news.google.com/rss/search?q=intitle:Talana+when:180d&hl=es-419&gl=CL&ceid=CL:es-419",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Talana (Chile/Perú, ahora de Visma); baja frecuencia de noticias.",
+      "metadata": {
+        "competitor": "Talana",
+        "product": "suites_hcm",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "worky_news",
+      "name": "Worky · Newsroom",
+      "url": "https://news.google.com/rss/search?q=intitle:Worky+when:365d&hl=es-419&gl=MX&ceid=MX:es-419",
+      "source_type": "RSS",
+      "category": "latam",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Worky (México: nómina y copiloto SophIA); baja frecuencia de noticias.",
+      "metadata": {
+        "competitor": "Worky",
+        "product": "compensacion",
+        "content_kind": "press",
+        "subcategory": "ecosistema_hr",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "betterworks_news",
+      "name": "Betterworks · Newsroom",
+      "url": "https://news.google.com/rss/search?q=intitle:Betterworks+when:180d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "objetivos_desempeno",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Cobertura de lanzamientos y adquisiciones de Betterworks (desempeño y objetivos), cuyas release notes no son legibles.",
+      "metadata": {
+        "competitor": "Betterworks",
+        "product": "objetivos_desempeno",
+        "content_kind": "press",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "perceptyx_blog",
+      "name": "Perceptyx — Blog",
+      "url": "https://blog.perceptyx.com/rss.xml",
+      "source_type": "RSS",
+      "category": "encuestas_clima",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Feed oficial de Perceptyx (escucha de empleados, encuestas de clima con IA): lanzamientos como Perceptyx Anywhere y estudios propios.",
+      "metadata": {
+        "competitor": "Perceptyx",
+        "product": "encuestas_clima",
+        "content_kind": "blog"
+      }
+    },
+    {
+      "source_key": "qualtrics_news",
+      "name": "Qualtrics — Noticias (Google News)",
+      "url": "https://news.google.com/rss/search?q=intitle%3AQualtrics+%28launches+OR+introduces+OR+unveils+OR+announces+OR+AI+OR+%22employee+experience%22+OR+XM%29+-%22Manchester+City%22+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "encuestas_clima",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Lanzamientos de Qualtrics (XM, employee experience) vía Google News acotado al título: el newsroom y el blog no exponen feed (404).",
+      "metadata": {
+        "competitor": "Qualtrics EX",
+        "product": "encuestas_clima",
+        "content_kind": "press",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "culture_amp_news",
+      "name": "Culture Amp — Noticias (Google News)",
+      "url": "https://news.google.com/rss/search?q=intitle%3A%22Culture+Amp%22+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "encuestas_clima",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Prensa sobre Culture Amp (benchmarks de clima, reconocimientos de analistas); complementa su newsfeed de producto, que entrega pocos items.",
+      "metadata": {
+        "competitor": "Culture Amp",
+        "product": "encuestas_clima",
+        "content_kind": "press",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "lattice_news",
+      "name": "Lattice — Noticias (Google News)",
+      "url": "https://news.google.com/rss/search?q=%22Lattice%22+%28%22HR+platform%22+OR+%22people+platform%22+OR+%22State+of+People%22+OR+%22performance+management%22+OR+HRIS+OR+%22Sarah+Franklin%22%29+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "objetivos_desempeno",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Cobertura de Lattice con términos de HR para evitar homónimos (Lattice Semiconductor); informes State of People y lanzamientos.",
+      "metadata": {
+        "competitor": "Lattice",
+        "product": "objetivos_desempeno",
+        "content_kind": "press",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "rippling_news",
+      "name": "Rippling — Noticias (Google News)",
+      "url": "https://news.google.com/rss/search?q=intitle%3ARippling+%28payroll+OR+HR+OR+AI+OR+launches+OR+introduces+OR+announces+OR+unveils+OR+Deel+OR+%22Parker+Conrad%22%29+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "compensacion",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Prensa sobre Rippling (nómina global, IA, litigio con Deel) vía Google News; el blog oficial no expone feed.",
+      "metadata": {
+        "competitor": "Rippling",
+        "product": "compensacion",
+        "content_kind": "press",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "gusto_news",
+      "name": "Gusto — Noticias (Google News)",
+      "url": "https://news.google.com/rss/search?q=intitle%3AGusto+%28payroll+OR+%22small+business%22+OR+launches+OR+introduces+OR+announces+OR+%22report%22+OR+acquires%29+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "compensacion",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Gusto (nómina y beneficios para pymes) bloquea lectores (403); Google News trae sus lanzamientos e informes de empleo y salarios. Incluye algunas reseñas.",
+      "metadata": {
+        "competitor": "Gusto",
+        "product": "compensacion",
+        "content_kind": "press",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "payscale_news",
+      "name": "Payscale — Noticias (Google News)",
+      "url": "https://news.google.com/rss/search?q=intitle%3APayscale+%28compensation+OR+%22pay+equity%22+OR+benchmarking+OR+launches+OR+introduces+OR+announces%29+-Bangladesh+when%3A60d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "compensacion",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Lanzamientos de Payscale (benchmarking salarial, equidad de pago) vía Google News con términos de compensación para evitar el uso genérico de 'payscale'.",
+      "metadata": {
+        "competitor": "Payscale",
+        "product": "compensacion",
+        "content_kind": "press",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "workable_news",
+      "name": "Workable — Noticias (Google News)",
+      "url": "https://news.google.com/rss/search?q=intitle%3AWorkable+%28launches+OR+introduces+OR+unveils+OR+announces+OR+debuts+OR+expands+OR+acquires+OR+adds+OR+partners%29+%28ATS+OR+AI+OR+recruiting+OR+hiring%29+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "reclutamiento",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Lanzamientos del ATS Workable (agentes de reclutamiento con IA) vía Google News acotado al título y a términos de reclutamiento.",
+      "metadata": {
+        "competitor": "Workable",
+        "product": "reclutamiento",
+        "content_kind": "press",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "docebo_blog",
+      "name": "Docebo — Blog",
+      "url": "https://www.docebo.com/feed/",
+      "source_type": "RSS",
+      "category": "aprendizaje",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Feed oficial del blog de Docebo: comparativas, anuncios y posicionamiento de su plataforma de aprendizaje con IA; complementa docebo_newsroom (HTML sin fechas).",
+      "metadata": {
+        "competitor": "Docebo",
+        "product": "aprendizaje",
+        "content_kind": "blog"
+      }
+    },
+    {
+      "source_key": "talentlms_news",
+      "name": "TalentLMS — Noticias (Google News)",
+      "url": "https://news.google.com/rss/search?q=TalentLMS+when%3A60d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "aprendizaje",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Releases de TalentLMS (LMS para pymes, de Epignosis) vía Google News; baja frecuencia.",
+      "metadata": {
+        "competitor": "TalentLMS",
+        "product": "aprendizaje",
+        "content_kind": "press",
+        "via": "google_news"
+      }
+    }
+  ],
+  "report": {
+    "checked_at": "2026-09-29",
+    "summary": {
+      "ok_feed": 37,
+      "ok_html": 12,
+      "stale": 0,
+      "empty": 0,
+      "broken": 2
+    },
+    "fixed": [
+      {
+        "source_key": "ashby_product_updates",
+        "old_url": "https://www.ashbyhq.com/product-updates",
+        "new_url": "https://www.ashbyhq.com/product-updates/feed.xml",
+        "reason": "Se usa el feed RSS oficial en lugar de scrapear la página, que solo devolvía 4 links."
+      },
+      {
+        "source_key": "bamboohr_product_updates",
+        "old_url": "https://www.bamboohr.com/product-updates/",
+        "new_url": "https://www.bamboohr.com/product-updates/feed",
+        "reason": "La página HTML no devolvía items; el feed RSS oficial sí."
+      },
+      {
+        "source_key": "smartrecruiters_product_updates",
+        "old_url": "https://www.smartrecruiters.com/recruiting-software/whatsnew/",
+        "new_url": "https://www.smartrecruiters.com/news/feed/",
+        "reason": "La página whatsnew responde 403; se reemplaza por el feed RSS oficial de noticias."
+      },
+      {
+        "source_key": "teamtailor_product_updates",
+        "old_url": "https://updates.teamtailor.com/",
+        "new_url": "https://updates.teamtailor.com/rss",
+        "reason": "Se usa el feed RSS del changelog en lugar del HTML (2 links)."
+      },
+      {
+        "source_key": "360learning_blog",
+        "old_url": "https://360learning.com/blog/product-update-ai-companion/",
+        "new_url": "https://360learning.com/blog/",
+        "reason": "La URL apuntaba a un único post (product-update-ai-companion); se cambia al listado del blog."
+      },
+      {
+        "source_key": "deel_product_updates",
+        "old_url": "https://www.deel.com/blog/whats-new-december-2025/",
+        "new_url": "https://news.google.com/rss/search?q=intitle:Deel+(launches+OR+introduces+OR+unveils+OR+announces)+when:90d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "La URL era un post puntual (whats-new-december-2025) y el blog RSS es contenido SEO; se reemplaza por una búsqueda de Google News acotada al título."
+      },
+      {
+        "source_key": "eightfold_newsroom",
+        "old_url": "https://eightfold.ai/company/press/press-releases/",
+        "new_url": "https://eightfold.ai/feed/",
+        "reason": "La página de press releases solo devolvía links de productos; se usa el feed RSS oficial del sitio."
+      },
+      {
+        "source_key": "moodle_workplace_product_updates",
+        "old_url": "https://moodledev.io/general/workplace/releases",
+        "new_url": "https://moodle.com/feed/",
+        "reason": "La página de releases de Moodle Workplace se renderiza con JavaScript (0 items); se usa el feed oficial de noticias."
+      },
+      {
+        "source_key": "oracle_hcm_product_updates",
+        "old_url": "https://docs.oracle.com/en/cloud/saas/readiness/hcm.html",
+        "new_url": "https://blogs.oracle.com/oraclehcm/rss",
+        "reason": "La página de readiness solo devolvía un link; se usa el feed RSS del blog oficial de Oracle HCM."
+      },
+      {
+        "source_key": "phenom_newsroom",
+        "old_url": "https://www.phenom.com/press-releases",
+        "new_url": "https://news.google.com/rss/search?q=%22Phenom%22+(hiring+OR+%22talent+experience%22+OR+HR)+when:60d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "La página de press releases solo devolvía links de navegación; se reemplaza por Google News con términos de HR para evitar homónimos."
+      },
+      {
+        "source_key": "adp_newsroom",
+        "old_url": "https://mediacenter.adp.com/",
+        "new_url": "https://mediacenter.adp.com/press-releases?pagetemplate=rss",
+        "reason": "Se usa el feed RSS oficial descubierto en el media center."
+      },
+      {
+        "source_key": "degreed_blog",
+        "old_url": "https://degreed.com/experience/blog/",
+        "new_url": "https://degreed.com/experience/feed/",
+        "reason": "Se usa el feed RSS oficial en lugar del HTML."
+      },
+      {
+        "source_key": "hrtech_series_newsroom",
+        "old_url": "https://techrseries.com/",
+        "new_url": "https://techrseries.com/feed/",
+        "reason": "Se usa el feed RSS del sitio en lugar del HTML."
+      },
+      {
+        "source_key": "josh_bersin_blog",
+        "old_url": "https://joshbersin.com/",
+        "new_url": "https://joshbersin.com/feed/",
+        "reason": "Se usa el feed RSS en lugar del HTML."
+      },
+      {
+        "source_key": "leapsome_blog",
+        "old_url": "https://www.leapsome.com/blog",
+        "new_url": "https://www.leapsome.com/blog/rss.xml",
+        "reason": "Se usa el feed RSS oficial en lugar del HTML (4 links)."
+      },
+      {
+        "source_key": "personio_blog",
+        "old_url": "https://www.personio.com/blog/q3-whats-new/",
+        "new_url": "https://news.google.com/rss/search?q=intitle:Personio+when:90d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "La URL era un post puntual (q3-whats-new) y personio.com responde 429; se reemplaza por Google News acotado al título."
+      },
+      {
+        "source_key": "ukg_blog",
+        "old_url": "https://www.ukg.com/working-smarter-cafe/dive-right-ukg-ready-release-100-brings-wave-new-features",
+        "new_url": "https://www.ukg.com/about-us/newsroom/rss",
+        "reason": "La URL era un post puntual (UKG Ready release 100); se reemplaza por el feed RSS del newsroom."
+      },
+      {
+        "source_key": "workday_blog",
+        "old_url": "https://blog.workday.com/en-us/home.html",
+        "new_url": "https://newsroom.workday.com/press-releases?pagetemplate=rss",
+        "reason": "blog.workday.com responde 404; se reemplaza por el feed RSS oficial del newsroom."
+      },
+      {
+        "source_key": "hibob_api_changelog",
+        "old_url": "https://apidocs.hibob.com/changelog",
+        "new_url": "https://apidocs.hibob.com/changelog.rss",
+        "reason": "Se usa el feed RSS del changelog (readme.io) en lugar del HTML, que solo devolvía 1 link."
+      },
+      {
+        "source_key": "hibob_newsroom",
+        "old_url": "https://www.hibob.com/news/",
+        "new_url": "https://news.google.com/rss/search?q=intitle%3AHiBob+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "El newsroom responde 429 de forma sostenida; se recupera con Google News acotado al título."
+      },
+      {
+        "source_key": "humand_news",
+        "old_url": "https://news.google.com/rss/search?q=intitle:Humand+when:180d&hl=es-419&gl=AR&ceid=AR:es-419",
+        "new_url": "https://news.google.com/rss/search?q=%22Humand%22+%28RRHH+OR+empleados+OR+startup+OR+Galper%C3%ADn+OR+plataforma+OR+%22recursos+humanos%22%29+when%3A90d&hl=es-419&gl=CO&ceid=CO:es-419",
+        "reason": "La búsqueda acotada al título no traía notas en 97 días; se amplía a menciones con contexto de RRHH."
+      }
+    ],
+    "deactivated": [
+      {
+        "source_key": "ravio_blog",
+        "url": "https://ravio.com/blog",
+        "reason": "429 (rate limit) sostenido; se conserva inactiva por ser un problema potencialmente temporal."
+      }
+    ],
+    "added": [
+      {
+        "source_key": "perceptyx_blog",
+        "url": "https://blog.perceptyx.com/rss.xml",
+        "reason": "Feed oficial de Perceptyx (escucha de empleados, encuestas de clima con IA): lanzamientos como Perceptyx Anywhere y estudios propios."
+      },
+      {
+        "source_key": "qualtrics_news",
+        "url": "https://news.google.com/rss/search?q=intitle%3AQualtrics+%28launches+OR+introduces+OR+unveils+OR+announces+OR+AI+OR+%22employee+experience%22+OR+XM%29+-%22Manchester+City%22+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Lanzamientos de Qualtrics (XM, employee experience) vía Google News acotado al título: el newsroom y el blog no exponen feed (404)."
+      },
+      {
+        "source_key": "culture_amp_news",
+        "url": "https://news.google.com/rss/search?q=intitle%3A%22Culture+Amp%22+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Prensa sobre Culture Amp (benchmarks de clima, reconocimientos de analistas); complementa su newsfeed de producto, que entrega pocos items."
+      },
+      {
+        "source_key": "lattice_news",
+        "url": "https://news.google.com/rss/search?q=%22Lattice%22+%28%22HR+platform%22+OR+%22people+platform%22+OR+%22State+of+People%22+OR+%22performance+management%22+OR+HRIS+OR+%22Sarah+Franklin%22%29+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Cobertura de Lattice con términos de HR para evitar homónimos (Lattice Semiconductor); informes State of People y lanzamientos."
+      },
+      {
+        "source_key": "rippling_news",
+        "url": "https://news.google.com/rss/search?q=intitle%3ARippling+%28payroll+OR+HR+OR+AI+OR+launches+OR+introduces+OR+announces+OR+unveils+OR+Deel+OR+%22Parker+Conrad%22%29+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Prensa sobre Rippling (nómina global, IA, litigio con Deel) vía Google News; el blog oficial no expone feed."
+      },
+      {
+        "source_key": "gusto_news",
+        "url": "https://news.google.com/rss/search?q=intitle%3AGusto+%28payroll+OR+%22small+business%22+OR+launches+OR+introduces+OR+announces+OR+%22report%22+OR+acquires%29+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Gusto (nómina y beneficios para pymes) bloquea lectores (403); Google News trae sus lanzamientos e informes de empleo y salarios. Incluye algunas reseñas."
+      },
+      {
+        "source_key": "payscale_news",
+        "url": "https://news.google.com/rss/search?q=intitle%3APayscale+%28compensation+OR+%22pay+equity%22+OR+benchmarking+OR+launches+OR+introduces+OR+announces%29+-Bangladesh+when%3A60d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Lanzamientos de Payscale (benchmarking salarial, equidad de pago) vía Google News con términos de compensación para evitar el uso genérico de 'payscale'."
+      },
+      {
+        "source_key": "workable_news",
+        "url": "https://news.google.com/rss/search?q=intitle%3AWorkable+%28launches+OR+introduces+OR+unveils+OR+announces+OR+debuts+OR+expands+OR+acquires+OR+adds+OR+partners%29+%28ATS+OR+AI+OR+recruiting+OR+hiring%29+when%3A30d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Lanzamientos del ATS Workable (agentes de reclutamiento con IA) vía Google News acotado al título y a términos de reclutamiento."
+      },
+      {
+        "source_key": "docebo_blog",
+        "url": "https://www.docebo.com/feed/",
+        "reason": "Feed oficial del blog de Docebo: comparativas, anuncios y posicionamiento de su plataforma de aprendizaje con IA; complementa docebo_newsroom (HTML sin fechas)."
+      },
+      {
+        "source_key": "talentlms_news",
+        "url": "https://news.google.com/rss/search?q=TalentLMS+when%3A60d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "Releases de TalentLMS (LMS para pymes, de Epignosis) vía Google News; baja frecuencia."
+      }
+    ],
+    "duplicates_removed": 0,
+    "notes": [
+      "El parser HTML solo conserva links cuyo título o ruta contiene términos de IA; por eso se priorizaron feeds RSS/Atom y las páginas de changelog sin feed rinden pocos items.",
+      "Las secciones de Zendesk (Greenhouse, Betterworks, 360Learning) no exponen feed de artículos y sus títulos genéricos no pasan el filtro HTML; quedan inactivas.",
+      "Para competidores sin newsroom con feed (Buk, Crehana, Humand, Rankmi, Talana, Worky, Deel, Personio, Phenom, Betterworks) se usan búsquedas de Google News acotadas; traen prensa de terceros y algo de ruido corporativo.",
+      "Runa y Pandapé/Computrabajo no se agregaron: sus búsquedas en Google News devuelven sobre todo homónimos u ofertas de empleo.",
+      "Gusto, Personio y Ravio bloquean lectores automáticos (403/429); conviene revisar si desde producción responden distinto.",
+      "El resumen cuenta las 60 fuentes (activas e inactivas) del último chequeo; varias inactivas figuran como ok_html porque solo devuelven links de navegación.",
+      "Ronda 2 (2026-09-29): se eliminaron 19 fuentes inactivas sin posibilidad de volver (ver removed) y se reorganizó el catálogo en pilares = líneas de producto de Ubits: reclutamiento, objetivos_desempeno, encuestas_clima, aprendizaje, compensacion, suites_hcm y latam. La categoría antigua queda en metadata.subcategory.",
+      "El antiguo 'ecosistema_hr' se repartió entre suites_hcm (Workday, SAP, Oracle, UKG, ADP, BambooHR, HiBob, Personio, Factorial y los medios/analistas HR Executive, TecHR Series y Josh Bersin con subcategory medios_analistas), compensacion (Deel, Rippling), encuestas_clima (Culture Amp) y latam (Buk, Humand, Talana, Worky, Factorial en español).",
+      "Los competidores LATAM (Buk, Crehana, Rankmi, Humand, Talana, Worky, Factorial LATAM) van en el pilar latam; su línea de producto queda en metadata.product.",
+      "compensacion pasó de 0 a 5 fuentes activas; Pave, Figures, Carta Total Comp y Remote no se agregaron porque sus búsquedas en Google News devuelven sobre todo homónimos. Ravio queda inactiva por 429.",
+      "objetivos_desempeno depende mucho de Lattice (3 fuentes) y Leapsome; 15Five, Workleap y Quantum Workplace no tienen feed ni cobertura útil en Google News.",
+      "Las búsquedas de Google News (metadata.via = google_news) traen prensa de terceros y algo de ruido (reseñas, notas financieras); el filtro de títulos del boletín debe priorizar lanzamientos.",
+      "Chequeo final ronda 2 (51 fuentes): 37 ok_feed, 12 ok_html, 2 broken: ravio_blog (429, inactiva) y ukg_blog (timeout puntual; en la corrida de cobertura inmediatamente anterior respondió con 5 notas frescas). Cobertura 30 días: reclutamiento 8/49, objetivos_desempeno 5/62, encuestas_clima 4/20, aprendizaje 7/28, compensacion 5/34, suites_hcm 14/80, latam 7/25 (fuentes funcionando / notas frescas)."
+    ],
+    "removed": [
+      {
+        "source_key": "betterworks_product_updates",
+        "url": "https://support.betterworks.com/hc/en-us/sections/360012378232-Release-Notes",
+        "reason": "Release notes en Zendesk sin feed ni items legibles; reemplazada por betterworks_news (Google News)."
+      },
+      {
+        "source_key": "factorial_product_updates",
+        "url": "https://factorialhr.com/product-updates",
+        "reason": "Redundante: solo links de navegación y duplica factorial_product_launches."
+      },
+      {
+        "source_key": "greenhouse_product_updates",
+        "url": "https://support.greenhouse.io/hc/en-us/sections/360000710732-Release-notes",
+        "reason": "Release notes en Zendesk sin feed ni items legibles; Greenhouse queda cubierto por greenhouse_newsroom."
+      },
+      {
+        "source_key": "gusto_product_updates",
+        "url": "https://gusto.com/product/feature-focus",
+        "reason": "403 persistente (anti-bot) en la página y sus feeds; reemplazada por gusto_news (Google News)."
+      },
+      {
+        "source_key": "sana_product_updates",
+        "url": "https://sanalabs.com/sana-learn-changelog",
+        "reason": "Changelog solo con JavaScript y sin alternativa; Sana ahora es parte de Workday (cubierto por workday_blog)."
+      },
+      {
+        "source_key": "smartrecruiters_product_updates",
+        "url": "https://www.smartrecruiters.com/news/feed/",
+        "reason": "Feed sin publicaciones hace más de 175 días tras la compra por SAP; Google News no devuelve nada. SAP queda cubierto por sap_successfactors_news."
+      },
+      {
+        "source_key": "buk_product_updates",
+        "url": "https://www.buk.co/productos/roadmap-novedades",
+        "reason": "Sin contenido legible (un solo link de navegación); Buk queda cubierto por buk_news."
+      },
+      {
+        "source_key": "cornerstone_newsroom",
+        "url": "https://www.cornerstoneondemand.com/company/news-room/press-releases/",
+        "reason": "Listado cargado por JavaScript, sin feed; Google News de 'Cornerstone' es demasiado ruidoso."
+      },
+      {
+        "source_key": "phenom_product_updates",
+        "url": "https://www.phenom.com/product-release-communication",
+        "reason": "Sin contenido legible (solo navegación); Phenom queda cubierto por phenom_newsroom."
+      },
+      {
+        "source_key": "buk_blog",
+        "url": "https://www.buk.cl/blog/lo-nuevo-de-buk-live-updates",
+        "reason": "Post único sin listado y blog con contenido legal/SEO; redundante con buk_news."
+      },
+      {
+        "source_key": "cornerstone_blog",
+        "url": "https://www.cornerstoneondemand.com/resources/",
+        "reason": "Página de recursos sin contenido legible (solo navegación) ni feed."
+      },
+      {
+        "source_key": "figures_blog",
+        "url": "https://figures.hr/blog",
+        "reason": "Blog solo con JavaScript y sin feed; Google News de 'Figures' es ruido genérico."
+      },
+      {
+        "source_key": "lever_blog",
+        "url": "https://www.lever.co/blog/category/news-and-updates",
+        "reason": "Sin feed (404) y solo un post antiguo; Google News de 'Lever' devuelve homónimos."
+      },
+      {
+        "source_key": "workleap_product_updates",
+        "url": "https://workleap.com/product-roadmap",
+        "reason": "Sin contenido legible (un link de navegación) ni feed."
+      },
+      {
+        "source_key": "15five_product_updates",
+        "url": "https://success.15five.com/hc/en-us/articles/36062624232219-What-s-New-in-15Five-Product-Releases",
+        "reason": "Artículo único de ayuda sin novedades fechadas; 15Five no tiene feed (404) ni cobertura en Google News."
+      },
+      {
+        "source_key": "360learning_product_updates",
+        "url": "https://support.360learning.com/hc/en-us/sections/360013275452-Release-notes",
+        "reason": "Sección de Zendesk sin feed ni items; 360Learning queda cubierto por 360learning_blog."
+      },
+      {
+        "source_key": "docebo_product_updates",
+        "url": "https://help.docebo.com/hc/en-us/categories/22113238448658-Product-updates",
+        "reason": "La categoría responde 404 (enlace muerto); Docebo queda cubierto por docebo_newsroom y docebo_blog."
+      },
+      {
+        "source_key": "smartrecruiters_developers",
+        "url": "https://developers.smartrecruiters.com",
+        "reason": "Portal de desarrolladores sin novedades legibles."
+      },
+      {
+        "source_key": "workleap_blog",
+        "url": "https://workleap.com/blog",
+        "reason": "Sin contenido legible (un link de navegación) ni feed (404)."
+      },
+      {
+        "source_key": "hr_executive_blog",
+        "url": "https://hrexecutive.com/",
+        "reason": "Medio/analista, no competidor: ya cubierto en HR Radar; se quita para que el radar se enfoque en lanzamientos de competidores."
+      },
+      {
+        "source_key": "hrtech_series_newsroom",
+        "url": "https://techrseries.com/feed/",
+        "reason": "Medio/analista, no competidor: ya cubierto en HR Radar; se quita para que el radar se enfoque en lanzamientos de competidores."
+      },
+      {
+        "source_key": "josh_bersin_blog",
+        "url": "https://joshbersin.com/feed/",
+        "reason": "Medio/analista, no competidor: ya cubierto en HR Radar; se quita para que el radar se enfoque en lanzamientos de competidores."
+      }
+    ]
+  }
+}
