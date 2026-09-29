@@ -10,32 +10,51 @@ import type {
   TokenUsage,
 } from "./types";
 
+/** Removes the usual copy/paste debris around a key: whitespace, quotes and a leading "NAME=". */
+export function cleanServiceKey(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^SUPABASE_SERVICE_ROLE_KEY\s*=\s*/, "")
+    .replace(/^["']|["']$/g, "")
+    .trim();
+}
+
+/** Safe description of what a key looks like, without revealing it. */
+function keyShape(key: string): string {
+  const dots = (key.match(/\./g) || []).length;
+  const spaces = /\s/.test(key) ? ", contiene espacios o saltos de línea" : "";
+  return `empieza por "${key.slice(0, 4)}", ${key.length} caracteres, ${dots} punto(s)${spaces}`;
+}
+
 /**
  * Explains a wrong SUPABASE_SERVICE_ROLE_KEY instead of failing later with empty reads:
  * with the anon/publishable key, RLS hides every newsletter row from the server.
  */
 export function describeServiceKeyProblem(key: string): string | null {
-  const hint = "Revisa SUPABASE_SERVICE_ROLE_KEY en Vercel: debe ser la llave service_role (Supabase → Project Settings → API).";
+  const hint = "Revisa SUPABASE_SERVICE_ROLE_KEY en Vercel: debe ser la llave service_role (Supabase → Project Settings → API Keys).";
   if (key.startsWith("sb_secret_")) return null;
   if (key.startsWith("sb_publishable_")) return `Se configuró la llave publishable en lugar de la secreta. ${hint}`;
 
-  const payload = key.split(".")[1];
-  if (!payload) return `La llave no tiene formato válido. ${hint}`;
+  const parts = key.split(".");
+  if (parts.length !== 3) {
+    return `La llave no tiene formato de llave de Supabase (${keyShape(key)}; debería empezar por "eyJ" y tener 2 puntos, o por "sb_secret_"). ${hint}`;
+  }
   try {
-    const role = JSON.parse(Buffer.from(payload, "base64").toString("utf8")).role;
+    const role = JSON.parse(Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8")).role;
     return role === "service_role" ? null : `Se configuró la llave "${role}" en lugar de "service_role". ${hint}`;
   } catch {
-    return `La llave no tiene formato válido. ${hint}`;
+    return `La llave no se pudo leer (${keyShape(key)}). ${hint}`;
   }
 }
 
 export function createServiceClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase no está configurado (URL o SERVICE_ROLE_KEY).");
+  const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !rawKey) throw new Error("Supabase no está configurado (URL o SERVICE_ROLE_KEY).");
+  const key = cleanServiceKey(rawKey);
   const problem = describeServiceKeyProblem(key);
   if (problem) throw new Error(problem);
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createClient(url.trim(), key, { auth: { persistSession: false } });
 }
 
 export async function getNewsletter(db: SupabaseClient, id: string): Promise<Newsletter> {
