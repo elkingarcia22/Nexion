@@ -1,12 +1,14 @@
 import type { EditionStatus, EditionTrigger } from "./types";
 import { callClaude, fetchSourceBody, postToSlack } from "./clients";
 import { runIaNewsDay } from "./ia-news-day/pipeline";
+import { runHrRadar } from "./hr-radar/pipeline";
 import { hasPipeline, type PipelineId } from "./pipelines";
 import { resolveAnthropicKey, resolveSlackToken } from "@/lib/secrets";
 import {
   createServiceClient,
   getActiveSources,
   getEdition,
+  getLastPublishedMessage,
   getNewsletter,
   getSeenItems,
   hasPublishedSince,
@@ -32,7 +34,10 @@ export interface RunOutcome {
 }
 
 /** Every id in PIPELINE_READY_IDS must register its runner here (enforced by the Record type). */
-const RUNNERS: Record<PipelineId, typeof runIaNewsDay> = { "ia-news-day": runIaNewsDay };
+const RUNNERS: Record<PipelineId, typeof runIaNewsDay> = {
+  "ia-news-day": runIaNewsDay,
+  "hr-radar": runHrRadar,
+};
 type NewsletterId = PipelineId;
 
 export function isKnownNewsletter(id: string): id is NewsletterId {
@@ -57,13 +62,14 @@ export async function runNewsletter(id: NewsletterId, options: RunOptions): Prom
     }
   }
 
-  const [sources, seen, anthropicKey] = await Promise.all([
+  const [sources, seen, previousMessage, anthropicKey] = await Promise.all([
     getActiveSources(db, id),
     getSeenItems(db, id),
+    getLastPublishedMessage(db, id),
     resolveAnthropicKey(db),
   ]);
   const result = await RUNNERS[id](
-    { sources, seen },
+    { sources, seen, previousMessage },
     {
       fetchBody: fetchSourceBody,
       generate: (prompt) => callClaude(prompt, newsletter.model, anthropicKey),

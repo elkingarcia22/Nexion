@@ -82,6 +82,20 @@ export async function getEdition(db: SupabaseClient, editionId: string): Promise
   return data as NewsletterEdition;
 }
 
+/** Text of the latest edition that went out, used as "don't repeat yourself" context. */
+export async function getLastPublishedMessage(db: SupabaseClient, newsletterId: string): Promise<string | null> {
+  const { data, error } = await db
+    .from("newsletter_editions")
+    .select("message")
+    .eq("newsletter_id", newsletterId)
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`No se pudo leer la última edición: ${error.message}`);
+  return (data?.message as string | null) ?? null;
+}
+
 export async function markEditionPublished(db: SupabaseClient, editionId: string, slackTs: string): Promise<void> {
   const { error } = await db
     .from("newsletter_editions")

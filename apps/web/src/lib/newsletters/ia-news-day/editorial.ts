@@ -1,4 +1,7 @@
-import type { Article, SelectedArticle } from "../types";
+import type { Article } from "../types";
+import { dedupe } from "../engine/candidates";
+import { formatEditionDate, selectDiverse, toSelected } from "../engine/select";
+import type { RankedArticle } from "../engine/types";
 import { foldText, hasKeyword, squish } from "../text";
 
 export const MIN_EDITORIAL_SCORE = 3;
@@ -84,11 +87,6 @@ const TRUSTED_DOMAIN_BONUS: Record<string, number> = {
   "xataka.com": 2,
 };
 
-interface RankedArticle extends Article {
-  angle: string;
-  editorialScore: number;
-  adjustedScore: number;
-}
 
 function articleText(article: Article): string {
   return foldText(`${article.title} ${article.summary} ${article.url} ${article.source} ${article.domain}`);
@@ -140,19 +138,6 @@ export function scoreArticle(article: Article): number {
   return score;
 }
 
-function dedupe(articles: Article[]): Article[] {
-  const seenUrls = new Set<string>();
-  const seenTitles = new Set<string>();
-  return articles.filter((article) => {
-    const urlKey = foldText(article.url);
-    const titleKey = foldText(article.title).slice(0, 90);
-    if (!urlKey || !titleKey || seenUrls.has(urlKey) || seenTitles.has(titleKey)) return false;
-    seenUrls.add(urlKey);
-    seenTitles.add(titleKey);
-    return true;
-  });
-}
-
 export function rankArticles(articles: Article[]): RankedArticle[] {
   return dedupe(articles)
     .map((article) => {
@@ -174,52 +159,12 @@ export function rankArticles(articles: Article[]): RankedArticle[] {
     });
 }
 
-/**
- * Pick `count` stories: the best one first, then prefer a different angle and domain,
- * relaxing those constraints only when there are not enough alternatives.
- */
+/** Two different angles and domains, and never two TLDR-style digests in the same edition. */
 export function selectPills(ranked: RankedArticle[], count: number): RankedArticle[] {
-  const selected: RankedArticle[] = [];
-  const has = (article: RankedArticle) => selected.some((s) => s.url === article.url);
-  const sameAngle = (article: RankedArticle) => selected.some((s) => s.angle === article.angle);
-  const sameDomain = (article: RankedArticle) => selected.some((s) => s.domain === article.domain);
-  const tldrTaken = () => selected.some(isTldr);
-
-  const passes: Array<(article: RankedArticle) => boolean> = [
-    (a) => selected.length === 0 || (!sameAngle(a) && !sameDomain(a) && !(tldrTaken() && isTldr(a))),
-    (a) => !sameAngle(a),
-    () => true,
-  ];
-
-  for (const accepts of passes) {
-    for (const article of ranked) {
-      if (selected.length >= count) return selected;
-      if (!has(article) && accepts(article)) selected.push(article);
-    }
-  }
-  return selected;
+  return selectDiverse(ranked, count, { isBundle: isTldr });
 }
 
-export function toSelected(article: RankedArticle): SelectedArticle {
-  return {
-    title: article.title,
-    url: article.url,
-    source: article.source,
-    domain: article.domain,
-    angle: article.angle,
-    editorialScore: article.editorialScore,
-    adjustedScore: article.adjustedScore,
-  };
-}
-
-export function formatEditionDate(date: Date): string {
-  return date.toLocaleDateString("es-CO", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "America/Bogota",
-  });
-}
+export { toSelected, formatEditionDate };
 
 export function buildPrompt(pills: RankedArticle[], dateLabel: string): string {
   const sourcesBlock = pills

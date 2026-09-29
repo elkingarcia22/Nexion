@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/newsletters?id=ia-news-day",
       "schedule": "0 13 * * 1-5"
+    },
+    {
+      "path": "/api/cron/newsletters?id=hr-radar",
+      "schedule": "0 13 * * 3"
     }
   ]
 }
