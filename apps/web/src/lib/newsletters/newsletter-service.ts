@@ -4,6 +4,7 @@ import { runIaNewsDay } from "./ia-news-day/pipeline";
 import { runHrRadar } from "./hr-radar/pipeline";
 import { runRadarProducto } from "./radar-producto/pipeline";
 import { runIaUsability } from "./ia-usability/pipeline";
+import { runProcesosRh } from "./procesos-rh/pipeline";
 import { hasPipeline, type PipelineId } from "./pipelines";
 import { resolveAnthropicKey, resolveSlackToken } from "@/lib/secrets";
 import {
@@ -41,6 +42,7 @@ const RUNNERS: Record<PipelineId, typeof runIaNewsDay> = {
   "hr-radar": runHrRadar,
   "radar-producto": runRadarProducto,
   "ia-usability": runIaUsability,
+  "procesos-rh": runProcesosRh,
 };
 type NewsletterId = PipelineId;
 

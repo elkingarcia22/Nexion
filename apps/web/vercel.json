@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/newsletters?id=ia-usability",
       "schedule": "0 13 * * 4"
+    },
+    {
+      "path": "/api/cron/newsletters?id=procesos-rh",
+      "schedule": "0 13 * * 1"
     }
   ]
 }
