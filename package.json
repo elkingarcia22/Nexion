@@ -9,11 +9,11 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "pnpm --filter web dev",
-    "build": "pnpm --filter web build",
-    "start": "pnpm --filter web start",
-    "lint": "pnpm --filter web lint",
-    "type-check": "pnpm --filter web type-check"
+    "dev": "pnpm --filter nexion-web dev",
+    "build": "pnpm --filter nexion-web build",
+    "start": "pnpm --filter nexion-web start",
+    "lint": "pnpm --filter nexion-web lint",
+    "type-check": "pnpm --filter nexion-web type-check"
   },
   "devDependencies": {
     "supabase": "^2.95.0",
