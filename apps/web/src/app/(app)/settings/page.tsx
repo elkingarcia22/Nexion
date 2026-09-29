@@ -7,6 +7,7 @@ import { testJiraConnection } from "@/lib/services/jira-service";
 import { ClaudeSettingsPanel } from "@/components/settings/ClaudeSettingsPanel";
 import { SlackBotSettingsPanel } from "@/components/settings/SlackBotSettingsPanel";
 import { GoogleSettingsPanel } from "@/components/settings/GoogleSettingsPanel";
+import { PosthogSettingsPanel, UbitsMcpSettingsPanel } from "@/components/settings/AnalyticsSourcesPanels";
 import {
   addPrivateChannelToSync,
   getSlackBotChannels,
@@ -59,7 +60,7 @@ interface SlackChannel {
   num_members: number;
 }
 
-type TabType = "slack" | "drive" | "jira" | "objetivos" | "metricas" | "analisis" | "gemini" | "claude" | "slack_bot" | "google" | "modulos";
+type TabType = "slack" | "drive" | "jira" | "objetivos" | "metricas" | "analisis" | "gemini" | "claude" | "slack_bot" | "google" | "posthog" | "ubits_mcp" | "modulos";
 
 // Private channels known to work (must match slack-service.ts)
 const KNOWN_PRIVATE = [
@@ -781,6 +782,8 @@ export default function SettingsPage() {
     { id: "claude" as TabType, label: "Claude AI" },
     { id: "slack_bot" as TabType, label: "Slack bot" },
     { id: "google" as TabType, label: "Google" },
+    { id: "posthog" as TabType, label: "PostHog" },
+    { id: "ubits_mcp" as TabType, label: "MCP de Ubits" },
     { id: "analisis" as TabType, label: "Análisis IA" },
     { id: "objetivos" as TabType, label: "Objetivos" },
     { id: "metricas" as TabType, label: "Métricas" },
@@ -1258,6 +1261,10 @@ export default function SettingsPage() {
 
       {/* ── Tab: Google (cliente OAuth para Drive/Calendar/Sheets) ── */}
       {activeTab === "google" && <GoogleSettingsPanel />}
+
+      {/* ── Tabs: fuentes de Analítica de producto ── */}
+      {activeTab === "posthog" && <PosthogSettingsPanel />}
+      {activeTab === "ubits_mcp" && <UbitsMcpSettingsPanel />}
 
       {/* ── Tab: Objetivos ── */}
       {activeTab === "objetivos" && (

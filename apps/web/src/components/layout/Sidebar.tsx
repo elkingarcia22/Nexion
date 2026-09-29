@@ -99,6 +99,17 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: "/analytics",
+    label: "Analítica",
+    matchPrefix: "/analytics",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18" />
+        <path d="M7 15l4-4 3 3 5-6" />
+      </svg>
+    ),
+  },
 ];
 
 interface SidebarProps {
@@ -107,8 +118,8 @@ interface SidebarProps {
   activeModules?: string[] | null;
 }
 
-// Boletines are team-wide, so they don't depend on the onboarding module selection.
-const ALWAYS_VISIBLE = ["/day", "/settings", "/newsletters"];
+// Boletines and Analítica are team-wide, so they don't depend on the onboarding module selection.
+const ALWAYS_VISIBLE = ["/day", "/settings", "/newsletters", "/analytics"];
 
 export function Sidebar({ expanded, onToggle, activeModules }: SidebarProps) {
   const pathname = usePathname();
