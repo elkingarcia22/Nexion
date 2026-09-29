@@ -6,6 +6,7 @@ import { getOrCreateWorkspace, updateWorkspaceJiraConfig, updateWorkspaceGeminiK
 import { testJiraConnection } from "@/lib/services/jira-service";
 import { ClaudeSettingsPanel } from "@/components/settings/ClaudeSettingsPanel";
 import { SlackBotSettingsPanel } from "@/components/settings/SlackBotSettingsPanel";
+import { GoogleSettingsPanel } from "@/components/settings/GoogleSettingsPanel";
 import {
   addPrivateChannelToSync,
   getSlackBotChannels,
@@ -58,7 +59,7 @@ interface SlackChannel {
   num_members: number;
 }
 
-type TabType = "slack" | "drive" | "jira" | "objetivos" | "metricas" | "analisis" | "gemini" | "claude" | "slack_bot" | "modulos";
+type TabType = "slack" | "drive" | "jira" | "objetivos" | "metricas" | "analisis" | "gemini" | "claude" | "slack_bot" | "google" | "modulos";
 
 // Private channels known to work (must match slack-service.ts)
 const KNOWN_PRIVATE = [
@@ -779,6 +780,7 @@ export default function SettingsPage() {
     { id: "gemini" as TabType, label: "Gemini AI" },
     { id: "claude" as TabType, label: "Claude AI" },
     { id: "slack_bot" as TabType, label: "Slack bot" },
+    { id: "google" as TabType, label: "Google" },
     { id: "analisis" as TabType, label: "Análisis IA" },
     { id: "objetivos" as TabType, label: "Objetivos" },
     { id: "metricas" as TabType, label: "Métricas" },
@@ -1253,6 +1255,9 @@ export default function SettingsPage() {
 
       {/* ── Tab: Slack bot (publicación de Boletines) ── */}
       {activeTab === "slack_bot" && <SlackBotSettingsPanel />}
+
+      {/* ── Tab: Google (cliente OAuth para Drive/Calendar/Sheets) ── */}
+      {activeTab === "google" && <GoogleSettingsPanel />}
 
       {/* ── Tab: Objetivos ── */}
       {activeTab === "objetivos" && (

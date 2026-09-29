@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getOptionalSlackToken } from "@/lib/secrets";
 
 async function syncSlackSources(supabase: any, workspaceId: string, date: Date) {
-  const slackToken = process.env.NEXT_PUBLIC_SLACK_BOT_TOKEN;
+  const slackToken = await getOptionalSlackToken();
   if (!slackToken) return 0;
 
   const y = date.getFullYear();

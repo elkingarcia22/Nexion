@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { createServiceClient } from "@/lib/newsletters/repository";
+import { resolveGoogleOAuthClient } from "@/lib/secrets";
 
 export async function POST(request: Request) {
   try {
@@ -11,16 +13,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-    if (!clientId || !clientSecret) {
-      console.error("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET in environment");
+    // Saved in Configuración → Google, falling back to GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.
+    const oauthClient = await resolveGoogleOAuthClient(createServiceClient());
+    if (!oauthClient) {
+      console.error("Missing Google OAuth client (Configuración → Google or GOOGLE_CLIENT_ID/SECRET)");
       return NextResponse.json(
-        { error: "Server configuration error. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env.local" },
+        { error: "Falta configurar el cliente OAuth de Google en Configuración → Google." },
         { status: 500 }
       );
     }
+    const { clientId, clientSecret } = oauthClient;
 
     // Call Google's token endpoint
     const response = await fetch("https://oauth2.googleapis.com/token", {

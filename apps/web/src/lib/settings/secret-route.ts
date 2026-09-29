@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getRequestUserId } from "@/lib/newsletters/auth";
 import { createServiceClient } from "@/lib/newsletters/repository";
 
-const VISIBLE_SUFFIX_CHARS = 4;
+export const VISIBLE_SUFFIX_CHARS = 4;
 
 export interface SecretRouteConfig {
   /** Row name in `app_secrets`. */
@@ -16,11 +16,11 @@ export interface SecretRouteConfig {
   hasEnvFallback: () => boolean;
 }
 
-function unauthorized() {
+export function unauthorized() {
   return NextResponse.json({ error: "Inicia sesión con Google para administrar esta clave." }, { status: 401 });
 }
 
-function serverError(scope: string, error: unknown) {
+export function serverError(scope: string, error: unknown) {
   console.error(`[settings/${scope}]`, error);
   return NextResponse.json({ error: error instanceof Error ? error.message : "Error desconocido" }, { status: 500 });
 }

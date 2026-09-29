@@ -1,7 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createServiceClient } from "@/lib/newsletters/repository";
 
 export const ANTHROPIC_KEY_SECRET = "anthropic_api_key";
 export const SLACK_TOKEN_SECRET = "slack_bot_token";
+export const GOOGLE_CLIENT_ID_SECRET = "google_client_id";
+export const GOOGLE_CLIENT_SECRET_SECRET = "google_client_secret";
 
 /** Server-only: read a secret from `app_secrets` (requires the service-role client). */
 export async function getSecret(db: SupabaseClient, name: string): Promise<string | null> {
@@ -26,4 +29,32 @@ export async function resolveSlackToken(db: SupabaseClient): Promise<string> {
     (await getSecret(db, SLACK_TOKEN_SECRET)) || process.env.SLACK_BOT_TOKEN || process.env.NEXT_PUBLIC_SLACK_BOT_TOKEN;
   if (!token) throw new Error("No hay token de Slack. Agrégalo en Configuración → Slack bot.");
   return token;
+}
+
+/**
+ * Slack token for features that degrade gracefully when Slack is not set up (channel listing,
+ * daily sync). Returns null instead of throwing, and never fails because Supabase is unreachable.
+ */
+export async function getOptionalSlackToken(): Promise<string | null> {
+  try {
+    return await resolveSlackToken(createServiceClient());
+  } catch {
+    return process.env.SLACK_BOT_TOKEN || process.env.NEXT_PUBLIC_SLACK_BOT_TOKEN || null;
+  }
+}
+
+export interface GoogleOAuthClient {
+  clientId: string;
+  clientSecret: string;
+}
+
+/** Google OAuth client used to refresh Drive/Calendar tokens: Configuración first, then the environment. */
+export async function resolveGoogleOAuthClient(db: SupabaseClient): Promise<GoogleOAuthClient | null> {
+  const [savedId, savedSecret] = await Promise.all([
+    getSecret(db, GOOGLE_CLIENT_ID_SECRET),
+    getSecret(db, GOOGLE_CLIENT_SECRET_SECRET),
+  ]);
+  const clientId = savedId || process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = savedSecret || process.env.GOOGLE_CLIENT_SECRET;
+  return clientId && clientSecret ? { clientId, clientSecret } : null;
 }

@@ -27,7 +27,12 @@ export interface SecretKeyPanelProps {
   removeConfirm: string;
 }
 
-async function callApi(endpoint: string, method: "GET" | "PUT" | "DELETE", body?: unknown): Promise<SecretStatus> {
+/** Authenticated call to a /api/settings/* route with the user's Supabase session. */
+export async function callSettingsApi<T = SecretStatus>(
+  endpoint: string,
+  method: "GET" | "PUT" | "DELETE",
+  body?: unknown
+): Promise<T> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("Inicia sesión con Google para administrar esta clave (el modo demo no puede).");
@@ -39,7 +44,7 @@ async function callApi(endpoint: string, method: "GET" | "PUT" | "DELETE", body?
   });
   const json = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(json.error ?? `Error ${response.status}`);
-  return json as SecretStatus;
+  return json as T;
 }
 
 /** Write-only field for an organization secret: shows only whether it is set and its last 4 characters. */
@@ -53,7 +58,7 @@ export function SecretKeyPanel(props: SecretKeyPanelProps) {
 
   const load = useCallback(async () => {
     try {
-      setStatus(await callApi(endpoint, "GET"));
+      setStatus(await callSettingsApi(endpoint, "GET"));
     } catch (error) {
       setStatus({ configured: false, last4: null });
       setFeedback({ tone: "error", text: error instanceof Error ? error.message : "No se pudo cargar el estado." });
@@ -78,10 +83,10 @@ export function SecretKeyPanel(props: SecretKeyPanelProps) {
     }
   };
 
-  const handleSave = () => run(() => callApi(endpoint, "PUT", { value }), "Verificado y guardado.");
+  const handleSave = () => run(() => callSettingsApi(endpoint, "PUT", { value }), "Verificado y guardado.");
   const handleRemove = () => {
     if (!window.confirm(props.removeConfirm)) return;
-    run(() => callApi(endpoint, "DELETE"), "Eliminado.");
+    run(() => callSettingsApi(endpoint, "DELETE"), "Eliminado.");
   };
 
   const isSet = status?.configured || status?.usingEnvFallback;

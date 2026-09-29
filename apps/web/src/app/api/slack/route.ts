@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-
-const SLACK_BOT_TOKEN = process.env.NEXT_PUBLIC_SLACK_BOT_TOKEN;
+import { getOptionalSlackToken } from "@/lib/secrets";
 
 async function checkUserInChannel(channelId: string, userId: string, botToken: string): Promise<boolean> {
   let cursor: string | undefined;
@@ -33,6 +32,8 @@ async function checkUserInChannel(channelId: string, userId: string, botToken: s
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
+  // Token saved in Configuración → Slack bot, falling back to the environment.
+  const SLACK_BOT_TOKEN = await getOptionalSlackToken();
 
   if (!SLACK_BOT_TOKEN) {
     return NextResponse.json({ error: "Slack token no configurado" }, { status: 500 });
@@ -225,6 +226,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
+  // Token saved in Configuración → Slack bot, falling back to the environment.
+  const SLACK_BOT_TOKEN = await getOptionalSlackToken();
 
   if (!SLACK_BOT_TOKEN) {
     return NextResponse.json({ error: "Slack token no configurado" }, { status: 500 });
