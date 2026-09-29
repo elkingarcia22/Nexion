@@ -27,6 +27,7 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    localStorage.removeItem("NEXION_DEMO_MODE");
     try {
       const searchParams = new URLSearchParams(window.location.search);
       const force = searchParams.get("force") === "true";

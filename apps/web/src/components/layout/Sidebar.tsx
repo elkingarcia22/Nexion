@@ -86,6 +86,19 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: "/newsletters",
+    label: "Boletines",
+    matchPrefix: "/newsletters",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+        <path d="M18 14h-8" />
+        <path d="M15 18h-5" />
+        <path d="M10 6h8v4h-8V6Z" />
+      </svg>
+    ),
+  },
 ];
 
 interface SidebarProps {
@@ -94,7 +107,8 @@ interface SidebarProps {
   activeModules?: string[] | null;
 }
 
-const ALWAYS_VISIBLE = ["/day", "/settings"];
+// Boletines are team-wide, so they don't depend on the onboarding module selection.
+const ALWAYS_VISIBLE = ["/day", "/settings", "/newsletters"];
 
 export function Sidebar({ expanded, onToggle, activeModules }: SidebarProps) {
   const pathname = usePathname();
@@ -106,7 +120,12 @@ export function Sidebar({ expanded, onToggle, activeModules }: SidebarProps) {
   });
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    localStorage.removeItem("NEXION_DEMO_MODE");
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    }
     window.location.href = "/auth/login";
   };
 

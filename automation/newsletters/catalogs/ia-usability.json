@@ -1,0 +1,1184 @@
+{
+  "newsletter": {
+    "id": "ia-usability",
+    "name": "IA, Usabilidad y Prompts",
+    "description": "Tips e insights prácticos cada semana sobre UX y usabilidad, accesibilidad, diseño con IA y prompting para equipos de producto y diseño.",
+    "schedule_label": "Jueves · 8:00 a. m. (Bogotá)",
+    "slack_channel_id": "C0A34HW4HGR",
+    "model": "claude-haiku-4-5-20251001"
+  },
+  "sources": [
+    {
+      "source_key": "nng_articles",
+      "name": "Nielsen Norman Group Articles",
+      "url": "https://www.nngroup.com/feed/rss/",
+      "source_type": "RSS",
+      "category": "usabilidad_research",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Investigación UX basada en evidencia: usabilidad, UX de IA, escritura y métodos de research. Prioridad máxima.",
+      "metadata": {
+        "tags": [
+          "ux",
+          "usability",
+          "research",
+          "ai_ux"
+        ],
+        "subcategory": "usability_research"
+      }
+    },
+    {
+      "source_key": "smashing_magazine",
+      "name": "Smashing Magazine",
+      "url": "https://www.smashingmagazine.com/feed/",
+      "source_type": "RSS",
+      "category": "ui_design_systems",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Artículos prácticos de UX, accesibilidad, diseño de interfaces, IA en producto y front-end.",
+      "metadata": {
+        "tags": [
+          "ux",
+          "accessibility",
+          "interface",
+          "ai_transparency"
+        ],
+        "subcategory": "ux_design_frontend"
+      }
+    },
+    {
+      "source_key": "baymard_blog",
+      "name": "Baymard Institute Blog",
+      "url": "https://baymard.com/blog/feed.xml",
+      "source_type": "RSS",
+      "category": "usabilidad_research",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Investigación UX basada en evidencia (benchmarks de usabilidad). Se cambió del listado HTML a su feed RSS oficial.",
+      "metadata": {
+        "tags": [
+          "ux_research",
+          "ecommerce",
+          "usability"
+        ],
+        "subcategory": "ux_research_ecommerce"
+      }
+    },
+    {
+      "source_key": "w3c_wai_news",
+      "name": "W3C WAI News",
+      "url": "https://www.w3.org/WAI/feed.xml",
+      "source_type": "RSS",
+      "category": "accesibilidad",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Noticias y actualizaciones oficiales de accesibilidad web (WCAG, borradores, recursos). Se cambió a su feed Atom oficial.",
+      "metadata": {
+        "tags": [
+          "accessibility",
+          "wcag",
+          "wai"
+        ],
+        "subcategory": "accessibility"
+      }
+    },
+    {
+      "source_key": "w3c_wcag_22",
+      "name": "W3C WCAG 2.2",
+      "url": "https://www.w3.org/WAI/standards-guidelines/wcag/new-in-22/",
+      "source_type": "HTML",
+      "category": "accesibilidad",
+      "priority": "high",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Referencia oficial sobre los criterios nuevos de WCAG 2.2; base para tips de accesibilidad aplicada. Documento estático.",
+      "metadata": {
+        "tags": [
+          "accessibility",
+          "wcag"
+        ],
+        "content_kind": "reference",
+        "subcategory": "accessibility"
+      }
+    },
+    {
+      "source_key": "figma_blog",
+      "name": "Figma Blog",
+      "url": "https://www.figma.com/blog/feed/atom.xml",
+      "source_type": "RSS",
+      "category": "ui_design_systems",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Diseño, producto y diseño con IA desde Figma. Se cambió del listado HTML a su feed Atom.",
+      "metadata": {
+        "tags": [
+          "figma",
+          "design_tools",
+          "ai_design"
+        ],
+        "subcategory": "design_tools"
+      }
+    },
+    {
+      "source_key": "figma_release_notes",
+      "name": "Figma Release Notes",
+      "url": "https://www.figma.com/release-notes/feed/atom.xml",
+      "source_type": "RSS",
+      "category": "ui_design_systems",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Cambios de producto y features de Figma; útil para tips de herramientas. Se cambió a su feed Atom.",
+      "metadata": {
+        "tags": [
+          "figma",
+          "product_updates",
+          "design_tools"
+        ],
+        "subcategory": "design_tools"
+      }
+    },
+    {
+      "source_key": "a_list_apart",
+      "name": "A List Apart",
+      "url": "https://alistapart.com/main/feed/",
+      "source_type": "RSS",
+      "category": "ui_design_systems",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Diseño web, contenido y pensamiento crítico. Se cambió del listado HTML (no extraía items) a su feed RSS.",
+      "metadata": {
+        "tags": [
+          "design",
+          "web",
+          "content_design"
+        ],
+        "subcategory": "design_strategy"
+      }
+    },
+    {
+      "source_key": "uxmatters",
+      "name": "UXmatters",
+      "url": "https://www.uxmatters.com/",
+      "source_type": "HTML",
+      "category": "usabilidad_research",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Artículos de UX research, diseño y producto. Se mantiene HTML: su feed (feedpress) no se actualiza desde hace más de 900 días, mientras que la portada sí lista artículos recientes.",
+      "metadata": {
+        "tags": [
+          "ux",
+          "research",
+          "product_design"
+        ],
+        "subcategory": "ux_research"
+      }
+    },
+    {
+      "source_key": "ux_collective",
+      "name": "UX Collective",
+      "url": "https://uxdesign.cc/feed",
+      "source_type": "RSS",
+      "category": "usabilidad_research",
+      "priority": "medium",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Radar amplio de diseño/UX; requiere filtro de calidad por ruido de Medium.",
+      "metadata": {
+        "tags": [
+          "ux",
+          "design",
+          "medium"
+        ],
+        "subcategory": "ux_design"
+      }
+    },
+    {
+      "source_key": "ux_planet",
+      "name": "UX Planet",
+      "url": "https://uxplanet.org/feed",
+      "source_type": "RSS",
+      "category": "ui_design_systems",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Tips y artículos prácticos de UX; revisar ruido editorial.",
+      "metadata": {
+        "tags": [
+          "ux",
+          "product_design",
+          "tips"
+        ],
+        "subcategory": "ux_design"
+      }
+    },
+    {
+      "source_key": "maze_blog",
+      "name": "Maze Blog",
+      "url": "https://maze.co/blog/",
+      "source_type": "HTML",
+      "category": "usabilidad_research",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Research ops, discovery y testing. Sin feed RSS disponible (404); el HTML extrae artículos pero mezcla páginas de producto.",
+      "metadata": {
+        "tags": [
+          "ux_research",
+          "testing",
+          "discovery"
+        ],
+        "subcategory": "ux_research"
+      }
+    },
+    {
+      "source_key": "dovetail_blog",
+      "name": "Dovetail Blog",
+      "url": "https://dovetail.com/blog/rss.xml",
+      "source_type": "RSS",
+      "category": "usabilidad_research",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Repositorio de research, insights y métodos. Se cambió del listado HTML a su feed RSS.",
+      "metadata": {
+        "tags": [
+          "research_ops",
+          "insights",
+          "ux"
+        ],
+        "subcategory": "ux_research"
+      }
+    },
+    {
+      "source_key": "user_interviews_blog",
+      "name": "User Interviews Blog",
+      "url": "https://www.userinterviews.com/blog",
+      "source_type": "HTML",
+      "category": "usabilidad_research",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Reclutamiento, entrevistas y operaciones de investigación. Sin feed (404); el HTML extrae artículos con algo de ruido de producto.",
+      "metadata": {
+        "tags": [
+          "user_research",
+          "recruitment",
+          "interviews"
+        ],
+        "subcategory": "ux_research"
+      }
+    },
+    {
+      "source_key": "logrocket_ux",
+      "name": "LogRocket UX Design",
+      "url": "https://blog.logrocket.com/category/ux-design/feed/",
+      "source_type": "RSS",
+      "category": "ui_design_systems",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Contenido práctico de UX/UI y producto. Se cambió al feed de la categoría UX Design; usar con filtro de calidad.",
+      "metadata": {
+        "tags": [
+          "ux",
+          "ui",
+          "product"
+        ],
+        "subcategory": "ux_design"
+      }
+    },
+    {
+      "source_key": "openai_cookbook",
+      "name": "OpenAI Cookbook",
+      "url": "https://developers.openai.com/cookbook",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Ejemplos prácticos de prompts, agentes, evaluación y construcción con IA. URL movida de cookbook.openai.com a developers.openai.com.",
+      "metadata": {
+        "tags": [
+          "prompts",
+          "openai",
+          "evaluation",
+          "agents"
+        ],
+        "subcategory": "prompts_ai_building"
+      }
+    },
+    {
+      "source_key": "openai_docs_prompting",
+      "name": "OpenAI Prompt Engineering Guide",
+      "url": "https://developers.openai.com/api/docs/guides/prompt-engineering",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Guía oficial de prompting de OpenAI. URL movida de platform.openai.com a developers.openai.com.",
+      "metadata": {
+        "tags": [
+          "prompts",
+          "openai",
+          "best_practices"
+        ],
+        "content_kind": "reference",
+        "subcategory": "prompts"
+      }
+    },
+    {
+      "source_key": "anthropic_prompt_engineering",
+      "name": "Anthropic Prompt Engineering",
+      "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Documentación oficial de prompting con Claude. URL movida de docs.anthropic.com a platform.claude.com.",
+      "metadata": {
+        "tags": [
+          "prompts",
+          "claude",
+          "anthropic"
+        ],
+        "content_kind": "reference",
+        "subcategory": "prompts"
+      }
+    },
+    {
+      "source_key": "anthropic_news",
+      "name": "Anthropic News",
+      "url": "https://www.anthropic.com/news",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "low",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Anuncios oficiales sobre Claude y producto; filtrar por utilidad UX/producto. El RSS anterior daba 404; se usa el listado HTML.",
+      "metadata": {
+        "tags": [
+          "claude",
+          "ai_product",
+          "safety"
+        ],
+        "subcategory": "ai_product"
+      }
+    },
+    {
+      "source_key": "google_ai_prompting",
+      "name": "Google Gemini Prompting Strategies",
+      "url": "https://ai.google.dev/gemini-api/docs/prompting-strategies",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Guía oficial de estrategias de prompting para Gemini.",
+      "metadata": {
+        "tags": [
+          "prompts",
+          "gemini",
+          "google"
+        ],
+        "content_kind": "reference",
+        "subcategory": "prompts"
+      }
+    },
+    {
+      "source_key": "microsoft_prompt_engineering",
+      "name": "Microsoft Foundry Prompt Engineering",
+      "url": "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/prompt-engineering",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Buenas prácticas de prompting de Microsoft. URL movida de azure/ai-services a azure/foundry.",
+      "metadata": {
+        "tags": [
+          "prompts",
+          "microsoft",
+          "enterprise"
+        ],
+        "content_kind": "reference",
+        "subcategory": "prompts"
+      }
+    },
+    {
+      "source_key": "prompting_guide_ai",
+      "name": "Prompting Guide AI",
+      "url": "https://www.promptingguide.ai/",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "high",
+      "max_items": 5,
+      "is_active": true,
+      "notes": "Guía abierta y práctica sobre prompting, RAG, agentes y evaluación (DAIR.AI).",
+      "metadata": {
+        "tags": [
+          "prompts",
+          "rag",
+          "agents",
+          "evaluation"
+        ],
+        "content_kind": "reference",
+        "subcategory": "prompts"
+      }
+    },
+    {
+      "source_key": "learnprompting",
+      "name": "Learn Prompting",
+      "url": "https://learnprompting.org/docs/introduction",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "medium",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Recurso educativo de prompting; útil para tips claros.",
+      "metadata": {
+        "tags": [
+          "prompts",
+          "learning"
+        ],
+        "content_kind": "reference",
+        "subcategory": "prompts"
+      }
+    },
+    {
+      "source_key": "lilian_weng",
+      "name": "Lilian Weng Blog",
+      "url": "https://lilianweng.github.io/index.xml",
+      "source_type": "RSS",
+      "category": "prompts_llms",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Explicaciones profundas sobre agentes, RAG y LLMs. Se cambió al feed RSS (la portada no extraía items); publica con poca frecuencia.",
+      "metadata": {
+        "tags": [
+          "agents",
+          "rag",
+          "llm"
+        ],
+        "subcategory": "ai_research_explained"
+      }
+    },
+    {
+      "source_key": "latent_space",
+      "name": "Latent Space",
+      "url": "https://www.latent.space/feed",
+      "source_type": "RSS",
+      "category": "prompts_llms",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Dev tools y análisis de IA; filtrar lo demasiado técnico.",
+      "metadata": {
+        "tags": [
+          "ai_dev",
+          "agents",
+          "llm"
+        ],
+        "subcategory": "ai_dev_tools"
+      }
+    },
+    {
+      "source_key": "hamel_dev",
+      "name": "Hamel Husain Blog",
+      "url": "https://hamel.dev/index.xml",
+      "source_type": "RSS",
+      "category": "prompts_llms",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Evaluación de LLMs y calidad de producto con IA. Se cambió al feed RSS (el listado HTML no extraía items).",
+      "metadata": {
+        "tags": [
+          "evals",
+          "llm_quality",
+          "ai_product"
+        ],
+        "subcategory": "ai_evaluation"
+      }
+    },
+    {
+      "source_key": "eugeneyan",
+      "name": "Eugene Yan Blog",
+      "url": "https://eugeneyan.com/writing/",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "ML/IA aplicado a producto, sistemas y evaluación. Se mantiene HTML: el feed RSS existe pero lleva más de 90 días sin publicaciones.",
+      "metadata": {
+        "tags": [
+          "ai_product",
+          "ml",
+          "systems"
+        ],
+        "subcategory": "ai_product_ml"
+      }
+    },
+    {
+      "source_key": "langchain_blog",
+      "name": "LangChain Blog",
+      "url": "https://www.langchain.com/blog/rss.xml",
+      "source_type": "RSS",
+      "category": "prompts_llms",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Agentes, RAG y workflows con IA; filtrar por utilidad para producto. URL del feed movida a langchain.com/blog/rss.xml.",
+      "metadata": {
+        "tags": [
+          "agents",
+          "rag",
+          "automation"
+        ],
+        "subcategory": "ai_agents"
+      }
+    },
+    {
+      "source_key": "llamaindex_blog",
+      "name": "LlamaIndex Blog",
+      "url": "https://www.llamaindex.ai/blog",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "RAG, agentes y procesamiento de documentos. El RSS daba 404; se usa el listado HTML. Mucho contenido comercial: filtrar.",
+      "metadata": {
+        "tags": [
+          "rag",
+          "agents",
+          "ai_apps"
+        ],
+        "subcategory": "ai_agents"
+      }
+    },
+    {
+      "source_key": "product_talk",
+      "name": "Product Talk",
+      "url": "https://www.producttalk.org/rss/",
+      "source_type": "RSS",
+      "category": "producto_discovery",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Continuous discovery y prácticas de producto (Teresa Torres).",
+      "metadata": {
+        "tags": [
+          "product_discovery",
+          "research",
+          "product"
+        ],
+        "subcategory": "product_discovery"
+      }
+    },
+    {
+      "source_key": "mind_the_product",
+      "name": "Mind the Product",
+      "url": "https://news.google.com/rss/search?q=site:mindtheproduct.com+when:30d&hl=en-US&gl=US&ceid=US:en",
+      "source_type": "RSS",
+      "category": "producto_discovery",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Artículos y podcast de Mind the Product sobre gestión de producto y discovery. Vía Google News (el sitio no publica feed); puede colar alguna oferta de empleo, filtrar al redactar.",
+      "metadata": {
+        "tags": [
+          "product",
+          "discovery",
+          "strategy"
+        ],
+        "subcategory": "product_management",
+        "via": "google_news"
+      }
+    },
+    {
+      "source_key": "intercom_blog_ai",
+      "name": "Intercom Blog",
+      "url": "https://www.intercom.com/blog/feed/",
+      "source_type": "RSS",
+      "category": "producto_discovery",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "IA aplicada a soporte, CX y producto; usar con filtros. Se cambió a su feed RSS.",
+      "metadata": {
+        "tags": [
+          "cx",
+          "ai_product",
+          "support"
+        ],
+        "subcategory": "ai_customer_experience"
+      }
+    },
+    {
+      "source_key": "torresburriel_blog",
+      "name": "Torresburriel Estudio Blog",
+      "url": "https://torresburriel.com/feed/",
+      "source_type": "RSS",
+      "category": "espanol",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Fuente en español sobre UX, research y accesibilidad. Se cambió al feed RSS (el listado HTML no extraía items).",
+      "metadata": {
+        "tags": [
+          "spanish",
+          "ux",
+          "research"
+        ],
+        "subcategory": "spanish_ux"
+      }
+    },
+    {
+      "source_key": "nng_ai_topic",
+      "name": "NN/g — Artificial Intelligence",
+      "url": "https://www.nngroup.com/topic/ai/",
+      "source_type": "HTML",
+      "category": "ux_de_ia",
+      "priority": "high",
+      "max_items": 4,
+      "is_active": true,
+      "notes": "Artículos de NN/g específicos sobre UX de IA (agentes, divulgación de IA, prototipado con IA). Complementa el feed general de NN/g.",
+      "metadata": {
+        "tags": [
+          "ai_ux",
+          "usability",
+          "research"
+        ],
+        "subcategory": "ai_ux"
+      }
+    },
+    {
+      "source_key": "shape_of_ai",
+      "name": "The Shape of AI",
+      "url": "https://www.shapeof.ai/",
+      "source_type": "HTML",
+      "category": "ux_de_ia",
+      "priority": "high",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Catálogo de patrones de UX para IA (inputs, nudges, templates, inpainting). Referencia de patrones que se actualiza con nuevos patrones.",
+      "metadata": {
+        "tags": [
+          "ai_ux",
+          "patterns",
+          "ui"
+        ],
+        "content_kind": "reference",
+        "subcategory": "ai_ux_patterns"
+      }
+    },
+    {
+      "source_key": "microsoft_hax_guidelines",
+      "name": "Microsoft HAX — Guidelines for Human-AI Interaction",
+      "url": "https://www.microsoft.com/en-us/haxtoolkit/ai-guidelines/",
+      "source_type": "HTML",
+      "category": "ux_de_ia",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Las 18 pautas de interacción humano-IA de Microsoft Research. Referencia estática (su feed lleva años sin actualizarse).",
+      "metadata": {
+        "tags": [
+          "ai_ux",
+          "guidelines",
+          "human_ai_interaction"
+        ],
+        "content_kind": "reference",
+        "subcategory": "ai_ux_patterns"
+      }
+    },
+    {
+      "source_key": "deque_blog",
+      "name": "Deque Blog",
+      "url": "https://www.deque.com/feed/",
+      "source_type": "RSS",
+      "category": "accesibilidad",
+      "priority": "high",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Blog de Deque (axe): accesibilidad práctica, testing y normativa.",
+      "metadata": {
+        "tags": [
+          "accessibility",
+          "testing",
+          "wcag"
+        ],
+        "subcategory": "accessibility"
+      }
+    },
+    {
+      "source_key": "webaim_blog",
+      "name": "WebAIM Blog",
+      "url": "https://webaim.org/blog/feed/",
+      "source_type": "RSS",
+      "category": "accesibilidad",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "WebAIM: investigación y guía práctica de accesibilidad web (incluye el informe WebAIM Million).",
+      "metadata": {
+        "tags": [
+          "accessibility",
+          "research",
+          "wcag"
+        ],
+        "subcategory": "accessibility"
+      }
+    },
+    {
+      "source_key": "adrian_roselli",
+      "name": "Adrian Roselli",
+      "url": "https://adrianroselli.com/feed",
+      "source_type": "RSS",
+      "category": "accesibilidad",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Practicante de referencia en accesibilidad y HTML semántico; análisis detallados de patrones y errores comunes.",
+      "metadata": {
+        "tags": [
+          "accessibility",
+          "aria",
+          "patterns"
+        ],
+        "subcategory": "accessibility"
+      }
+    },
+    {
+      "source_key": "brad_frost",
+      "name": "Brad Frost",
+      "url": "https://bradfrost.com/feed/feed.xml",
+      "source_type": "RSS",
+      "category": "ui_design_systems",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Autor de Atomic Design; design systems, componentes y design systems con IA.",
+      "metadata": {
+        "tags": [
+          "design_system",
+          "components",
+          "ai_design"
+        ],
+        "subcategory": "design_systems"
+      }
+    },
+    {
+      "source_key": "zeroheight_blog",
+      "name": "zeroheight Blog",
+      "url": "https://zeroheight.com/blog/",
+      "source_type": "HTML",
+      "category": "ui_design_systems",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Design systems en la práctica: gobernanza, documentación y efecto de la IA en los sistemas de diseño. Sin feed (404).",
+      "metadata": {
+        "tags": [
+          "design_system",
+          "governance",
+          "ai_design"
+        ],
+        "subcategory": "design_systems"
+      }
+    },
+    {
+      "source_key": "anthropic_engineering",
+      "name": "Anthropic Engineering",
+      "url": "https://www.anthropic.com/engineering",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "high",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Blog de ingeniería de Anthropic: agentes, evals, context engineering y construcción con Claude.",
+      "metadata": {
+        "tags": [
+          "claude",
+          "agents",
+          "evals",
+          "prompts"
+        ],
+        "subcategory": "prompts_ai_building"
+      }
+    },
+    {
+      "source_key": "claude_docs_evals",
+      "name": "Claude Docs — Define success criteria and build evaluations",
+      "url": "https://platform.claude.com/docs/en/test-and-evaluate/develop-tests",
+      "source_type": "HTML",
+      "category": "prompts_llms",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Guía oficial de Anthropic para definir criterios de éxito y construir evals de prompts.",
+      "metadata": {
+        "tags": [
+          "evals",
+          "prompts",
+          "claude"
+        ],
+        "content_kind": "reference",
+        "subcategory": "ai_evaluation"
+      }
+    },
+    {
+      "source_key": "simon_willison",
+      "name": "Simon Willison's Weblog",
+      "url": "https://simonwillison.net/atom/everything/",
+      "source_type": "RSS",
+      "category": "prompts_llms",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Practicante de referencia en construir con LLMs: prompting, herramientas, seguridad (prompt injection). Publica a diario; filtrar lo más aplicable.",
+      "metadata": {
+        "tags": [
+          "llm",
+          "prompts",
+          "ai_tools"
+        ],
+        "subcategory": "prompts_ai_building"
+      }
+    },
+    {
+      "source_key": "jakob_nielsen_substack",
+      "name": "Jakob Nielsen — UX Tigers",
+      "url": "https://jakobnielsenphd.substack.com/feed",
+      "source_type": "RSS",
+      "category": "ux_de_ia",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Jakob Nielsen escribe sobre UX de IA, usabilidad y el futuro del diseño; ideas de alto nivel con datos.",
+      "metadata": {
+        "tags": [
+          "ai_ux",
+          "usability",
+          "ux"
+        ],
+        "subcategory": "ai_ux"
+      }
+    },
+    {
+      "source_key": "lukew",
+      "name": "LukeW — Functioning Form",
+      "url": "http://feeds.feedburner.com/FunctioningForm",
+      "source_type": "RSS",
+      "category": "ux_de_ia",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Luke Wroblewski: diseño de interfaces para agentes e IA, patrones de interacción; posts breves y accionables.",
+      "metadata": {
+        "tags": [
+          "ai_ux",
+          "interaction_design",
+          "agents"
+        ],
+        "subcategory": "ai_ux"
+      }
+    },
+    {
+      "source_key": "olga_carreras",
+      "name": "Usable y Accesible (Olga Carreras)",
+      "url": "https://olgacarreras.blogspot.com/feeds/posts/default",
+      "source_type": "RSS",
+      "category": "espanol",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Referente en español sobre accesibilidad y normativa (WCAG, EN 301 549, lectura fácil).",
+      "metadata": {
+        "tags": [
+          "spanish",
+          "accessibility",
+          "wcag"
+        ],
+        "subcategory": "spanish_accessibility"
+      }
+    },
+    {
+      "source_key": "uifrommars",
+      "name": "UI from Mars",
+      "url": "https://uifrommars.com/feed/",
+      "source_type": "RSS",
+      "category": "espanol",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Blog en español sobre diseño UI/UX, carrera de diseño y diseño con IA.",
+      "metadata": {
+        "tags": [
+          "spanish",
+          "ui",
+          "ai_design"
+        ],
+        "subcategory": "spanish_ux"
+      }
+    },
+    {
+      "source_key": "measuringu",
+      "name": "MeasuringU",
+      "url": "https://measuringu.com/feed/",
+      "source_type": "RSS",
+      "category": "usabilidad_research",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Jeff Sauro: métricas de UX, SUS, benchmarks y métodos cuantitativos de usabilidad. Publica cada semana.",
+      "metadata": {
+        "tags": [
+          "ux_research",
+          "metrics",
+          "usability"
+        ]
+      }
+    },
+    {
+      "source_key": "level_access",
+      "name": "Level Access Blog",
+      "url": "https://www.levelaccess.com/feed/",
+      "source_type": "RSS",
+      "category": "accesibilidad",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Blog de Level Access: programas de accesibilidad, normativa (EAA, ADA) y métricas. Fuente de proveedor, pero autorizada en el sector.",
+      "metadata": {
+        "tags": [
+          "accessibility",
+          "compliance",
+          "wcag"
+        ]
+      }
+    },
+    {
+      "source_key": "eric_bailey",
+      "name": "Eric Bailey",
+      "url": "https://ericwbailey.website/feed/feed.xml",
+      "source_type": "RSS",
+      "category": "accesibilidad",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Practicante reconocido de accesibilidad y diseño inclusivo (ex-GitHub); ensayos sobre accesibilidad, CSS y diseño.",
+      "metadata": {
+        "tags": [
+          "accessibility",
+          "inclusive_design"
+        ]
+      }
+    },
+    {
+      "source_key": "lennys_newsletter",
+      "name": "Lenny's Newsletter",
+      "url": "https://www.lennysnewsletter.com/feed",
+      "source_type": "RSS",
+      "category": "producto_discovery",
+      "priority": "high",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Newsletter y podcast de producto de Lenny Rachitsky: discovery, growth y cómo los equipos usan IA.",
+      "metadata": {
+        "tags": [
+          "product",
+          "discovery",
+          "ai_product"
+        ]
+      }
+    },
+    {
+      "source_key": "svpg",
+      "name": "SVPG (Marty Cagan)",
+      "url": "https://www.svpg.com/feed/",
+      "source_type": "RSS",
+      "category": "producto_discovery",
+      "priority": "medium",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Silicon Valley Product Group: modelo de producto, discovery y equipos empoderados.",
+      "metadata": {
+        "tags": [
+          "product",
+          "discovery",
+          "strategy"
+        ]
+      }
+    },
+    {
+      "source_key": "uxables",
+      "name": "UXABLES",
+      "url": "https://www.uxables.com/feed/",
+      "source_type": "RSS",
+      "category": "espanol",
+      "priority": "low",
+      "max_items": 2,
+      "is_active": true,
+      "notes": "Consultora UX de Barcelona: usabilidad, métricas UX, sistemas de diseño y diseño con IA, en español. Publica cada 1–2 meses.",
+      "metadata": {
+        "tags": [
+          "spanish",
+          "ux",
+          "design_systems",
+          "ai_design"
+        ]
+      }
+    }
+  ],
+  "report": {
+    "checked_at": "2026-09-29",
+    "summary": {
+      "ok_feed": 34,
+      "ok_html": 20,
+      "stale": 0,
+      "empty": 0,
+      "broken": 0
+    },
+    "fixed": [
+      {
+        "source_key": "mind_the_product",
+        "old_url": "https://www.mindtheproduct.com/",
+        "new_url": "https://news.google.com/rss/search?q=site:mindtheproduct.com+when:30d&hl=en-US&gl=US&ceid=US:en",
+        "reason": "El listado HTML no trae fechas (0 frescas) y el sitio no tiene feed (/feed/ vacío); se usa Google News restringido al dominio."
+      }
+    ],
+    "deactivated": [],
+    "removed": [
+      {
+        "source_key": "wai_aria_apg",
+        "url": "https://www.w3.org/WAI/ARIA/apg/",
+        "reason": "Página de referencia sin contenido legible para el parser (0 items en cada chequeo); se eliminó."
+      },
+      {
+        "source_key": "apple_hig",
+        "url": "https://developer.apple.com/design/human-interface-guidelines",
+        "reason": "Solo renderiza con JavaScript y no hay alternativa legible; decisión tomada de dejarla fuera."
+      },
+      {
+        "source_key": "material_design",
+        "url": "https://m3.material.io/",
+        "reason": "Solo renderiza con JavaScript y no hay feed oficial; decisión tomada de dejarla fuera."
+      },
+      {
+        "source_key": "ux_booth",
+        "url": "https://www.uxbooth.com/feed/",
+        "reason": "Sitio cerrado: el dominio no responde."
+      },
+      {
+        "source_key": "balsamiq_blog",
+        "url": "https://balsamiq.com/blog/",
+        "reason": "Inactiva por criterio editorial (blog corporativo de wireframes con poco valor para el boletín)."
+      },
+      {
+        "source_key": "humanloop_blog",
+        "url": "https://humanloop.com/blog",
+        "reason": "Sin publicaciones desde mayo de 2025 (más de 12 meses) y su RSS devuelve 500."
+      },
+      {
+        "source_key": "weaviate_blog",
+        "url": "https://weaviate.io/blog/rss.xml",
+        "reason": "Fuera de alcance: contenido de bases vectoriales demasiado técnico para equipos de producto y diseño."
+      },
+      {
+        "source_key": "pinecone_blog",
+        "url": "https://www.pinecone.io/rss/",
+        "reason": "Fuera de alcance: contenido de bases vectoriales demasiado técnico para equipos de producto y diseño."
+      },
+      {
+        "source_key": "linear_changelog",
+        "url": "https://linear.app/rss/changelog.xml",
+        "reason": "Ruido: changelog de producto de un tercero, sin tips de UX aplicables."
+      },
+      {
+        "source_key": "notion_blog_ai",
+        "url": "https://www.notion.com/blog",
+        "reason": "Sin feed (404) y marketing de producto; inactiva por criterio editorial."
+      },
+      {
+        "source_key": "xataka_ai",
+        "url": "https://www.xataka.com/tag/inteligencia-artificial/rss2.xml",
+        "reason": "Noticias generales de IA, no tips accionables; decisión tomada de dejarla fuera de este boletín."
+      },
+      {
+        "source_key": "thinkwithgoogle_latam",
+        "url": "https://www.thinkwithgoogle.com/intl/es-419/",
+        "reason": "Redirige a business.google.com y su RSS lleva más de 250 días sin publicar."
+      },
+      {
+        "source_key": "platzi_ai_blog",
+        "url": "https://platzi.com/blog/",
+        "reason": "El parser no extrae contenido legible y el blog es mayormente promoción de cursos."
+      }
+    ],
+    "added": [
+      {
+        "source_key": "measuringu",
+        "url": "https://measuringu.com/feed/",
+        "reason": "Jeff Sauro: métricas de UX, SUS, benchmarks y métodos cuantitativos de usabilidad. Publica cada semana."
+      },
+      {
+        "source_key": "level_access",
+        "url": "https://www.levelaccess.com/feed/",
+        "reason": "Blog de Level Access: programas de accesibilidad, normativa (EAA, ADA) y métricas. Fuente de proveedor, pero autorizada en el sector."
+      },
+      {
+        "source_key": "eric_bailey",
+        "url": "https://ericwbailey.website/feed/feed.xml",
+        "reason": "Practicante reconocido de accesibilidad y diseño inclusivo (ex-GitHub); ensayos sobre accesibilidad, CSS y diseño."
+      },
+      {
+        "source_key": "lennys_newsletter",
+        "url": "https://www.lennysnewsletter.com/feed",
+        "reason": "Newsletter y podcast de producto de Lenny Rachitsky: discovery, growth y cómo los equipos usan IA."
+      },
+      {
+        "source_key": "svpg",
+        "url": "https://www.svpg.com/feed/",
+        "reason": "Silicon Valley Product Group: modelo de producto, discovery y equipos empoderados."
+      },
+      {
+        "source_key": "uxables",
+        "url": "https://www.uxables.com/feed/",
+        "reason": "Consultora UX de Barcelona: usabilidad, métricas UX, sistemas de diseño y diseño con IA, en español. Publica cada 1–2 meses."
+      }
+    ],
+    "duplicates_removed": 0,
+    "notes": [
+      "61 fuentes: 49 activas y 12 inactivas (46 originales + 15 nuevas).",
+      "Resumen del chequeo final: anthropic_news falló por un error de red transitorio y respondió ok_html (25 items) al volver a chequearla; se cuenta como ok_html.",
+      "microsoft_prompt_engineering devolvió 429 (rate limit de learn.microsoft.com) en el chequeo final tras varias peticiones seguidas; en el primer chequeo respondió 200 con la URL nueva. Se mantiene activa; vigilar en producción.",
+      "wai_aria_apg queda 'empty' para el parser de links pero la página es estática y carga completa (200); se mantiene activa como referencia (metadata.content_kind = reference).",
+      "Las guías oficiales de prompting (OpenAI, Anthropic, Google, Microsoft, Prompting Guide, Learn Prompting), WCAG 2.2, Shape of AI, Microsoft HAX y la guía de evals de Claude se marcan como content_kind = reference: son documentos evergreen, no listados de artículos.",
+      "Apple HIG y Material Design 3 requieren JavaScript y no entregan contenido al parser; quedan inactivas. Google PAIR Guidebook se evaluó como fuente nueva pero también requiere JavaScript (y su feed lleva ~8 años sin publicar), así que no se añadió.",
+      "Evaluadas y descartadas por inactividad (>90 días sin publicar): TPGi, The A11Y Project, feed de UXmatters, Chip Huyen, Google Design, Microsoft Design, Sara Soueidan, UXpañol, web.dev. No Solo Usabilidad se descartó por codificación rota y contenido de archivo.",
+      "Maze, User Interviews, LlamaIndex y zeroheight no tienen feed: el HTML extrae artículos mezclados con páginas de producto; conviene filtrar por URL /blog/ si el ruido molesta.",
+      "Xataka IA se desactivó por criterio editorial (noticias generales de IA, no tips accionables); reactivar si se quiere una señal de actualidad en español.",
+      "Ronda 2 (2026-09-29): historial previo — 24 URLs arregladas, 15 fuentes añadidas y 5 desactivadas en la ronda 1 (detalle en el historial de git).",
+      "Ronda 2: se consolidaron 25 categorías finas en 7 pilares (usabilidad_research, accesibilidad, ui_design_systems, ux_de_ia, prompts_llms, producto_discovery, espanol); la categoría anterior queda en metadata.subcategory.",
+      "Ronda 2: se eliminaron 13 fuentes inactivas o sin contenido legible (ver report.removed), incluidas Apple HIG, Material 3 y Xataka por decisión tomada.",
+      "Ronda 2: Mind the Product pasa a Google News (site:mindtheproduct.com) porque el HTML no tiene fechas y el sitio no publica feed; Maze y User Interviews siguen en HTML porque Google News casi no los indexa (0–1 items).",
+      "Ronda 2: cobertura final (30 días) — usabilidad_research 8/8 · 28 frescas; accesibilidad 7/7 · 17; ui_design_systems 8/8 · 67; ux_de_ia 5/5 · 18; prompts_llms 17/17 · 72; producto_discovery 5/5 · 58; espanol 4/4 · 6. claude_docs_evals tuvo un timeout puntual en coverage pero respondió ok_html en check-sources.",
+      "Ronda 2: las guías oficiales (OpenAI, Anthropic, Google, Microsoft, Prompting Guide, Learn Prompting, guía de evals de Claude, WCAG 2.2, Shape of AI, HAX) siguen como content_kind = reference y no cuentan para las metas de frescura.",
+      "Ronda 2: evaluadas y descartadas — TPGi, GOV.UK accesibilidad y Scott O'Hara (sin publicar en 4+ meses), Rosenfeld Media (sobre todo promoción de eventos), Hiberus (agencia, contenido fuera de tema), Domestika (ilustración, fuera de tema), feed de Eugene Yan (última entrada en junio; se mantiene el HTML), Google News de Anthropic Engineering (desactualizado).",
+      "Ronda 2: español es el pilar más justo (6 frescas, meta 4); Uxables publica cada 1–2 meses y aporta profundidad más que frescura."
+    ]
+  }
+}

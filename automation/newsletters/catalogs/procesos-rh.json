@@ -1,0 +1,3917 @@
+{
+  "newsletter": {
+    "id": "procesos-rh",
+    "name": "Entendimiento de Procesos RH",
+    "description": "Explicador semanal de un proceso de RR. HH. (cómo funciona, buenas prácticas y métricas) para que los equipos de producto y UX entiendan el dominio para el que construyen.",
+    "schedule_label": "Lunes · 8:00 a. m. (Bogotá)",
+    "slack_channel_id": "C0A34HW4HGR",
+    "model": "claude-haiku-4-5-20251001"
+  },
+  "sources": [
+    {
+      "source_key": "aihr_hr_processes",
+      "name": "AIHR · Hr processes",
+      "url": "https://www.aihr.com/blog/hr-processes/",
+      "source_type": "HTML",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guías de procesos core de RRHH (reclutamiento, desempeño, compensación, etc.).",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 1
+      }
+    },
+    {
+      "source_key": "leapsome_core_hr_processes",
+      "name": "Leapsome · Core hr processes",
+      "url": "https://www.leapsome.com/blog/core-hr-processes",
+      "source_type": "HTML",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Visión de 8 procesos de HR y su impacto en employee experience.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH",
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 2
+      }
+    },
+    {
+      "source_key": "bamboohr_human_resource_processes",
+      "name": "BambooHR · Human resource processes",
+      "url": "https://www.bamboohr.com/blog/human-resource-processes",
+      "source_type": "HTML",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Artículos sobre 10 procesos de HR; buenos mapas paso a paso.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 3
+      }
+    },
+    {
+      "source_key": "lattice_goals_and_okrs",
+      "name": "Lattice · Hub goals y OKRs",
+      "url": "https://lattice.com/insights/goals-and-okrs",
+      "source_type": "HTML",
+      "category": "OKRS",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Hub de contenidos sobre objetivos, OKRs y gestión de metas.",
+      "metadata": {
+        "processes": [
+          "OKRS"
+        ],
+        "content_kind": "blog_listing",
+        "language": "en",
+        "legacy_table_id": 5
+      }
+    },
+    {
+      "source_key": "synergita_blog",
+      "name": "Synergita · Blog OKRs y desempeño",
+      "url": "https://www.synergita.com/blog/feed/",
+      "source_type": "RSS",
+      "category": "OKRS",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Blog con foco en OKRs y performance reviews (rituales, cadencias, ejemplos).",
+      "metadata": {
+        "processes": [
+          "OKRS"
+        ],
+        "content_kind": "blog_listing",
+        "language": "en",
+        "legacy_table_id": 6
+      }
+    },
+    {
+      "source_key": "buk_blog",
+      "name": "Buk · Blog RR. HH.",
+      "url": "https://www.buk.pe/blog/rss.xml",
+      "source_type": "RSS",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Blog de RRHH: desempeño, reclutamiento, encuestas, capacitaciones, etc.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "blog_listing",
+        "language": "es",
+        "legacy_table_id": 8
+      }
+    },
+    {
+      "source_key": "factorial_blog",
+      "name": "Factorial HR · Blog RR. HH.",
+      "url": "https://factorial.mx/blog/feed/",
+      "source_type": "RSS",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Contenido sobre evaluaciones 360, clima, nómina y formación en español.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "blog_listing",
+        "language": "es",
+        "legacy_table_id": 9
+      }
+    },
+    {
+      "source_key": "bizneo_blog",
+      "name": "Bizneo HR · Blog RR. HH.",
+      "url": "https://www.bizneo.com/blog/feed/",
+      "source_type": "RSS",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Selección, onboarding, clima y formación con enfoque muy práctico.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO"
+        ],
+        "content_kind": "blog_listing",
+        "language": "es",
+        "legacy_table_id": 10
+      }
+    },
+    {
+      "source_key": "sesamehr_blog",
+      "name": "SesameHR · Blog RR. HH. (México)",
+      "url": "https://www.sesamehr.mx/feed",
+      "source_type": "RSS",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Gestión de talento, desarrollo profesional y cultura organizacional.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "blog_listing",
+        "language": "es",
+        "legacy_table_id": 11
+      }
+    },
+    {
+      "source_key": "rankmi_nom_035",
+      "name": "Rankmi · Nom 035",
+      "url": "https://www.rankmi.com/blog/nom-035",
+      "source_type": "HTML",
+      "category": "NOM035_MX",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía detallada de implementación de NOM-035 con foco en encuestas.",
+      "metadata": {
+        "processes": [
+          "NOM035_MX",
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "legacy_table_id": 13
+      }
+    },
+    {
+      "source_key": "wellhub_nom_035",
+      "name": "Wellhub · Nom 035",
+      "url": "https://wellhub.com/es-mx/blog/beneficios-y-programas-de-bienestar/nom-035/",
+      "source_type": "HTML",
+      "category": "NOM035_MX",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Visión NOM-035 desde bienestar, beneficios y programas de salud mental.",
+      "metadata": {
+        "processes": [
+          "NOM035_MX",
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "legacy_table_id": 14
+      }
+    },
+    {
+      "source_key": "en_buena_compania_blog",
+      "name": "En buena compañía · Blog",
+      "url": "https://www.enbuenacompania.com/feed/",
+      "source_type": "RSS",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Gestión de personas, liderazgo y cultura organizacional.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "blog_listing",
+        "language": "es",
+        "legacy_table_id": 17
+      }
+    },
+    {
+      "source_key": "angel_largo_contenido",
+      "name": "Ángel Largo · Contenido",
+      "url": "https://angellargo.com/contenido/feed",
+      "source_type": "RSS",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Contenido sobre RRHH, cultura, liderazgo y transformación.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "blog_listing",
+        "language": "es",
+        "legacy_table_id": 18
+      }
+    },
+    {
+      "source_key": "talentclue_blog",
+      "name": "Talent Clue · Blog reclutamiento",
+      "url": "https://talentclue.com/feed/",
+      "source_type": "RSS",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Inbound recruiting, employer branding y procesos de selección.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO"
+        ],
+        "content_kind": "blog_listing",
+        "language": "es",
+        "legacy_table_id": 19
+      }
+    },
+    {
+      "source_key": "revista_rrhh_blog",
+      "name": "Revista Recursos Humanos · Portada",
+      "url": "https://revistarecursoshumanos.com/feed/",
+      "source_type": "RSS",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Artículos variados sobre RRHH, desarrollo y gestión del talento.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "blog_listing",
+        "language": "es",
+        "legacy_table_id": 20
+      }
+    },
+    {
+      "source_key": "ximo_salas_blog",
+      "name": "Ximo Salas · Blog",
+      "url": "https://ximosalas.com/feed/",
+      "source_type": "RSS",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "low",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Gestión de personas, talento y transformación en organizaciones.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "blog_listing",
+        "language": "es",
+        "legacy_table_id": 23
+      }
+    },
+    {
+      "source_key": "aihr_human_resources_functions",
+      "name": "AIHR · Human resources functions",
+      "url": "https://www.aihr.com/blog/human-resources-functions/",
+      "source_type": "HTML",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Funciones principales de HR: planificación, reclutamiento, employee relations, compensación, desempeño, L&D y compliance.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 28
+      }
+    },
+    {
+      "source_key": "aihr_human_resources_hr_pillars",
+      "name": "AIHR · Human resources hr pillars",
+      "url": "https://www.aihr.com/blog/human-resources-hr-pillars/",
+      "source_type": "HTML",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Pilares de HR y fundamentos para estructurar estrategia de personas.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 29
+      }
+    },
+    {
+      "source_key": "aihr_hr_life_cycle",
+      "name": "AIHR · Hr life cycle",
+      "url": "https://www.aihr.com/blog/hr-life-cycle/",
+      "source_type": "HTML",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Ciclo de vida de HR desde estrategia y diseño organizacional hasta onboarding y offboarding.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 30
+      }
+    },
+    {
+      "source_key": "aihr_employee_life_cycle",
+      "name": "AIHR · Employee life cycle",
+      "url": "https://www.aihr.com/blog/employee-life-cycle/",
+      "source_type": "HTML",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Employee lifecycle y experiencia por etapa del colaborador.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 31
+      }
+    },
+    {
+      "source_key": "bamboohr_people_operations",
+      "name": "BambooHR · People operations",
+      "url": "https://www.bamboohr.com/resources/hr-glossary/people-operations",
+      "source_type": "HTML",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Diferencia entre HR tradicional y people operations.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 33
+      }
+    },
+    {
+      "source_key": "aihr_hr_service_delivery",
+      "name": "AIHR · Hr service delivery",
+      "url": "https://www.aihr.com/blog/hr-service-delivery/",
+      "source_type": "HTML",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Modelo de prestación de servicios de HR y operación consistente.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH",
+          "HR_OPERATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 34
+      }
+    },
+    {
+      "source_key": "aihr_talent_acquisition",
+      "name": "AIHR · Talent acquisition",
+      "url": "https://www.aihr.com/blog/talent-acquisition/",
+      "source_type": "HTML",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía integral de talent acquisition.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 35
+      }
+    },
+    {
+      "source_key": "aihr_recruiting_strategies",
+      "name": "AIHR · Recruiting strategies",
+      "url": "https://www.aihr.com/blog/recruiting-strategies/",
+      "source_type": "HTML",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Estrategias prácticas para atraer y contratar talento.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 36
+      }
+    },
+    {
+      "source_key": "aihr_recruiting_metrics",
+      "name": "AIHR · Recruiting metrics",
+      "url": "https://www.aihr.com/blog/recruiting-metrics/",
+      "source_type": "HTML",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Métricas de reclutamiento y eficiencia del funnel.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 37
+      }
+    },
+    {
+      "source_key": "aihr_selection_process_practical_guide",
+      "name": "AIHR · Selection process practical guide",
+      "url": "https://www.aihr.com/blog/selection-process-practical-guide/",
+      "source_type": "HTML",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Métodos de selección para evaluar candidatos.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 38
+      }
+    },
+    {
+      "source_key": "bamboohr_state_of_hr_2024",
+      "name": "BambooHR · State of hr 2024",
+      "url": "https://www.bamboohr.com/resources/guides/state-of-hr-2024",
+      "source_type": "HTML",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Reporte sobre retos de talent acquisition y onboarding.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO",
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "report",
+        "language": "en",
+        "legacy_table_id": 39
+      }
+    },
+    {
+      "source_key": "cultureamp_candidate_experience_survey_questions",
+      "name": "Culture Amp · Candidate experience survey questions",
+      "url": "https://www.cultureamp.com/blog/candidate-experience-survey-questions",
+      "source_type": "HTML",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Candidate experience y señales para mejorar el proceso.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 40
+      }
+    },
+    {
+      "source_key": "lattice_library",
+      "name": "Lattice · Library",
+      "url": "https://lattice.com/library",
+      "source_type": "HTML",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "medium",
+      "max_items": 3,
+      "is_active": true,
+      "notes": "Biblioteca con recursos de hiring, onboarding, performance y engagement.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO"
+        ],
+        "content_kind": "blog_listing",
+        "language": "en",
+        "legacy_table_id": 41
+      }
+    },
+    {
+      "source_key": "bizneo_seleccion_de_personal",
+      "name": "Bizneo HR · Seleccion de personal",
+      "url": "https://www.bizneo.com/blog/seleccion-de-personal/",
+      "source_type": "HTML",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía en español sobre selección de personal.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "legacy_table_id": 42
+      }
+    },
+    {
+      "source_key": "aihr_employee_onboarding",
+      "name": "AIHR · Employee onboarding",
+      "url": "https://www.aihr.com/blog/employee-onboarding/",
+      "source_type": "HTML",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía específica de employee onboarding, workflows y 30-60-90.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 43
+      }
+    },
+    {
+      "source_key": "aihr_ai_in_employee_onboarding",
+      "name": "AIHR · Ai in employee onboarding",
+      "url": "https://www.aihr.com/blog/ai-in-employee-onboarding/",
+      "source_type": "HTML",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Casos de uso de IA en employee onboarding.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 44
+      }
+    },
+    {
+      "source_key": "aihr_onboarding_process_examples",
+      "name": "AIHR · Onboarding process examples",
+      "url": "https://www.aihr.com/blog/onboarding-process-examples/",
+      "source_type": "HTML",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Ejemplos de proceso de onboarding para nuevos colaboradores.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 45
+      }
+    },
+    {
+      "source_key": "aihr_remote_onboarding",
+      "name": "AIHR · Remote onboarding",
+      "url": "https://www.aihr.com/blog/remote-onboarding/",
+      "source_type": "HTML",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía de onboarding remoto y checklist operativo.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 46
+      }
+    },
+    {
+      "source_key": "aihr_onboarding_metrics",
+      "name": "AIHR · Onboarding metrics",
+      "url": "https://www.aihr.com/blog/onboarding-metrics/",
+      "source_type": "HTML",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Métricas de onboarding para medir experiencia, velocidad y productividad.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 47
+      }
+    },
+    {
+      "source_key": "aihr_new_hire_onboarding_survey_questions",
+      "name": "AIHR · New hire onboarding survey questions",
+      "url": "https://www.aihr.com/blog/new-hire-onboarding-survey-questions/",
+      "source_type": "HTML",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Preguntas de encuesta para evaluar el onboarding de nuevos colaboradores.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 48
+      }
+    },
+    {
+      "source_key": "bamboohr_onboarding_benchmarking",
+      "name": "BambooHR · Onboarding benchmarking",
+      "url": "https://www.bamboohr.com/resources/guides/onboarding-benchmarking",
+      "source_type": "HTML",
+      "category": "ONBOARDING",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Reporte de benchmarking de onboarding y tendencias.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "report",
+        "language": "en",
+        "legacy_table_id": 49
+      }
+    },
+    {
+      "source_key": "bamboohr_bamboohr_state_of_hr_2024_pdf",
+      "name": "BambooHR · Bamboohr state of hr 2024",
+      "url": "https://www.bamboohr.com/resources/assets/ebooks/bamboohr-state-of-hr-2024.pdf",
+      "source_type": "HTML",
+      "category": "ONBOARDING",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Reporte con datos sobre onboarding, training y employee experience.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "pdf",
+        "language": "en",
+        "legacy_table_id": 50,
+        "document_type": "report"
+      }
+    },
+    {
+      "source_key": "cultureamp_30_60_90_day_plan",
+      "name": "Culture Amp · 30 60 90 day plan",
+      "url": "https://www.cultureamp.com/blog/30-60-90-day-plan",
+      "source_type": "HTML",
+      "category": "ONBOARDING",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Plan 30-60-90 para nuevos colaboradores y roles.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 52
+      }
+    },
+    {
+      "source_key": "aihr_what_is_performance_management",
+      "name": "AIHR · What is performance management",
+      "url": "https://www.aihr.com/blog/what-is-performance-management/",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía completa de performance management.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 53
+      }
+    },
+    {
+      "source_key": "aihr_continuous_performance_management",
+      "name": "AIHR · Continuous performance management",
+      "url": "https://www.aihr.com/blog/continuous-performance-management/",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Modelo de continuous performance management.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 54
+      }
+    },
+    {
+      "source_key": "aihr_continuous_feedback",
+      "name": "AIHR · Continuous feedback",
+      "url": "https://www.aihr.com/blog/continuous-feedback/",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía sobre continuous feedback y herramientas.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 55
+      }
+    },
+    {
+      "source_key": "aihr_performance_management_framework",
+      "name": "AIHR · Performance management framework",
+      "url": "https://www.aihr.com/blog/performance-management-framework/",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Framework para diseñar performance management.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 56
+      }
+    },
+    {
+      "source_key": "bamboohr_definitive_guide_performance_management",
+      "name": "BambooHR · Definitive guide performance management",
+      "url": "https://www.bamboohr.com/resources/guides/definitive-guide-performance-management",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía definitiva de performance management.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 57
+      }
+    },
+    {
+      "source_key": "lattice_what_is_performance_management",
+      "name": "Lattice · What is performance management",
+      "url": "https://lattice.com/articles/what-is-performance-management",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Performance management y continuous feedback.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 58
+      }
+    },
+    {
+      "source_key": "lattice_performance_reviews_vs_continuous_feedback",
+      "name": "Lattice · Performance reviews vs continuous feedback",
+      "url": "https://lattice.com/articles/performance-reviews-vs-continuous-feedback",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Comparación entre performance reviews y continuous feedback.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 59
+      }
+    },
+    {
+      "source_key": "lattice_how_to_implement_a_continuous_feedback_cycle",
+      "name": "Lattice · How to implement a continuous feedback cycle",
+      "url": "https://lattice.com/articles/how-to-implement-a-continuous-feedback-cycle",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Cómo implementar un ciclo de feedback continuo.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 60
+      }
+    },
+    {
+      "source_key": "lattice_top_strategies_for_managing_employee_performance",
+      "name": "Lattice · Top strategies for managing employee performance",
+      "url": "https://lattice.com/articles/top-strategies-for-managing-employee-performance",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Estrategias para gestionar desempeño de empleados.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 61
+      }
+    },
+    {
+      "source_key": "lattice_areas_of_improvement",
+      "name": "Lattice · Areas of improvement",
+      "url": "https://lattice.com/articles/areas-of-improvement",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Áreas de mejora y cómo managers pueden apoyar desarrollo.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 62
+      }
+    },
+    {
+      "source_key": "aihr_employee_development",
+      "name": "AIHR · Employee development",
+      "url": "https://www.aihr.com/blog/employee-development/",
+      "source_type": "HTML",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Métodos y estrategias de employee development.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 63
+      }
+    },
+    {
+      "source_key": "aihr_learning_and_development",
+      "name": "AIHR · Learning and development",
+      "url": "https://www.aihr.com/blog/learning-and-development/",
+      "source_type": "HTML",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía de learning and development.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 64
+      }
+    },
+    {
+      "source_key": "aihr_upskilling",
+      "name": "AIHR · Upskilling",
+      "url": "https://www.aihr.com/blog/upskilling/",
+      "source_type": "HTML",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Upskilling y desarrollo de capacidades.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 65
+      }
+    },
+    {
+      "source_key": "aihr_reskilling",
+      "name": "AIHR · Reskilling",
+      "url": "https://www.aihr.com/blog/reskilling/",
+      "source_type": "HTML",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Reskilling y preparación de la fuerza laboral.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 66
+      }
+    },
+    {
+      "source_key": "aihr_skills_gap_analysis",
+      "name": "AIHR · Skills gap analysis",
+      "url": "https://www.aihr.com/blog/skills-gap-analysis/",
+      "source_type": "HTML",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Análisis de skills gap para planear desarrollo.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 67
+      }
+    },
+    {
+      "source_key": "leapsome_employee_development_plan_examples",
+      "name": "Leapsome · Employee development plan examples",
+      "url": "https://www.leapsome.com/blog/employee-development-plan-examples",
+      "source_type": "HTML",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Ejemplos de employee development plans.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 68
+      }
+    },
+    {
+      "source_key": "leapsome_employee_development_methods",
+      "name": "Leapsome · Employee development methods",
+      "url": "https://www.leapsome.com/blog/employee-development-methods",
+      "source_type": "HTML",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Métodos de employee development de alto impacto.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 69
+      }
+    },
+    {
+      "source_key": "cultureamp_employee_development_guide",
+      "name": "Culture Amp · Employee development guide",
+      "url": "https://www.cultureamp.com/blog/employee-development-guide",
+      "source_type": "HTML",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Employee development y crecimiento.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 70
+      }
+    },
+    {
+      "source_key": "cultureamp_employee_engagement_guide",
+      "name": "Culture Amp · Employee engagement guide",
+      "url": "https://www.cultureamp.com/blog/employee-engagement-guide",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía completa de employee engagement.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 72
+      }
+    },
+    {
+      "source_key": "cultureamp_how_to_improve_employee_engagement",
+      "name": "Culture Amp · How to improve employee engagement",
+      "url": "https://www.cultureamp.com/blog/how-to-improve-employee-engagement",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Cómo mejorar engagement con acciones data-driven.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 73
+      }
+    },
+    {
+      "source_key": "cultureamp_employee_engagement_best_practices",
+      "name": "Culture Amp · Employee engagement best practices",
+      "url": "https://www.cultureamp.com/blog/employee-engagement-best-practices",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Buenas prácticas de employee engagement.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 74
+      }
+    },
+    {
+      "source_key": "cultureamp_benefits_of_employee_engagement_survey",
+      "name": "Culture Amp · Benefits of employee engagement survey",
+      "url": "https://www.cultureamp.com/blog/benefits-of-employee-engagement-survey",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Beneficios de encuestas de engagement.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 75
+      }
+    },
+    {
+      "source_key": "cultureamp_employee_survey_guide",
+      "name": "Culture Amp · Employee survey guide",
+      "url": "https://www.cultureamp.com/blog/employee-survey-guide",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía de employee surveys para engagement y decisiones.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO",
+          "PEOPLE_ANALYTICS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 76
+      }
+    },
+    {
+      "source_key": "cultureamp_employee_experience_guide",
+      "name": "Culture Amp · Employee experience guide",
+      "url": "https://www.cultureamp.com/blog/employee-experience-guide",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía de employee experience y listening.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO",
+          "CULTURA_Y_DEI"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 77
+      }
+    },
+    {
+      "source_key": "cultureamp_build_employee_experience_strategy",
+      "name": "Culture Amp · Build employee experience strategy",
+      "url": "https://www.cultureamp.com/blog/build-employee-experience-strategy",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Estrategia de employee experience y surveys por etapa.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO",
+          "CULTURA_Y_DEI"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 78
+      }
+    },
+    {
+      "source_key": "aihr_ai_in_employee_engagement",
+      "name": "AIHR · Ai in employee engagement",
+      "url": "https://www.aihr.com/blog/ai-in-employee-engagement/",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Casos de uso de IA en employee engagement.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 79
+      }
+    },
+    {
+      "source_key": "workhuman_how_to_improve_employee_engagement",
+      "name": "Workhuman · How to improve employee engagement",
+      "url": "https://www.workhuman.com/blog/how-to-improve-employee-engagement/",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Cómo mejorar employee engagement.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 80
+      }
+    },
+    {
+      "source_key": "workhuman_employee_engagement_models",
+      "name": "Workhuman · Employee engagement models",
+      "url": "https://www.workhuman.com/blog/employee-engagement-models/",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Modelos de employee engagement.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 81
+      }
+    },
+    {
+      "source_key": "workhuman_employee_wellbeing",
+      "name": "Workhuman · Employee wellbeing",
+      "url": "https://www.workhuman.com/blog/employee-wellbeing/",
+      "source_type": "HTML",
+      "category": "SALUD_Y_BIENESTAR",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía de employee wellbeing y reconocimiento.",
+      "metadata": {
+        "processes": [
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 82
+      }
+    },
+    {
+      "source_key": "workhuman_employee_wellbeing_and_performance",
+      "name": "Workhuman · Employee wellbeing and performance",
+      "url": "https://www.workhuman.com/blog/employee-wellbeing-and-performance/",
+      "source_type": "HTML",
+      "category": "SALUD_Y_BIENESTAR",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Relación entre wellbeing, reconocimiento y desempeño.",
+      "metadata": {
+        "processes": [
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 83
+      }
+    },
+    {
+      "source_key": "workhuman_how_recognition_improves_wellbeing",
+      "name": "Workhuman · How recognition improves wellbeing",
+      "url": "https://www.workhuman.com/blog/how-recognition-improves-wellbeing/",
+      "source_type": "HTML",
+      "category": "SALUD_Y_BIENESTAR",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Reconocimiento y wellbeing.",
+      "metadata": {
+        "processes": [
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 84
+      }
+    },
+    {
+      "source_key": "cultureamp_employee_wellbeing_survey_questions",
+      "name": "Culture Amp · Employee wellbeing survey questions",
+      "url": "https://www.cultureamp.com/blog/employee-wellbeing-survey-questions",
+      "source_type": "HTML",
+      "category": "SALUD_Y_BIENESTAR",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Preguntas para medir wellbeing.",
+      "metadata": {
+        "processes": [
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 85
+      }
+    },
+    {
+      "source_key": "cultureamp_employee_experience_engagement_and_wellbeing_definitions",
+      "name": "Culture Amp · Employee experience engagement and wellbeing definitions",
+      "url": "https://www.cultureamp.com/blog/employee-experience-engagement-and-wellbeing-definitions",
+      "source_type": "HTML",
+      "category": "SALUD_Y_BIENESTAR",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Diferencias entre employee experience, engagement y wellbeing.",
+      "metadata": {
+        "processes": [
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 86
+      }
+    },
+    {
+      "source_key": "aihr_employee_wellbeing_metrics",
+      "name": "AIHR · Employee wellbeing metrics",
+      "url": "https://www.aihr.com/blog/employee-wellbeing-metrics/",
+      "source_type": "HTML",
+      "category": "SALUD_Y_BIENESTAR",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Employee wellbeing desde HR.",
+      "metadata": {
+        "processes": [
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 87
+      }
+    },
+    {
+      "source_key": "lattice_okr_101",
+      "name": "Lattice · Okr 101",
+      "url": "https://lattice.com/articles/okr-101",
+      "source_type": "HTML",
+      "category": "OKRS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Objetivos y OKRs para equipos.",
+      "metadata": {
+        "processes": [
+          "OKRS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 91
+      }
+    },
+    {
+      "source_key": "leapsome_okr_examples",
+      "name": "Leapsome · Okr examples",
+      "url": "https://www.leapsome.com/blog/okr-examples",
+      "source_type": "HTML",
+      "category": "OKRS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Ejemplos de OKRs.",
+      "metadata": {
+        "processes": [
+          "OKRS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 92
+      }
+    },
+    {
+      "source_key": "leapsome_how_to_write_okrs",
+      "name": "Leapsome · How to write okrs",
+      "url": "https://www.leapsome.com/blog/how-to-write-okrs",
+      "source_type": "HTML",
+      "category": "OKRS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Buenas prácticas para OKRs.",
+      "metadata": {
+        "processes": [
+          "OKRS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 93
+      }
+    },
+    {
+      "source_key": "aihr_hr_okrs",
+      "name": "AIHR · Hr okrs",
+      "url": "https://www.aihr.com/blog/hr-okrs/",
+      "source_type": "HTML",
+      "category": "OKRS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Objetivos de HR y conexión con métricas.",
+      "metadata": {
+        "processes": [
+          "OKRS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 94
+      }
+    },
+    {
+      "source_key": "bamboohr_first_90_days",
+      "name": "BambooHR · First 90 days",
+      "url": "https://www.bamboohr.com/resources/guides/first-90-days",
+      "source_type": "HTML",
+      "category": "OKRS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Roadmap 90 días con quick wins y objetivos.",
+      "metadata": {
+        "processes": [
+          "OKRS",
+          "HR_OPERATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 95
+      }
+    },
+    {
+      "source_key": "aihr_succession_planning",
+      "name": "AIHR · Succession planning",
+      "url": "https://www.aihr.com/blog/succession-planning/",
+      "source_type": "HTML",
+      "category": "SUCESION_Y_MOVILIDAD",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía de succession planning.",
+      "metadata": {
+        "processes": [
+          "SUCESION_Y_MOVILIDAD"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 96
+      }
+    },
+    {
+      "source_key": "aihr_what_is_talent_management",
+      "name": "AIHR · What is talent management",
+      "url": "https://www.aihr.com/blog/what-is-talent-management/",
+      "source_type": "HTML",
+      "category": "SUCESION_Y_MOVILIDAD",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Talent management y prácticas como succession, onboarding y development.",
+      "metadata": {
+        "processes": [
+          "SUCESION_Y_MOVILIDAD"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 97
+      }
+    },
+    {
+      "source_key": "aihr_talent_management_metrics",
+      "name": "AIHR · Talent management metrics",
+      "url": "https://www.aihr.com/blog/talent-management-metrics/",
+      "source_type": "HTML",
+      "category": "SUCESION_Y_MOVILIDAD",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Métricas para talent management, desarrollo y retención.",
+      "metadata": {
+        "processes": [
+          "SUCESION_Y_MOVILIDAD",
+          "PEOPLE_ANALYTICS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 98
+      }
+    },
+    {
+      "source_key": "leapsome_succession_planning",
+      "name": "Leapsome · Succession planning",
+      "url": "https://www.leapsome.com/blog/succession-planning",
+      "source_type": "HTML",
+      "category": "SUCESION_Y_MOVILIDAD",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía práctica de succession planning.",
+      "metadata": {
+        "processes": [
+          "SUCESION_Y_MOVILIDAD"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 99
+      }
+    },
+    {
+      "source_key": "leapsome_9_box_grid",
+      "name": "Leapsome · 9 box grid",
+      "url": "https://www.leapsome.com/blog/9-box-grid",
+      "source_type": "HTML",
+      "category": "SUCESION_Y_MOVILIDAD",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "9-box grid para talento y sucesión.",
+      "metadata": {
+        "processes": [
+          "SUCESION_Y_MOVILIDAD"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 100
+      }
+    },
+    {
+      "source_key": "lattice_performance_management_vs_talent_management",
+      "name": "Lattice · Performance management vs talent management",
+      "url": "https://lattice.com/articles/performance-management-vs-talent-management",
+      "source_type": "HTML",
+      "category": "SUCESION_Y_MOVILIDAD",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Conexión entre performance, talent management y succession.",
+      "metadata": {
+        "processes": [
+          "SUCESION_Y_MOVILIDAD"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 101
+      }
+    },
+    {
+      "source_key": "aihr_head_of_talent_management",
+      "name": "AIHR · Head of talent management",
+      "url": "https://www.aihr.com/blog/head-of-talent-management/",
+      "source_type": "HTML",
+      "category": "SUCESION_Y_MOVILIDAD",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Rol de talent management y planes de sucesión.",
+      "metadata": {
+        "processes": [
+          "SUCESION_Y_MOVILIDAD"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 102
+      }
+    },
+    {
+      "source_key": "aihr_compensation_management",
+      "name": "AIHR · Compensation management",
+      "url": "https://www.aihr.com/blog/compensation-management/",
+      "source_type": "HTML",
+      "category": "COMPENSACION_Y_BENEFICIOS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Compensation management y rol de HR.",
+      "metadata": {
+        "processes": [
+          "COMPENSACION_Y_BENEFICIOS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 103
+      }
+    },
+    {
+      "source_key": "bamboohr_compensation_trends_2025",
+      "name": "BambooHR · Compensation trends 2025",
+      "url": "https://www.bamboohr.com/resources/guides/compensation-trends-2025",
+      "source_type": "HTML",
+      "category": "COMPENSACION_Y_BENEFICIOS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Reporte de tendencias de compensación.",
+      "metadata": {
+        "processes": [
+          "COMPENSACION_Y_BENEFICIOS"
+        ],
+        "content_kind": "report",
+        "language": "en",
+        "legacy_table_id": 104
+      }
+    },
+    {
+      "source_key": "aihr_types_of_employee_benefits",
+      "name": "AIHR · Types of employee benefits",
+      "url": "https://www.aihr.com/blog/types-of-employee-benefits/",
+      "source_type": "HTML",
+      "category": "COMPENSACION_Y_BENEFICIOS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Beneficios para empleados y EVP.",
+      "metadata": {
+        "processes": [
+          "COMPENSACION_Y_BENEFICIOS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 105
+      }
+    },
+    {
+      "source_key": "aihr_total_rewards_strategy",
+      "name": "AIHR · Total rewards strategy",
+      "url": "https://www.aihr.com/blog/total-rewards-strategy/",
+      "source_type": "HTML",
+      "category": "COMPENSACION_Y_BENEFICIOS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Total rewards y estrategia de compensación.",
+      "metadata": {
+        "processes": [
+          "COMPENSACION_Y_BENEFICIOS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 106
+      }
+    },
+    {
+      "source_key": "leapsome_compensation_management",
+      "name": "Leapsome · Compensation management",
+      "url": "https://www.leapsome.com/blog/compensation-management",
+      "source_type": "HTML",
+      "category": "COMPENSACION_Y_BENEFICIOS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Compensation management y procesos de revisión.",
+      "metadata": {
+        "processes": [
+          "COMPENSACION_Y_BENEFICIOS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 107
+      }
+    },
+    {
+      "source_key": "bamboohr_compensation",
+      "name": "BambooHR · Compensation",
+      "url": "https://www.bamboohr.com/resources/hr-glossary/compensation",
+      "source_type": "HTML",
+      "category": "COMPENSACION_Y_BENEFICIOS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Definición y conceptos de compensación.",
+      "metadata": {
+        "processes": [
+          "COMPENSACION_Y_BENEFICIOS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 108
+      }
+    },
+    {
+      "source_key": "aihr_what_is_hr_analytics",
+      "name": "AIHR · What is hr analytics",
+      "url": "https://www.aihr.com/blog/what-is-hr-analytics/",
+      "source_type": "HTML",
+      "category": "PEOPLE_ANALYTICS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía de HR Analytics.",
+      "metadata": {
+        "processes": [
+          "PEOPLE_ANALYTICS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 109
+      }
+    },
+    {
+      "source_key": "aihr_people_analytics",
+      "name": "AIHR · People analytics",
+      "url": "https://www.aihr.com/blog/people-analytics/",
+      "source_type": "HTML",
+      "category": "PEOPLE_ANALYTICS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "People analytics y decisiones de talento.",
+      "metadata": {
+        "processes": [
+          "PEOPLE_ANALYTICS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 110
+      }
+    },
+    {
+      "source_key": "aihr_hr_metrics_examples",
+      "name": "AIHR · Hr metrics examples",
+      "url": "https://www.aihr.com/blog/hr-metrics-examples/",
+      "source_type": "HTML",
+      "category": "PEOPLE_ANALYTICS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Métricas de HR y seguimiento.",
+      "metadata": {
+        "processes": [
+          "PEOPLE_ANALYTICS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 111
+      }
+    },
+    {
+      "source_key": "leapsome_hr_risk_management",
+      "name": "Leapsome · Hr risk management",
+      "url": "https://www.leapsome.com/blog/hr-risk-management",
+      "source_type": "HTML",
+      "category": "PEOPLE_ANALYTICS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "People risk y early warning systems desde datos de HR.",
+      "metadata": {
+        "processes": [
+          "PEOPLE_ANALYTICS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 114
+      }
+    },
+    {
+      "source_key": "aihr_types_of_organizational_culture",
+      "name": "AIHR · Types of organizational culture",
+      "url": "https://www.aihr.com/blog/types-of-organizational-culture/",
+      "source_type": "HTML",
+      "category": "CULTURA_Y_DEI",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Tipos de cultura organizacional y rol de HR.",
+      "metadata": {
+        "processes": [
+          "CULTURA_Y_DEI"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 115
+      }
+    },
+    {
+      "source_key": "bamboohr_the_definitive_guide_to_company_culture",
+      "name": "BambooHR · The definitive guide to company culture",
+      "url": "https://www.bamboohr.com/resources/guides/the-definitive-guide-to-company-culture",
+      "source_type": "HTML",
+      "category": "CULTURA_Y_DEI",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía de cultura organizacional.",
+      "metadata": {
+        "processes": [
+          "CULTURA_Y_DEI"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 116
+      }
+    },
+    {
+      "source_key": "aihr_diversity_equity_inclusion_belonging_deib",
+      "name": "AIHR · Diversity equity inclusion belonging deib",
+      "url": "https://www.aihr.com/blog/diversity-equity-inclusion-belonging-deib/",
+      "source_type": "HTML",
+      "category": "CULTURA_Y_DEI",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Diversidad e inclusión en HR.",
+      "metadata": {
+        "processes": [
+          "CULTURA_Y_DEI"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 119
+      }
+    },
+    {
+      "source_key": "aihr_dei_metrics",
+      "name": "AIHR · Dei metrics",
+      "url": "https://www.aihr.com/blog/dei-metrics/",
+      "source_type": "HTML",
+      "category": "CULTURA_Y_DEI",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Métricas de DEI.",
+      "metadata": {
+        "processes": [
+          "CULTURA_Y_DEI"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 120
+      }
+    },
+    {
+      "source_key": "aihr_offboarding_checklist",
+      "name": "AIHR · Offboarding checklist",
+      "url": "https://www.aihr.com/blog/offboarding-checklist/",
+      "source_type": "HTML",
+      "category": "OFFBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Proceso de employee offboarding.",
+      "metadata": {
+        "processes": [
+          "OFFBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 121
+      }
+    },
+    {
+      "source_key": "aihr_exit_interview_questions",
+      "name": "AIHR · Exit interview questions",
+      "url": "https://www.aihr.com/blog/exit-interview-questions/",
+      "source_type": "HTML",
+      "category": "OFFBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Exit interviews como mecanismo de aprendizaje.",
+      "metadata": {
+        "processes": [
+          "OFFBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 122
+      }
+    },
+    {
+      "source_key": "aihr_how_to_fire_an_employee",
+      "name": "AIHR · How to fire an employee",
+      "url": "https://www.aihr.com/blog/how-to-fire-an-employee/",
+      "source_type": "HTML",
+      "category": "OFFBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Terminación y offboarding profesional.",
+      "metadata": {
+        "processes": [
+          "OFFBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 123
+      }
+    },
+    {
+      "source_key": "bamboohr_employee_handbook",
+      "name": "BambooHR · Employee handbook",
+      "url": "https://www.bamboohr.com/resources/hr-glossary/employee-handbook",
+      "source_type": "HTML",
+      "category": "OFFBOARDING",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Handbook y políticas de offboarding.",
+      "metadata": {
+        "processes": [
+          "OFFBOARDING",
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 124
+      }
+    },
+    {
+      "source_key": "leapsome_offboarding",
+      "name": "Leapsome · Offboarding",
+      "url": "https://www.leapsome.com/blog/offboarding",
+      "source_type": "HTML",
+      "category": "OFFBOARDING",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Proceso de offboarding y transferencia de conocimiento.",
+      "metadata": {
+        "processes": [
+          "OFFBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 125
+      }
+    },
+    {
+      "source_key": "aihr_hr_operations",
+      "name": "AIHR · Hr operations",
+      "url": "https://www.aihr.com/blog/hr-operations/",
+      "source_type": "HTML",
+      "category": "HR_OPERATIONS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "HR Operations: roles, responsabilidades y procesos.",
+      "metadata": {
+        "processes": [
+          "HR_OPERATIONS",
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 126
+      }
+    },
+    {
+      "source_key": "aihr_hr_shared_services",
+      "name": "AIHR · Hr shared services",
+      "url": "https://www.aihr.com/blog/hr-shared-services/",
+      "source_type": "HTML",
+      "category": "HR_OPERATIONS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "HR shared services y automatización operativa.",
+      "metadata": {
+        "processes": [
+          "HR_OPERATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 128
+      }
+    },
+    {
+      "source_key": "aihr_hr_governance",
+      "name": "AIHR · Hr governance",
+      "url": "https://www.aihr.com/blog/hr-governance/",
+      "source_type": "HTML",
+      "category": "HR_OPERATIONS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Gobernanza de HR, roles y accountability.",
+      "metadata": {
+        "processes": [
+          "HR_OPERATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 129
+      }
+    },
+    {
+      "source_key": "bamboohr_hr_crisis_playbook",
+      "name": "BambooHR · Hr crisis playbook",
+      "url": "https://www.bamboohr.com/resources/guides/hr-crisis-playbook",
+      "source_type": "HTML",
+      "category": "HR_OPERATIONS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Playbook para manejar crisis y procesos de HR.",
+      "metadata": {
+        "processes": [
+          "HR_OPERATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 130
+      }
+    },
+    {
+      "source_key": "bamboohr_employees_not_sharing_issues",
+      "name": "BambooHR · Employees not sharing issues",
+      "url": "https://www.bamboohr.com/resources/guides/employees-not-sharing-issues",
+      "source_type": "HTML",
+      "category": "HR_OPERATIONS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Employee relations, confianza y reporting a HR.",
+      "metadata": {
+        "processes": [
+          "HR_OPERATIONS",
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 132
+      }
+    },
+    {
+      "source_key": "aihr_hr_business_partner",
+      "name": "AIHR · Hr business partner",
+      "url": "https://www.aihr.com/blog/hr-business-partner/",
+      "source_type": "HTML",
+      "category": "HR_OPERATIONS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "HRBP y conexión entre negocio y HR.",
+      "metadata": {
+        "processes": [
+          "HR_OPERATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 133
+      }
+    },
+    {
+      "source_key": "aihr_ai_in_hr",
+      "name": "AIHR · Ai in hr",
+      "url": "https://www.aihr.com/blog/ai-in-hr/",
+      "source_type": "HTML",
+      "category": "HR_TECH_AUTOMATIZACION",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "IA en HR y casos de uso.",
+      "metadata": {
+        "processes": [
+          "HR_TECH_AUTOMATIZACION"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 134
+      }
+    },
+    {
+      "source_key": "aihr_prompt_engineering_for_hr_professionals",
+      "name": "AIHR · Prompt engineering for hr professionals",
+      "url": "https://www.aihr.com/blog/prompt-engineering-for-hr-professionals/",
+      "source_type": "HTML",
+      "category": "HR_TECH_AUTOMATIZACION",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Prompt engineering para profesionales de HR.",
+      "metadata": {
+        "processes": [
+          "HR_TECH_AUTOMATIZACION"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 135
+      }
+    },
+    {
+      "source_key": "aihr_claude_for_hr_resource_pack",
+      "name": "AIHR · Claude for hr resource pack",
+      "url": "https://www.aihr.com/hr-resources/claude-for-hr-resource-pack/",
+      "source_type": "HTML",
+      "category": "HR_TECH_AUTOMATIZACION",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Uso práctico de Claude para HR.",
+      "metadata": {
+        "processes": [
+          "HR_TECH_AUTOMATIZACION"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 136
+      }
+    },
+    {
+      "source_key": "aihr_digital_hr",
+      "name": "AIHR · Digital hr",
+      "url": "https://www.aihr.com/blog/digital-hr/",
+      "source_type": "HTML",
+      "category": "HR_TECH_AUTOMATIZACION",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Digital HR y transformación.",
+      "metadata": {
+        "processes": [
+          "HR_TECH_AUTOMATIZACION"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 137
+      }
+    },
+    {
+      "source_key": "leapsome_strategic_hr_initiatives",
+      "name": "Leapsome · Strategic hr initiatives",
+      "url": "https://www.leapsome.com/blog/strategic-hr-initiatives",
+      "source_type": "HTML",
+      "category": "HR_TECH_AUTOMATIZACION",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Iniciativas estratégicas HR con IA y datos.",
+      "metadata": {
+        "processes": [
+          "HR_TECH_AUTOMATIZACION"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 138
+      }
+    },
+    {
+      "source_key": "leapsome_talent_management_system",
+      "name": "Leapsome · Talent management system",
+      "url": "https://www.leapsome.com/blog/talent-management-system",
+      "source_type": "HTML",
+      "category": "HR_TECH_AUTOMATIZACION",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Talent management system y procesos conectados.",
+      "metadata": {
+        "processes": [
+          "HR_TECH_AUTOMATIZACION"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 139
+      }
+    },
+    {
+      "source_key": "aihr_employee_relations_specialist",
+      "name": "AIHR · Employee relations specialist",
+      "url": "https://www.aihr.com/blog/employee-relations-specialist/",
+      "source_type": "HTML",
+      "category": "EMPLOYEE_RELATIONS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Employee relations, conflictos y confianza.",
+      "metadata": {
+        "processes": [
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 140
+      }
+    },
+    {
+      "source_key": "workhuman_benefits_of_employee_recognition",
+      "name": "Workhuman · Benefits of employee recognition",
+      "url": "https://www.workhuman.com/blog/benefits-of-employee-recognition/",
+      "source_type": "HTML",
+      "category": "EMPLOYEE_RELATIONS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Reconocimiento como feedback positivo y clima relacional.",
+      "metadata": {
+        "processes": [
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "legacy_table_id": 144
+      }
+    },
+    {
+      "source_key": "cipd_performance_management",
+      "name": "CIPD · Performance management",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/performance-factsheet/",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "high",
+      "notes": "Factsheet de CIPD sobre gestión del desempeño: evidencia, enfoques y buenas prácticas.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "cipd_induction",
+      "name": "CIPD · Induction",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/induction-factsheet/",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "notes": "Factsheet de CIPD sobre inducción y onboarding de nuevos colaboradores.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "cipd_recruitment",
+      "name": "CIPD · Recruitment process",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/recruitment-factsheet/",
+      "category": "RECLUTAMIENTO_Y_TALENTO",
+      "priority": "high",
+      "notes": "Factsheet de CIPD sobre el proceso de reclutamiento de punta a punta.",
+      "metadata": {
+        "processes": [
+          "RECLUTAMIENTO_Y_TALENTO"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "cipd_employee_engagement",
+      "name": "CIPD · Employee engagement",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/engagement-factsheet/",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "high",
+      "notes": "Factsheet de CIPD sobre engagement y motivación con base en evidencia.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "cipd_wellbeing",
+      "name": "CIPD · Wellbeing at work",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/well-being-factsheet/",
+      "category": "SALUD_Y_BIENESTAR",
+      "priority": "high",
+      "notes": "Factsheet de CIPD sobre bienestar laboral y cómo diseñar una estrategia.",
+      "metadata": {
+        "processes": [
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "cipd_succession_planning",
+      "name": "CIPD · Succession planning",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/succession-planning-factsheet/",
+      "category": "SUCESION_Y_MOVILIDAD",
+      "priority": "high",
+      "notes": "Factsheet de CIPD sobre planes de sucesión y pipeline de liderazgo.",
+      "metadata": {
+        "processes": [
+          "SUCESION_Y_MOVILIDAD"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "cipd_diversity_inclusion",
+      "name": "CIPD · Equality, diversity and inclusion",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/diversity-factsheet/",
+      "category": "CULTURA_Y_DEI",
+      "priority": "high",
+      "notes": "Factsheet de CIPD sobre igualdad, diversidad e inclusión en el trabajo.",
+      "metadata": {
+        "processes": [
+          "CULTURA_Y_DEI"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "cipd_business_partnering",
+      "name": "CIPD · Business partnering",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/business-partnering-factsheet/",
+      "category": "HR_OPERATIONS",
+      "priority": "high",
+      "notes": "Factsheet de CIPD sobre el modelo HR business partner y la operación de HR.",
+      "metadata": {
+        "processes": [
+          "HR_OPERATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "cipd_reward",
+      "name": "CIPD · Reward",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/reward-factsheet/",
+      "category": "COMPENSACION_Y_BENEFICIOS",
+      "priority": "high",
+      "notes": "Factsheet de CIPD sobre estrategia de recompensas, salario y beneficios.",
+      "metadata": {
+        "processes": [
+          "COMPENSACION_Y_BENEFICIOS"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "cipd_discipline_grievance",
+      "name": "CIPD · Discipline and grievance",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/discipline-factsheet/",
+      "category": "EMPLOYEE_RELATIONS",
+      "priority": "high",
+      "notes": "Factsheet de CIPD sobre procesos disciplinarios y quejas formales.",
+      "metadata": {
+        "processes": [
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "shrm_performance_toolkit",
+      "name": "SHRM · Managing employee performance",
+      "url": "https://www.shrm.org/topics-tools/tools/toolkits/managing-employee-performance",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "high",
+      "notes": "Toolkit de SHRM sobre gestión del desempeño: ciclo, roles y consideraciones legales.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "shrm_onboarding_guide",
+      "name": "SHRM · Employee onboarding",
+      "url": "https://www.shrm.org/topics-tools/topics/onboarding",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "notes": "Guía de SHRM sobre onboarding (la URL del toolkit redirige aquí).",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "gallup_improve_engagement",
+      "name": "Gallup · Improve employee engagement",
+      "url": "https://www.gallup.com/workplace/285674/improve-employee-engagement-workplace.aspx",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "high",
+      "notes": "Gallup explica cómo mejorar el engagement con base en el modelo Q12.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "gallup_onboarding_retention",
+      "name": "Gallup · Onboarding y retención",
+      "url": "https://www.gallup.com/workplace/235121/why-onboarding-experience-key-retention.aspx",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "notes": "Gallup sobre por qué la experiencia de onboarding define la retención.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "hbr_performance_management_revolution",
+      "name": "HBR · The performance management revolution",
+      "url": "https://hbr.org/2016/10/the-performance-management-revolution",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "high",
+      "notes": "Artículo clásico de HBR sobre el paso de evaluaciones anuales a conversaciones continuas. Puede tener muro de pago parcial.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "hbr_onboarding_new_hires",
+      "name": "HBR · Onboarding de nuevos ingresos",
+      "url": "https://hbr.org/2018/12/to-retain-new-hires-spend-more-time-onboarding-them",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "notes": "HBR sobre invertir más tiempo en onboarding para retener a nuevos ingresos. Puede tener muro de pago parcial.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "whatmatters_okr_definition",
+      "name": "What Matters · Qué es un OKR",
+      "url": "https://www.whatmatters.com/faqs/okr-meaning-definition-example",
+      "category": "OKRS",
+      "priority": "high",
+      "notes": "Definición y ejemplos de OKRs del sitio de John Doerr (Measure What Matters).",
+      "metadata": {
+        "processes": [
+          "OKRS"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "who_mental_health_at_work",
+      "name": "OMS · Guidelines on mental health at work",
+      "url": "https://www.who.int/publications/i/item/9789240053052",
+      "category": "SALUD_Y_BIENESTAR",
+      "priority": "high",
+      "notes": "Directrices de la OMS sobre salud mental en el trabajo: intervenciones organizacionales y formación de líderes.",
+      "metadata": {
+        "processes": [
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "report",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "stps_nom035_norma",
+      "name": "STPS · Texto oficial NOM-035-STPS-2018",
+      "url": "https://asinom.stps.gob.mx/upload/nom/48.pdf",
+      "category": "NOM035_MX",
+      "priority": "high",
+      "notes": "PDF oficial de la STPS con el texto completo de la NOM-035 y sus guías de referencia. La página de gob.mx bloquea bots, por eso se usa el PDF.",
+      "metadata": {
+        "processes": [
+          "NOM035_MX",
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "pdf",
+        "language": "es",
+        "document_type": "regulation"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "fondo_riesgos_bateria_psicosocial",
+      "name": "Fondo de Riesgos Laborales · Batería de riesgo psicosocial",
+      "url": "https://fondoriesgoslaborales.gov.co/wp-content/uploads/2018/10/Bateria-riesgo-psicosocial-1.pdf",
+      "category": "SALUD_Y_BIENESTAR",
+      "priority": "high",
+      "notes": "Batería oficial de instrumentos de riesgo psicosocial avalada por el Ministerio del Trabajo de Colombia (PDF extenso).",
+      "metadata": {
+        "processes": [
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "pdf",
+        "language": "es",
+        "document_type": "regulation"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "isl_ley_karin",
+      "name": "ISL · Ley Karin",
+      "url": "https://www.isl.gob.cl/ley-karin/",
+      "category": "EMPLOYEE_RELATIONS",
+      "priority": "high",
+      "notes": "Guía del Instituto de Seguridad Laboral de Chile sobre la Ley Karin (acoso y violencia en el trabajo).",
+      "metadata": {
+        "processes": [
+          "EMPLOYEE_RELATIONS",
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "regulation",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "dt_ley_karin",
+      "name": "Dirección del Trabajo · Ley Karin",
+      "url": "https://www.dt.gob.cl/portal/1626/articles-127102_archivo_01.pdf",
+      "category": "EMPLOYEE_RELATIONS",
+      "priority": "high",
+      "notes": "Presentación oficial de la Dirección del Trabajo de Chile sobre la Ley Karin: obligaciones, protocolo e investigación.",
+      "metadata": {
+        "processes": [
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "pdf",
+        "language": "es",
+        "document_type": "regulation"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "aihr_employee_relations",
+      "name": "AIHR · Employee relations",
+      "url": "https://www.aihr.com/blog/employee-relations/",
+      "category": "EMPLOYEE_RELATIONS",
+      "priority": "high",
+      "notes": "Guía de AIHR sobre employee relations: estrategia, ejemplos y buenas prácticas.",
+      "metadata": {
+        "processes": [
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "aihr_hr_technology",
+      "name": "AIHR · HR technology",
+      "url": "https://www.aihr.com/blog/hr-technology/",
+      "category": "HR_TECH_AUTOMATIZACION",
+      "priority": "high",
+      "notes": "Qué es la tecnología de HR, beneficios y ejemplos de uso exitoso.",
+      "metadata": {
+        "processes": [
+          "HR_TECH_AUTOMATIZACION"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "aihr_psychological_safety",
+      "name": "AIHR · Psychological safety",
+      "url": "https://www.aihr.com/blog/psychological-safety-at-work/",
+      "category": "CULTURA_Y_DEI",
+      "priority": "high",
+      "notes": "Seguridad psicológica en el trabajo y el rol de HR.",
+      "metadata": {
+        "processes": [
+          "CULTURA_Y_DEI",
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "en"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "factorial_onboarding",
+      "name": "Factorial · Onboarding para empresas",
+      "url": "https://factorial.mx/blog/onboarding-concepto-proceso-herramientas/",
+      "category": "ONBOARDING",
+      "priority": "medium",
+      "notes": "Guía en español (México) sobre el proceso completo de onboarding y herramientas.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "rankmi_evaluacion_desempeno",
+      "name": "Rankmi · Evaluación de desempeño",
+      "url": "https://www.rankmi.com/blog/que-es-evaluacion-de-desempeno-y-como-actualizarla-en-5-pasos",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "medium",
+      "notes": "Rankmi (Chile) explica qué es la evaluación de desempeño y cómo hacerla efectiva en 5 pasos.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "factorial_programas_capacitacion",
+      "name": "Factorial · Programas de capacitación",
+      "url": "https://factorial.mx/blog/programas-capacitacion-empresa/",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "medium",
+      "notes": "Cómo diseñar programas de capacitación empresarial, con enfoque México.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "rankmi_capacitacion_latam",
+      "name": "Rankmi · Capacitación en Latam",
+      "url": "https://www.rankmi.com/blog/aprendizaje-capacitacion-trabajo-latam-2026",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "medium",
+      "notes": "Aprendizaje y capacitación en el trabajo con datos y contexto latinoamericano.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "rankmi_encuesta_clima",
+      "name": "Rankmi · Encuestas de pulso de clima",
+      "url": "https://www.rankmi.com/blog/como-realizar-encuesta-de-clima",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "medium",
+      "notes": "Por qué y cómo realizar encuestas de pulso de clima laboral.",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "rankmi_kpi_vs_okr",
+      "name": "Rankmi · KPI vs. OKR en RR. HH.",
+      "url": "https://www.rankmi.com/blog/cuales-son-las-diferencias-entre-kpi-okr-en-rrhh",
+      "category": "OKRS",
+      "priority": "medium",
+      "notes": "Diferencias entre KPI y OKR aplicadas a recursos humanos.",
+      "metadata": {
+        "processes": [
+          "OKRS",
+          "PEOPLE_ANALYTICS"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "buk_plan_sucesion",
+      "name": "Buk · Plan de sucesión",
+      "url": "https://www.buk.co/blog/plan-de-sucesion-en-las-empresas",
+      "category": "SUCESION_Y_MOVILIDAD",
+      "priority": "medium",
+      "notes": "Buk (Colombia) explica qué es un plan de sucesión y cómo implementarlo paso a paso.",
+      "metadata": {
+        "processes": [
+          "SUCESION_Y_MOVILIDAD"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "bizneo_estructura_salarial",
+      "name": "Bizneo · Estructura salarial",
+      "url": "https://www.bizneo.com/blog/estructura-salarial/",
+      "category": "COMPENSACION_Y_BENEFICIOS",
+      "priority": "medium",
+      "notes": "Cómo diseñar una estructura salarial competitiva y justa.",
+      "metadata": {
+        "processes": [
+          "COMPENSACION_Y_BENEFICIOS"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "bizneo_people_analytics",
+      "name": "Bizneo · People analytics",
+      "url": "https://www.bizneo.com/blog/people-analytics-medir-el-talento-con-datos/",
+      "category": "PEOPLE_ANALYTICS",
+      "priority": "medium",
+      "notes": "People analytics en recursos humanos: medir el talento con datos.",
+      "metadata": {
+        "processes": [
+          "PEOPLE_ANALYTICS"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "buk_cultura_organizacional",
+      "name": "Buk · Cultura organizacional en Colombia",
+      "url": "https://www.buk.co/blog/cultura-organizacional-colombia",
+      "category": "CULTURA_Y_DEI",
+      "priority": "medium",
+      "notes": "Qué es la cultura organizacional, tipos y guía con contexto colombiano.",
+      "metadata": {
+        "processes": [
+          "CULTURA_Y_DEI"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "factorial_diversidad_inclusion",
+      "name": "Factorial · Diversidad e inclusión laboral",
+      "url": "https://factorial.mx/blog/diversidad-inclusion-laboral/",
+      "category": "CULTURA_Y_DEI",
+      "priority": "medium",
+      "notes": "Diversidad e inclusión laboral explicadas con ejemplos para empresas en México.",
+      "metadata": {
+        "processes": [
+          "CULTURA_Y_DEI"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "bizneo_offboarding",
+      "name": "Bizneo · Offboarding",
+      "url": "https://www.bizneo.com/blog/offboarding/",
+      "category": "OFFBOARDING",
+      "priority": "medium",
+      "notes": "Offboarding: cómo gestionar bien la salida de un colaborador.",
+      "metadata": {
+        "processes": [
+          "OFFBOARDING"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "buk_gestion_documental",
+      "name": "Buk · Gestión documental",
+      "url": "https://www.buk.co/blog/en-que-consisten-los-procesos-de-gestion-documental",
+      "category": "HR_OPERATIONS",
+      "priority": "medium",
+      "notes": "Procesos de gestión documental de personal, con contexto colombiano.",
+      "metadata": {
+        "processes": [
+          "HR_OPERATIONS"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "rankmi_ia_rrhh",
+      "name": "Rankmi · IA en recursos humanos",
+      "url": "https://www.rankmi.com/blog/como-aplicar-inteligencia-artificial-en-recursos-humanos",
+      "category": "HR_TECH_AUTOMATIZACION",
+      "priority": "medium",
+      "notes": "Cómo aplicar inteligencia artificial en procesos de recursos humanos.",
+      "metadata": {
+        "processes": [
+          "HR_TECH_AUTOMATIZACION"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "buk_comite_convivencia",
+      "name": "Buk · Comité de Convivencia Laboral",
+      "url": "https://www.buk.co/blog/normatividad-del-comite-de-convivencia-laboral-en-colombia",
+      "category": "EMPLOYEE_RELATIONS",
+      "priority": "medium",
+      "notes": "Normativa y funciones del Comité de Convivencia Laboral en Colombia.",
+      "metadata": {
+        "processes": [
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "factorial_conflictos_laborales",
+      "name": "Factorial · Resolución de conflictos laborales",
+      "url": "https://factorial.mx/blog/manejo-resolucion-conflictos-laborales/",
+      "category": "EMPLOYEE_RELATIONS",
+      "priority": "medium",
+      "notes": "Guía práctica de manejo y resolución de conflictos laborales.",
+      "metadata": {
+        "processes": [
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "factorial_nom035",
+      "name": "Factorial · Guía NOM-035",
+      "url": "https://factorial.mx/blog/nom-035/",
+      "category": "NOM035_MX",
+      "priority": "medium",
+      "notes": "Guía práctica de la NOM-035 para empresas mexicanas.",
+      "metadata": {
+        "processes": [
+          "NOM035_MX"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "buk_bateria_riesgo_psicosocial",
+      "name": "Buk · Batería de riesgo psicosocial",
+      "url": "https://www.buk.co/blog/bateria-de-riesgo-psicosocial",
+      "category": "SALUD_Y_BIENESTAR",
+      "priority": "medium",
+      "notes": "Qué es la batería de riesgo psicosocial en Colombia, componentes y cómo aplicarla.",
+      "metadata": {
+        "processes": [
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "article",
+        "language": "es"
+      },
+      "source_type": "HTML",
+      "max_items": 1,
+      "is_active": true
+    },
+    {
+      "source_key": "serviciocivil_cl_gestion_desempeno",
+      "name": "Servicio Civil (Chile) · Orientaciones para un procedimiento de gestión del desempeño",
+      "url": "https://www.serviciocivil.cl/wp-content/uploads/2018/04/2016-Orientaciones-para-la-elaboraci%C3%B3n-de-un-Procedimiento-de-Gesti%C3%B3n-del-Desempe%C3%B1o.pdf",
+      "source_type": "HTML",
+      "category": "DESEMPENO_Y_FEEDBACK",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía oficial de la Dirección Nacional del Servicio Civil de Chile: ciclo de planificación, seguimiento, evaluación y retroalimentación del desempeño.",
+      "metadata": {
+        "processes": [
+          "DESEMPENO_Y_FEEDBACK"
+        ],
+        "content_kind": "pdf",
+        "language": "es",
+        "document_type": "guide",
+        "authority": "official_gov"
+      }
+    },
+    {
+      "source_key": "serviciocivil_cl_programas_induccion",
+      "name": "Servicio Civil (Chile) · Orientaciones para programas de inducción",
+      "url": "https://www.serviciocivil.cl/wp-content/uploads/2018/04/2018-actualizaci%C3%B3n-Orientaciones-para-la-elaboraci%C3%B3n-de-Programas-de-Inducci%C3%B3n.pdf",
+      "source_type": "HTML",
+      "category": "ONBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía oficial (actualización 2018) para diseñar programas de inducción: objetivos, etapas, plazos y responsables.",
+      "metadata": {
+        "processes": [
+          "ONBOARDING"
+        ],
+        "content_kind": "pdf",
+        "language": "es",
+        "document_type": "guide",
+        "authority": "official_gov"
+      }
+    },
+    {
+      "source_key": "stps_nom035_preguntas_frecuentes",
+      "name": "STPS · Preguntas frecuentes sobre la NOM-035",
+      "url": "https://trabajoseguro.stps.gob.mx/bol097/vinculos/preguntas_bol097.pdf",
+      "source_type": "HTML",
+      "category": "NOM035_MX",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Documento oficial de la STPS que resuelve dudas de aplicación de la NOM-035 (obligaciones por tamaño de centro de trabajo, cuestionarios, evidencias).",
+      "metadata": {
+        "processes": [
+          "NOM035_MX",
+          "SALUD_Y_BIENESTAR"
+        ],
+        "content_kind": "pdf",
+        "language": "es",
+        "document_type": "faq",
+        "authority": "official_gov"
+      }
+    },
+    {
+      "source_key": "stps_trabajo_seguro_nom035_cumplimiento",
+      "name": "STPS Trabajo Seguro · Cumplimiento de la NOM-035",
+      "url": "https://trabajoseguro.stps.gob.mx/bol103/vinculos/notas_6.html",
+      "source_type": "HTML",
+      "category": "NOM035_MX",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Nota oficial del boletín Trabajo Seguro (DGSST-STPS) sobre cómo cumplir la NOM-035: identificación, análisis y prevención de factores de riesgo psicosocial.",
+      "metadata": {
+        "processes": [
+          "NOM035_MX"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "authority": "official_gov"
+      }
+    },
+    {
+      "source_key": "oit_ia_generativa_trabajo",
+      "name": "OIT · IA generativa y trabajo: más allá de la automatización",
+      "url": "https://www.ilo.org/es/resource/article/inteligencia-artificial-generativa-y-trabajo-mas-alla-de-la-automatizacion",
+      "source_type": "HTML",
+      "category": "HR_TECH_AUTOMATIZACION",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Análisis de la OIT sobre la exposición de las ocupaciones a la IA generativa y la transformación de tareas; contexto para automatización de RR. HH. y reskilling.",
+      "metadata": {
+        "processes": [
+          "HR_TECH_AUTOMATIZACION",
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "authority": "intl_org"
+      }
+    },
+    {
+      "source_key": "chileatiende_finiquito",
+      "name": "ChileAtiende · Finiquito de término de contrato de trabajo",
+      "url": "https://www.chileatiende.gob.cl/fichas/33522-finiquito-de-termino-de-contrato-de-trabajo",
+      "source_type": "HTML",
+      "category": "OFFBOARDING",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Ficha oficial del Gobierno de Chile sobre el finiquito: causales, contenido obligatorio, pagos y ratificación. Base legal del offboarding en Chile.",
+      "metadata": {
+        "processes": [
+          "OFFBOARDING",
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "authority": "official_gov"
+      }
+    },
+    {
+      "source_key": "oit_salario_minimo_definicion",
+      "name": "OIT · Salario mínimo: definición y finalidad",
+      "url": "https://www.ilo.org/es/resource/11-definicion-y-finalidad",
+      "source_type": "HTML",
+      "category": "COMPENSACION_Y_BENEFICIOS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía de políticas de salario mínimo de la OIT: definición, finalidad y cómo se fija; marco de referencia para compensación en LATAM.",
+      "metadata": {
+        "processes": [
+          "COMPENSACION_Y_BENEFICIOS"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "authority": "intl_org"
+      }
+    },
+    {
+      "source_key": "gptw_chile_encuesta_clima",
+      "name": "Great Place to Work Chile · ¿Qué es una encuesta de clima laboral?",
+      "url": "https://www.greatplacetowork.cl/encuesta-clima-laboral/",
+      "source_type": "HTML",
+      "category": "CLIMA_Y_COMPROMISO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Explicación de GPTW Chile sobre qué mide una encuesta de clima, para qué sirve y cómo usar los resultados (modelo Trust Index).",
+      "metadata": {
+        "processes": [
+          "CLIMA_Y_COMPROMISO"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "authority": "research_firm"
+      }
+    },
+    {
+      "source_key": "apd_metodologia_okr",
+      "name": "APD · Metodología OKR",
+      "url": "https://www.apd.es/metodologia-okr/",
+      "source_type": "HTML",
+      "category": "OKRS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Asociación para el Progreso de la Dirección: qué son los OKR, cómo se formulan y sus beneficios frente a otros sistemas de objetivos.",
+      "metadata": {
+        "processes": [
+          "OKRS"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "authority": "business_association"
+      }
+    },
+    {
+      "source_key": "hrlatam_planes_sucesion",
+      "name": "HR Latam · Planes de sucesión: guía de implementación",
+      "url": "https://hrlatam.com/blog/planes-de-sucesion-guia-corta/",
+      "source_type": "HTML",
+      "category": "SUCESION_Y_MOVILIDAD",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Guía de HR Latam (medio y comunidad de RR. HH. latinoamericana) sobre cómo identificar puestos críticos, sucesores y planes de desarrollo.",
+      "metadata": {
+        "processes": [
+          "SUCESION_Y_MOVILIDAD"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "authority": "hr_media"
+      }
+    },
+    {
+      "source_key": "sunat_planilla_electronica",
+      "name": "SUNAT (Perú) · Planilla Electrónica: concepto",
+      "url": "https://orientacion.sunat.gob.pe/informacion-general-planilla-electronica",
+      "source_type": "HTML",
+      "category": "HR_OPERATIONS",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Orientación oficial sobre la Planilla Electrónica (T-Registro y PLAME): el proceso operativo de nómina y registro laboral obligatorio en Perú.",
+      "metadata": {
+        "processes": [
+          "HR_OPERATIONS",
+          "COMPENSACION_Y_BENEFICIOS"
+        ],
+        "content_kind": "article",
+        "language": "es",
+        "authority": "official_gov"
+      }
+    },
+    {
+      "source_key": "cipd_people_analytics",
+      "name": "CIPD · People analytics factsheet",
+      "url": "https://www.cipd.org/en/knowledge/factsheets/analytics-factsheet/",
+      "source_type": "HTML",
+      "category": "PEOPLE_ANALYTICS",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Factsheet del CIPD: qué es people analytics, fuentes y tipos de datos, y cómo usarlos para decisiones basadas en evidencia.",
+      "metadata": {
+        "processes": [
+          "PEOPLE_ANALYTICS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "authority": "professional_body"
+      }
+    },
+    {
+      "source_key": "cipd_ld_strategy",
+      "name": "CIPD · Learning and development strategy and policy",
+      "url": "https://www.cipd.org/en/knowledge/factsheets/strategy-development-factsheet/",
+      "source_type": "HTML",
+      "category": "FORMACION_Y_DESARROLLO",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Factsheet del CIPD sobre estrategia y política de L&D: influencias, stakeholders e implementación.",
+      "metadata": {
+        "processes": [
+          "FORMACION_Y_DESARROLLO"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "authority": "professional_body"
+      }
+    },
+    {
+      "source_key": "cipd_dismissal",
+      "name": "CIPD · Dismissal procedures factsheet",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/dismissal-factsheet/",
+      "source_type": "HTML",
+      "category": "OFFBOARDING",
+      "priority": "medium",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Factsheet del CIPD sobre procedimientos de desvinculación justa (marco del Reino Unido, útil como referencia de buenas prácticas).",
+      "metadata": {
+        "processes": [
+          "OFFBOARDING",
+          "EMPLOYEE_RELATIONS"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "authority": "professional_body"
+      }
+    },
+    {
+      "source_key": "cipd_ai_technology",
+      "name": "CIPD · AI and technology factsheet",
+      "url": "https://www.cipd.org/uk/knowledge/factsheets/ai-technology",
+      "source_type": "HTML",
+      "category": "HR_TECH_AUTOMATIZACION",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Factsheet del CIPD sobre tecnología e IA en el trabajo: términos clave, principios para elegir y usar herramientas y el rol de RR. HH. en la transformación digital.",
+      "metadata": {
+        "processes": [
+          "HR_TECH_AUTOMATIZACION"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "authority": "professional_body"
+      }
+    },
+    {
+      "source_key": "cipd_strategic_hrm",
+      "name": "CIPD · Strategic human resource management",
+      "url": "https://www.cipd.org/en/knowledge/factsheets/strategic-hrm-factsheet/",
+      "source_type": "HTML",
+      "category": "GENERAL_PROCESOS_RH",
+      "priority": "high",
+      "max_items": 1,
+      "is_active": true,
+      "notes": "Factsheet del CIPD sobre gestión estratégica de personas: cómo se conectan los procesos de RR. HH. con la estrategia del negocio.",
+      "metadata": {
+        "processes": [
+          "GENERAL_PROCESOS_RH"
+        ],
+        "content_kind": "article",
+        "language": "en",
+        "authority": "professional_body"
+      }
+    }
+  ],
+  "report": {
+    "checked_at": "2026-09-29",
+    "summary": {
+      "ok_feed": 10,
+      "ok_html": 125,
+      "stale": 0,
+      "empty": 42,
+      "broken": 0
+    },
+    "fixed": [
+      {
+        "source_key": "synergita_blog",
+        "old_url": "https://www.synergita.com/blog/",
+        "new_url": "https://www.synergita.com/blog/feed/",
+        "reason": "El listado HTML no ofrece links útiles o hay feed oficial; se usa el feed RSS descubierto."
+      },
+      {
+        "source_key": "buk_blog",
+        "old_url": "https://www.buk.pe/blog/",
+        "new_url": "https://www.buk.pe/blog/rss.xml",
+        "reason": "El listado HTML no ofrece links útiles o hay feed oficial; se usa el feed RSS descubierto."
+      },
+      {
+        "source_key": "factorial_blog",
+        "old_url": "https://factorial.mx/blog/",
+        "new_url": "https://factorial.mx/blog/feed/",
+        "reason": "El listado HTML no ofrece links útiles o hay feed oficial; se usa el feed RSS descubierto."
+      },
+      {
+        "source_key": "bizneo_blog",
+        "old_url": "https://www.bizneo.com/blog/",
+        "new_url": "https://www.bizneo.com/blog/feed/",
+        "reason": "El listado HTML no ofrece links útiles o hay feed oficial; se usa el feed RSS descubierto."
+      },
+      {
+        "source_key": "sesamehr_blog",
+        "old_url": "https://www.sesamehr.co/blog/",
+        "new_url": "https://www.sesamehr.mx/feed",
+        "reason": "El listado de sesamehr.co no ofrece links y su feed lleva ~640 días sin publicar; se usa el feed activo de SesameHR México."
+      },
+      {
+        "source_key": "en_buena_compania_blog",
+        "old_url": "http://www.enbuenacompania.com/",
+        "new_url": "https://www.enbuenacompania.com/feed/",
+        "reason": "El listado HTML no ofrece links útiles o hay feed oficial; se usa el feed RSS descubierto."
+      },
+      {
+        "source_key": "angel_largo_contenido",
+        "old_url": "https://angellargo.com/contenido/",
+        "new_url": "https://angellargo.com/contenido/feed",
+        "reason": "El listado HTML no ofrece links útiles o hay feed oficial; se usa el feed RSS descubierto."
+      },
+      {
+        "source_key": "talentclue_blog",
+        "old_url": "https://blog.talentclue.com/",
+        "new_url": "https://talentclue.com/feed/",
+        "reason": "El listado HTML no ofrece links útiles o hay feed oficial; se usa el feed RSS descubierto. Además, redirección permanente del subdominio; se actualiza a la URL final."
+      },
+      {
+        "source_key": "revista_rrhh_blog",
+        "old_url": "https://revistarecursoshumanos.com/",
+        "new_url": "https://revistarecursoshumanos.com/feed/",
+        "reason": "El listado HTML no ofrece links útiles o hay feed oficial; se usa el feed RSS descubierto."
+      },
+      {
+        "source_key": "ximo_salas_blog",
+        "old_url": "https://ximosalas.com/blog/",
+        "new_url": "https://ximosalas.com/feed/",
+        "reason": "El listado HTML no ofrece links útiles o hay feed oficial; se usa el feed RSS descubierto."
+      },
+      {
+        "source_key": "aihr_recruiting_metrics",
+        "old_url": "https://www.aihr.com/blog/recruitment-metrics/",
+        "new_url": "https://www.aihr.com/blog/recruiting-metrics/",
+        "reason": "404; AIHR movió el artículo a recruiting-metrics."
+      },
+      {
+        "source_key": "aihr_selection_process_practical_guide",
+        "old_url": "https://www.aihr.com/blog/selection-methods/",
+        "new_url": "https://www.aihr.com/blog/selection-process-practical-guide/",
+        "reason": "404; reemplazado por la guía de proceso de selección de AIHR."
+      },
+      {
+        "source_key": "cultureamp_candidate_experience_survey_questions",
+        "old_url": "https://www.cultureamp.com/blog/candidate-experience",
+        "new_url": "https://www.cultureamp.com/blog/candidate-experience-survey-questions",
+        "reason": "404; reemplazado por el artículo de encuestas de candidate experience."
+      },
+      {
+        "source_key": "cultureamp_employee_development_guide",
+        "old_url": "https://www.cultureamp.com/blog/employee-development",
+        "new_url": "https://www.cultureamp.com/blog/employee-development-guide",
+        "reason": "404; reemplazado por la guía completa de employee development."
+      },
+      {
+        "source_key": "aihr_employee_wellbeing_metrics",
+        "old_url": "https://www.aihr.com/blog/employee-wellbeing/",
+        "new_url": "https://www.aihr.com/blog/employee-wellbeing-metrics/",
+        "reason": "Redirección permanente; se actualiza a la URL final (métricas de bienestar)."
+      },
+      {
+        "source_key": "lattice_okr_101",
+        "old_url": "https://lattice.com/articles/setting-goals-and-okrs",
+        "new_url": "https://lattice.com/articles/okr-101",
+        "reason": "404; reemplazado por la guía OKRs 101 de Lattice."
+      },
+      {
+        "source_key": "leapsome_how_to_write_okrs",
+        "old_url": "https://www.leapsome.com/blog/okr-best-practices",
+        "new_url": "https://www.leapsome.com/blog/how-to-write-okrs",
+        "reason": "404; reemplazado por la guía paso a paso para escribir OKRs."
+      },
+      {
+        "source_key": "aihr_hr_okrs",
+        "old_url": "https://www.aihr.com/blog/hr-goals-and-objectives/",
+        "new_url": "https://www.aihr.com/blog/hr-okrs/",
+        "reason": "404; reemplazado por la guía de OKRs de HR de AIHR."
+      },
+      {
+        "source_key": "aihr_types_of_employee_benefits",
+        "old_url": "https://www.aihr.com/blog/employee-benefits/",
+        "new_url": "https://www.aihr.com/blog/types-of-employee-benefits/",
+        "reason": "Redirección permanente; se actualiza a la URL final."
+      },
+      {
+        "source_key": "aihr_total_rewards_strategy",
+        "old_url": "https://www.aihr.com/blog/total-rewards/",
+        "new_url": "https://www.aihr.com/blog/total-rewards-strategy/",
+        "reason": "Redirigía a la página de un curso; se usa la guía de estrategia de total rewards."
+      },
+      {
+        "source_key": "aihr_what_is_hr_analytics",
+        "old_url": "https://www.aihr.com/blog/hr-analytics/",
+        "new_url": "https://www.aihr.com/blog/what-is-hr-analytics/",
+        "reason": "Redirigía a un listado de categoría; se usa la guía introductoria de HR analytics."
+      },
+      {
+        "source_key": "aihr_hr_metrics_examples",
+        "old_url": "https://www.aihr.com/blog/hr-metrics/",
+        "new_url": "https://www.aihr.com/blog/hr-metrics-examples/",
+        "reason": "Redirigía a un artículo antiguo; se usa la guía actual de ejemplos de métricas de HR."
+      },
+      {
+        "source_key": "aihr_diversity_equity_inclusion_belonging_deib",
+        "old_url": "https://www.aihr.com/blog/diversity-and-inclusion/",
+        "new_url": "https://www.aihr.com/blog/diversity-equity-inclusion-belonging-deib/",
+        "reason": "Redirigía a un artículo de puestos de D&I; se usa la guía DEIB de AIHR."
+      },
+      {
+        "source_key": "aihr_offboarding_checklist",
+        "old_url": "https://www.aihr.com/blog/employee-offboarding/",
+        "new_url": "https://www.aihr.com/blog/offboarding-checklist/",
+        "reason": "Redirigía al portal demo de AIHR; se usa el proceso de offboarding en 9 pasos."
+      },
+      {
+        "source_key": "aihr_exit_interview_questions",
+        "old_url": "https://www.aihr.com/blog/exit-interview/",
+        "new_url": "https://www.aihr.com/blog/exit-interview-questions/",
+        "reason": "Redirigía a un artículo de análisis de datos; se usa la guía de preguntas de exit interview."
+      },
+      {
+        "source_key": "aihr_claude_for_hr_resource_pack",
+        "old_url": "https://www.aihr.com/blog/claude-for-hr-resource-pack/",
+        "new_url": "https://www.aihr.com/hr-resources/claude-for-hr-resource-pack/",
+        "reason": "Redirección permanente; se actualiza a la URL final."
+      },
+      {
+        "source_key": "bamboohr_bamboohr_state_of_hr_2024_pdf",
+        "old_url": "",
+        "new_url": "",
+        "reason": "Ronda 2: metadata.content_kind pasa a \"pdf\" (el tipo anterior queda en metadata.document_type)."
+      },
+      {
+        "source_key": "stps_nom035_norma",
+        "old_url": "",
+        "new_url": "",
+        "reason": "Ronda 2: metadata.content_kind pasa a \"pdf\" (el tipo anterior queda en metadata.document_type)."
+      },
+      {
+        "source_key": "fondo_riesgos_bateria_psicosocial",
+        "old_url": "",
+        "new_url": "",
+        "reason": "Ronda 2: metadata.content_kind pasa a \"pdf\" (el tipo anterior queda en metadata.document_type)."
+      },
+      {
+        "source_key": "dt_ley_karin",
+        "old_url": "",
+        "new_url": "",
+        "reason": "Ronda 2: metadata.content_kind pasa a \"pdf\" (el tipo anterior queda en metadata.document_type)."
+      }
+    ],
+    "deactivated": [],
+    "added": [
+      {
+        "source_key": "cipd_performance_management",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/performance-factsheet/",
+        "reason": "Referencia profesional de CIPD para desempeño."
+      },
+      {
+        "source_key": "cipd_induction",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/induction-factsheet/",
+        "reason": "Referencia profesional de CIPD para onboarding."
+      },
+      {
+        "source_key": "cipd_recruitment",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/recruitment-factsheet/",
+        "reason": "Referencia profesional de CIPD para reclutamiento."
+      },
+      {
+        "source_key": "cipd_employee_engagement",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/engagement-factsheet/",
+        "reason": "Referencia profesional de CIPD para clima y compromiso."
+      },
+      {
+        "source_key": "cipd_wellbeing",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/well-being-factsheet/",
+        "reason": "Referencia profesional de CIPD para bienestar."
+      },
+      {
+        "source_key": "cipd_succession_planning",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/succession-planning-factsheet/",
+        "reason": "Referencia profesional de CIPD para sucesión."
+      },
+      {
+        "source_key": "cipd_diversity_inclusion",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/diversity-factsheet/",
+        "reason": "Referencia profesional de CIPD para DEI."
+      },
+      {
+        "source_key": "cipd_business_partnering",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/business-partnering-factsheet/",
+        "reason": "Referencia profesional de CIPD para el modelo operativo de HR."
+      },
+      {
+        "source_key": "cipd_reward",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/reward-factsheet/",
+        "reason": "Referencia profesional de CIPD para compensación."
+      },
+      {
+        "source_key": "cipd_discipline_grievance",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/discipline-factsheet/",
+        "reason": "Referencia profesional de CIPD para relaciones laborales."
+      },
+      {
+        "source_key": "shrm_performance_toolkit",
+        "url": "https://www.shrm.org/topics-tools/tools/toolkits/managing-employee-performance",
+        "reason": "Toolkit oficial de SHRM."
+      },
+      {
+        "source_key": "shrm_onboarding_guide",
+        "url": "https://www.shrm.org/topics-tools/topics/onboarding",
+        "reason": "Guía oficial de SHRM."
+      },
+      {
+        "source_key": "gallup_improve_engagement",
+        "url": "https://www.gallup.com/workplace/285674/improve-employee-engagement-workplace.aspx",
+        "reason": "Investigación de referencia de Gallup en engagement."
+      },
+      {
+        "source_key": "gallup_onboarding_retention",
+        "url": "https://www.gallup.com/workplace/235121/why-onboarding-experience-key-retention.aspx",
+        "reason": "Investigación de referencia de Gallup."
+      },
+      {
+        "source_key": "hbr_performance_management_revolution",
+        "url": "https://hbr.org/2016/10/the-performance-management-revolution",
+        "reason": "Artículo de referencia de Harvard Business Review."
+      },
+      {
+        "source_key": "hbr_onboarding_new_hires",
+        "url": "https://hbr.org/2018/12/to-retain-new-hires-spend-more-time-onboarding-them",
+        "reason": "Artículo de referencia de Harvard Business Review."
+      },
+      {
+        "source_key": "whatmatters_okr_definition",
+        "url": "https://www.whatmatters.com/faqs/okr-meaning-definition-example",
+        "reason": "Fuente canónica sobre la metodología OKR."
+      },
+      {
+        "source_key": "who_mental_health_at_work",
+        "url": "https://www.who.int/publications/i/item/9789240053052",
+        "reason": "Fuente oficial internacional sobre salud mental laboral."
+      },
+      {
+        "source_key": "stps_nom035_norma",
+        "url": "https://asinom.stps.gob.mx/upload/nom/48.pdf",
+        "reason": "Fuente oficial del regulador mexicano."
+      },
+      {
+        "source_key": "fondo_riesgos_bateria_psicosocial",
+        "url": "https://fondoriesgoslaborales.gov.co/wp-content/uploads/2018/10/Bateria-riesgo-psicosocial-1.pdf",
+        "reason": "Fuente oficial colombiana."
+      },
+      {
+        "source_key": "isl_ley_karin",
+        "url": "https://www.isl.gob.cl/ley-karin/",
+        "reason": "Fuente oficial chilena."
+      },
+      {
+        "source_key": "dt_ley_karin",
+        "url": "https://www.dt.gob.cl/portal/1626/articles-127102_archivo_01.pdf",
+        "reason": "Fuente oficial del regulador chileno."
+      },
+      {
+        "source_key": "aihr_employee_relations",
+        "url": "https://www.aihr.com/blog/employee-relations/",
+        "reason": "Guía núcleo que faltaba para relaciones laborales."
+      },
+      {
+        "source_key": "aihr_hr_technology",
+        "url": "https://www.aihr.com/blog/hr-technology/",
+        "reason": "Guía núcleo de HR tech."
+      },
+      {
+        "source_key": "aihr_psychological_safety",
+        "url": "https://www.aihr.com/blog/psychological-safety-at-work/",
+        "reason": "Refuerza cultura y bienestar."
+      },
+      {
+        "source_key": "factorial_onboarding",
+        "url": "https://factorial.mx/blog/onboarding-concepto-proceso-herramientas/",
+        "reason": "Cobertura en español para onboarding."
+      },
+      {
+        "source_key": "rankmi_evaluacion_desempeno",
+        "url": "https://www.rankmi.com/blog/que-es-evaluacion-de-desempeno-y-como-actualizarla-en-5-pasos",
+        "reason": "Cobertura LATAM en español para desempeño."
+      },
+      {
+        "source_key": "factorial_programas_capacitacion",
+        "url": "https://factorial.mx/blog/programas-capacitacion-empresa/",
+        "reason": "Cobertura en español para formación."
+      },
+      {
+        "source_key": "rankmi_capacitacion_latam",
+        "url": "https://www.rankmi.com/blog/aprendizaje-capacitacion-trabajo-latam-2026",
+        "reason": "Cobertura LATAM en español para formación."
+      },
+      {
+        "source_key": "rankmi_encuesta_clima",
+        "url": "https://www.rankmi.com/blog/como-realizar-encuesta-de-clima",
+        "reason": "Cobertura LATAM en español para clima."
+      },
+      {
+        "source_key": "rankmi_kpi_vs_okr",
+        "url": "https://www.rankmi.com/blog/cuales-son-las-diferencias-entre-kpi-okr-en-rrhh",
+        "reason": "Cobertura LATAM en español para OKRs."
+      },
+      {
+        "source_key": "buk_plan_sucesion",
+        "url": "https://www.buk.co/blog/plan-de-sucesion-en-las-empresas",
+        "reason": "Cobertura LATAM en español para sucesión."
+      },
+      {
+        "source_key": "bizneo_estructura_salarial",
+        "url": "https://www.bizneo.com/blog/estructura-salarial/",
+        "reason": "Cobertura en español para compensación."
+      },
+      {
+        "source_key": "bizneo_people_analytics",
+        "url": "https://www.bizneo.com/blog/people-analytics-medir-el-talento-con-datos/",
+        "reason": "Cobertura en español para people analytics."
+      },
+      {
+        "source_key": "buk_cultura_organizacional",
+        "url": "https://www.buk.co/blog/cultura-organizacional-colombia",
+        "reason": "Cobertura LATAM en español para cultura."
+      },
+      {
+        "source_key": "factorial_diversidad_inclusion",
+        "url": "https://factorial.mx/blog/diversidad-inclusion-laboral/",
+        "reason": "Cobertura LATAM en español para DEI."
+      },
+      {
+        "source_key": "bizneo_offboarding",
+        "url": "https://www.bizneo.com/blog/offboarding/",
+        "reason": "Cobertura en español para offboarding."
+      },
+      {
+        "source_key": "buk_gestion_documental",
+        "url": "https://www.buk.co/blog/en-que-consisten-los-procesos-de-gestion-documental",
+        "reason": "Cobertura LATAM en español para HR operations."
+      },
+      {
+        "source_key": "rankmi_ia_rrhh",
+        "url": "https://www.rankmi.com/blog/como-aplicar-inteligencia-artificial-en-recursos-humanos",
+        "reason": "Cobertura LATAM en español para HR tech."
+      },
+      {
+        "source_key": "buk_comite_convivencia",
+        "url": "https://www.buk.co/blog/normatividad-del-comite-de-convivencia-laboral-en-colombia",
+        "reason": "Cobertura LATAM en español para relaciones laborales."
+      },
+      {
+        "source_key": "factorial_conflictos_laborales",
+        "url": "https://factorial.mx/blog/manejo-resolucion-conflictos-laborales/",
+        "reason": "Cobertura en español para relaciones laborales."
+      },
+      {
+        "source_key": "factorial_nom035",
+        "url": "https://factorial.mx/blog/nom-035/",
+        "reason": "Refuerza NOM-035 tras desactivar Integratec."
+      },
+      {
+        "source_key": "buk_bateria_riesgo_psicosocial",
+        "url": "https://www.buk.co/blog/bateria-de-riesgo-psicosocial",
+        "reason": "Cobertura LATAM en español para salud y bienestar."
+      },
+      {
+        "source_key": "serviciocivil_cl_gestion_desempeno",
+        "url": "https://www.serviciocivil.cl/wp-content/uploads/2018/04/2016-Orientaciones-para-la-elaboraci%C3%B3n-de-un-Procedimiento-de-Gesti%C3%B3n-del-Desempe%C3%B1o.pdf",
+        "reason": "Ronda 2: Guía oficial de la Dirección Nacional del Servicio Civil de Chile: ciclo de planificación, seguimiento, evaluación y retroalimentación del desempeño."
+      },
+      {
+        "source_key": "serviciocivil_cl_programas_induccion",
+        "url": "https://www.serviciocivil.cl/wp-content/uploads/2018/04/2018-actualizaci%C3%B3n-Orientaciones-para-la-elaboraci%C3%B3n-de-Programas-de-Inducci%C3%B3n.pdf",
+        "reason": "Ronda 2: Guía oficial (actualización 2018) para diseñar programas de inducción: objetivos, etapas, plazos y responsables."
+      },
+      {
+        "source_key": "stps_nom035_preguntas_frecuentes",
+        "url": "https://trabajoseguro.stps.gob.mx/bol097/vinculos/preguntas_bol097.pdf",
+        "reason": "Ronda 2: Documento oficial de la STPS que resuelve dudas de aplicación de la NOM-035 (obligaciones por tamaño de centro de trabajo, cuestionarios, evidencias)."
+      },
+      {
+        "source_key": "stps_trabajo_seguro_nom035_cumplimiento",
+        "url": "https://trabajoseguro.stps.gob.mx/bol103/vinculos/notas_6.html",
+        "reason": "Ronda 2: Nota oficial del boletín Trabajo Seguro (DGSST-STPS) sobre cómo cumplir la NOM-035: identificación, análisis y prevención de factores de riesgo psicosocial."
+      },
+      {
+        "source_key": "oit_ia_generativa_trabajo",
+        "url": "https://www.ilo.org/es/resource/article/inteligencia-artificial-generativa-y-trabajo-mas-alla-de-la-automatizacion",
+        "reason": "Ronda 2: Análisis de la OIT sobre la exposición de las ocupaciones a la IA generativa y la transformación de tareas; contexto para automatización de RR. HH. y reskilling."
+      },
+      {
+        "source_key": "chileatiende_finiquito",
+        "url": "https://www.chileatiende.gob.cl/fichas/33522-finiquito-de-termino-de-contrato-de-trabajo",
+        "reason": "Ronda 2: Ficha oficial del Gobierno de Chile sobre el finiquito: causales, contenido obligatorio, pagos y ratificación. Base legal del offboarding en Chile."
+      },
+      {
+        "source_key": "oit_salario_minimo_definicion",
+        "url": "https://www.ilo.org/es/resource/11-definicion-y-finalidad",
+        "reason": "Ronda 2: Guía de políticas de salario mínimo de la OIT: definición, finalidad y cómo se fija; marco de referencia para compensación en LATAM."
+      },
+      {
+        "source_key": "gptw_chile_encuesta_clima",
+        "url": "https://www.greatplacetowork.cl/encuesta-clima-laboral/",
+        "reason": "Ronda 2: Explicación de GPTW Chile sobre qué mide una encuesta de clima, para qué sirve y cómo usar los resultados (modelo Trust Index)."
+      },
+      {
+        "source_key": "apd_metodologia_okr",
+        "url": "https://www.apd.es/metodologia-okr/",
+        "reason": "Ronda 2: Asociación para el Progreso de la Dirección: qué son los OKR, cómo se formulan y sus beneficios frente a otros sistemas de objetivos."
+      },
+      {
+        "source_key": "hrlatam_planes_sucesion",
+        "url": "https://hrlatam.com/blog/planes-de-sucesion-guia-corta/",
+        "reason": "Ronda 2: Guía de HR Latam (medio y comunidad de RR. HH. latinoamericana) sobre cómo identificar puestos críticos, sucesores y planes de desarrollo."
+      },
+      {
+        "source_key": "sunat_planilla_electronica",
+        "url": "https://orientacion.sunat.gob.pe/informacion-general-planilla-electronica",
+        "reason": "Ronda 2: Orientación oficial sobre la Planilla Electrónica (T-Registro y PLAME): el proceso operativo de nómina y registro laboral obligatorio en Perú."
+      },
+      {
+        "source_key": "cipd_people_analytics",
+        "url": "https://www.cipd.org/en/knowledge/factsheets/analytics-factsheet/",
+        "reason": "Ronda 2: Factsheet del CIPD: qué es people analytics, fuentes y tipos de datos, y cómo usarlos para decisiones basadas en evidencia."
+      },
+      {
+        "source_key": "cipd_ld_strategy",
+        "url": "https://www.cipd.org/en/knowledge/factsheets/strategy-development-factsheet/",
+        "reason": "Ronda 2: Factsheet del CIPD sobre estrategia y política de L&D: influencias, stakeholders e implementación."
+      },
+      {
+        "source_key": "cipd_dismissal",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/dismissal-factsheet/",
+        "reason": "Ronda 2: Factsheet del CIPD sobre procedimientos de desvinculación justa (marco del Reino Unido, útil como referencia de buenas prácticas)."
+      },
+      {
+        "source_key": "cipd_ai_technology",
+        "url": "https://www.cipd.org/uk/knowledge/factsheets/ai-technology",
+        "reason": "Ronda 2: Factsheet del CIPD sobre tecnología e IA en el trabajo: términos clave, principios para elegir y usar herramientas y el rol de RR. HH. en la transformación digital."
+      },
+      {
+        "source_key": "cipd_strategic_hrm",
+        "url": "https://www.cipd.org/en/knowledge/factsheets/strategic-hrm-factsheet/",
+        "reason": "Ronda 2: Factsheet del CIPD sobre gestión estratégica de personas: cómo se conectan los procesos de RR. HH. con la estrategia del negocio."
+      }
+    ],
+    "duplicates_removed": 134,
+    "notes": [
+      "La tabla de n8n (3ydPwChaI4GncOr6) tenía 262 filas: la fila 26 estaba vacía, las filas 145–262 repetían exactamente las 27–144 (118 duplicados) y dentro del lote restante había 16 URLs repetidas entre procesos. Total: 134 duplicados eliminados + 1 fila vacía; quedaron 127 fuentes únicas.",
+      "Cuando una misma URL servía a varios procesos se conservó una sola fila: category es el primer proceso y metadata.processes lista todos. metadata.legacy_table_id guarda el id de la fila original.",
+      "Casi todas las fuentes son artículos evergreen de una sola página; el checker los marca como 'empty' u 'ok_html' según los links que encuentre, pero lo relevante es HTTP 200 y que la URL final sea el artículo. Se verificó con curl el código y el <title> de cada URL activa.",
+      "aihr_diversity_equity_inclusion_belonging_deib falló por un error transitorio de red en el chequeo final; un reintento devolvió 200 con el artículo correcto y se contabiliza como ok_html.",
+      "Los listados de blogs se pasaron a su feed RSS cuando existía (preferencia del README). Los 3 'broken' corresponden a fuentes desactivadas (Personio, Fundación Ascendo, GlocalThinking).",
+      "Los PDF (STPS NOM-035, batería de riesgo psicosocial de Colombia, Ley Karin de la DT, reporte de BambooHR) cargan con 200; se registran como source_type HTML porque el esquema no tiene tipo PDF. Confirmar que el flujo sabe extraer texto de PDF.",
+      "HBR puede mostrar muro de pago parcial y gob.mx/DOF bloquean bots, por eso para NOM-035 se usa el PDF oficial de asinom.stps.gob.mx.",
+      "Cobertura activa por proceso (total / en español): CLIMA_Y_COMPROMISO 13/1, COMPENSACION_Y_BENEFICIOS 8/1, CULTURA_Y_DEI 10/2, DESEMPENO_Y_FEEDBACK 14/1, EMPLOYEE_RELATIONS 11/4, FORMACION_Y_DESARROLLO 11/2, GENERAL_PROCESOS_RH 16/7, HR_OPERATIONS 10/1, HR_TECH_AUTOMATIZACION 8/1, NOM035_MX 4/4, OFFBOARDING 6/1, OKRS 9/1, ONBOARDING 15/1, PEOPLE_ANALYTICS 8/2, RECLUTAMIENTO_Y_TALENTO 11/3, SALUD_Y_BIENESTAR 15/6, SUCESION_Y_MOVILIDAD 9/1.",
+      "Fuentes activas: 161 de 170.",
+      "Ronda 2 (2026-09-29): se borraron las 9 fuentes inactivas (dominios caídos o perdidos, bloqueo anti-bots permanente, listados solo JavaScript, feeds sin publicar hace más de 12 meses); detalle en report.removed. No quedan fuentes inactivas.",
+      "Ronda 2: se añadieron 16 fuentes evergreen verificadas (HTTP 200, título correcto, contenido legible): 11 en español con relevancia LATAM (STPS México, Servicio Civil y ChileAtiende de Chile, SUNAT Perú, OIT, GPTW Chile, APD, HR Latam; ninguna de proveedor de software) y 5 factsheets del CIPD para que cada proceso tenga al menos una fuente autoritativa no comercial.",
+      "Ronda 2: no se usó Google News; al ser un boletín evergreen la frescura no aplica. Los PDF (4 existentes + 3 nuevos) llevan metadata.content_kind \"pdf\" y el tipo anterior en metadata.document_type.",
+      "Ronda 2: el chequeo final marcó synergita_blog como broken por un timeout puntual; un reintento con curl devolvió 200 con publicaciones de septiembre de 2026, por eso se cuenta como ok_feed. Los 42 'empty' son artículos evergreen de una sola página (esperable, ver nota anterior).",
+      "Ronda 2: se descartó la ficha Ley Fácil de la BCN (término de contrato) porque solo se renderiza con JavaScript.",
+      "Cobertura tras la ronda 2 (total / en español): CLIMA_Y_COMPROMISO 14/2, COMPENSACION_Y_BENEFICIOS 10/3, CULTURA_Y_DEI 10/2, DESEMPENO_Y_FEEDBACK 15/2, EMPLOYEE_RELATIONS 13/5, FORMACION_Y_DESARROLLO 13/3, GENERAL_PROCESOS_RH 17/7, HR_OPERATIONS 11/2, HR_TECH_AUTOMATIZACION 10/2, NOM035_MX 6/6, OFFBOARDING 8/2, OKRS 10/2, ONBOARDING 16/2, PEOPLE_ANALYTICS 9/2, RECLUTAMIENTO_Y_TALENTO 11/3, SALUD_Y_BIENESTAR 16/7, SUCESION_Y_MOVILIDAD 10/2.",
+      "Fuentes activas: 177 de 177."
+    ],
+    "removed": [
+      {
+        "source_key": "personio_hr_processes",
+        "url": "https://www.personio.com/hr-lexicon/hr-processes/",
+        "reason": "Bloqueada de forma permanente por el checkpoint anti-bots de Vercel (429); no es legible por el scraper y el proceso general ya tiene cobertura amplia."
+      },
+      {
+        "source_key": "crehana_blog",
+        "url": "https://www.crehana.com/blog/gestion-talento/",
+        "reason": "Listado renderizado con JavaScript, sin links extraíbles ni feed RSS alternativo."
+      },
+      {
+        "source_key": "integratec_blog",
+        "url": "https://www.integratec.com/blog/",
+        "reason": "403 permanente por desafío anti-bots de Cloudflare; NOM-035 se cubre ahora con fuentes oficiales de la STPS."
+      },
+      {
+        "source_key": "andres_ortega_blog",
+        "url": "http://andres-ortega.com/",
+        "reason": "Dominio perdido: ya no pertenece al autor y muestra un sitio sin relación."
+      },
+      {
+        "source_key": "historias_de_cracks_headhunter",
+        "url": "https://www.historiasdecracks.com/headhunter/",
+        "reason": "Sin links extraíbles, feed intermitente y sin publicaciones desde junio de 2024 (más de 12 meses)."
+      },
+      {
+        "source_key": "aptitus_feed",
+        "url": "https://aptitus23.rssing.com/chan-16125906/index-latest.php",
+        "reason": "Espejo de RSSing sin contenido (respuesta vacía)."
+      },
+      {
+        "source_key": "fundacion_ascendo_blog",
+        "url": "https://fundacionascendo.org/blog/",
+        "reason": "Sitio cerrado: el dominio no resuelve (sin DNS)."
+      },
+      {
+        "source_key": "emol_capital_humano_blog",
+        "url": "https://capitalhumano.emol.com/",
+        "reason": "Sin links extraíbles y feed sin publicaciones en ~700 días."
+      },
+      {
+        "source_key": "glocalthinking_blog",
+        "url": "https://glocalthinking.com/",
+        "reason": "Blog cerrado: el dominio redirige al sitio corporativo de Cegid (403)."
+      }
+    ]
+  }
+}
