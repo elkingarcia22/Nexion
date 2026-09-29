@@ -74,6 +74,13 @@ const KNOWN_PRIVATE = [
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabType>("slack");
+
+  // Deep links (e.g. the Ubits MCP sign-in coming back) open a specific tab via ?tab=.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    if (requested === "ubits_mcp" || requested === "posthog") setActiveTab(requested);
+  }, []);
+
   const [user, setUser] = useState<any>(null);
   const [workspace, setWorkspace] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -302,13 +309,13 @@ export default function SettingsPage() {
           if (anConfigResult.data.source_types) {
             setActiveSources(anConfigResult.data.source_types);
             const sources = anConfigResult.data.source_types;
-            if (!sources.includes("slack") && activeTab === "slack") {
-              setActiveTab("drive");
+            if (!sources.includes("slack")) {
+              setActiveTab(tab => (tab === "slack" ? "drive" : tab));
             }
           } else {
             const sources = SOURCE_TYPES.map(s => s.key);
-            if (!sources.includes("slack") && activeTab === "slack") {
-              setActiveTab("drive");
+            if (!sources.includes("slack")) {
+              setActiveTab(tab => (tab === "slack" ? "drive" : tab));
             }
           }
         }

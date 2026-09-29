@@ -7,6 +7,8 @@ export const GOOGLE_CLIENT_ID_SECRET = "google_client_id";
 export const GOOGLE_CLIENT_SECRET_SECRET = "google_client_secret";
 export const POSTHOG_KEY_SECRET = "posthog_api_key";
 export const UBITS_MCP_TOKEN_SECRET = "ubits_mcp_token";
+export const UBITS_MCP_CLIENT_SECRET = "ubits_mcp_oauth_client";
+export const UBITS_MCP_PENDING_SECRET = "ubits_mcp_oauth_pending";
 
 /** Server-only: read a secret from `app_secrets` (requires the service-role client). */
 export async function getSecret(db: SupabaseClient, name: string): Promise<string | null> {
@@ -66,11 +68,4 @@ export async function resolvePosthogKey(db: SupabaseClient): Promise<string> {
   const key = (await getSecret(db, POSTHOG_KEY_SECRET)) || process.env.POSTHOG_API_KEY;
   if (!key) throw new Error("No hay llave de PostHog. Agrégala en Configuración → PostHog.");
   return key;
-}
-
-/** Ubits MCP token saved in Configuración → MCP de Ubits (falls back to UBITS_MCP_TOKEN). */
-export async function resolveUbitsMcpToken(db: SupabaseClient): Promise<string> {
-  const token = (await getSecret(db, UBITS_MCP_TOKEN_SECRET)) || process.env.UBITS_MCP_TOKEN;
-  if (!token) throw new Error("No hay token del MCP de Ubits. Agrégalo en Configuración → MCP de Ubits.");
-  return token;
 }

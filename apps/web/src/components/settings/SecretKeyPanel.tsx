@@ -30,7 +30,7 @@ export interface SecretKeyPanelProps {
 /** Authenticated call to a /api/settings/* route with the user's Supabase session. */
 export async function callSettingsApi<T = SecretStatus>(
   endpoint: string,
-  method: "GET" | "PUT" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "DELETE",
   body?: unknown
 ): Promise<T> {
   const { data } = await supabase.auth.getSession();
