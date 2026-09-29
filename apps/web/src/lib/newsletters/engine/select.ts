@@ -36,6 +36,8 @@ export function selectDiverse(ranked: RankedArticle[], count: number, options: S
 export interface ShortlistSelectOptions {
   maxPerAngle: number;
   maxPerDomain: number;
+  /** What counts as "the same outlet" (defaults to the domain; e.g. the competitor for a product radar). */
+  groupOf?: (article: RankedArticle) => string;
 }
 
 /**
@@ -48,6 +50,7 @@ export function selectVariedShortlist(
   options: ShortlistSelectOptions
 ): RankedArticle[] {
   const picked: RankedArticle[] = [];
+  const groupOf = options.groupOf ?? ((a: RankedArticle) => a.domain);
   const count = (key: (a: RankedArticle) => string, value: string) => picked.filter((a) => key(a) === value).length;
 
   for (const perAngle of [1, options.maxPerAngle]) {
@@ -55,7 +58,7 @@ export function selectVariedShortlist(
       if (picked.length >= size) return picked;
       if (picked.some((a) => a.url === article.url)) continue;
       if (count((a) => a.angle, article.angle) >= perAngle) continue;
-      if (count((a) => a.domain, article.domain) >= options.maxPerDomain) continue;
+      if (count(groupOf, groupOf(article)) >= options.maxPerDomain) continue;
       picked.push(article);
     }
   }

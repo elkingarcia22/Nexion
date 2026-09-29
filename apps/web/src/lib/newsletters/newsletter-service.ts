@@ -2,6 +2,7 @@ import type { EditionStatus, EditionTrigger } from "./types";
 import { callClaude, fetchSourceBody, postToSlack } from "./clients";
 import { runIaNewsDay } from "./ia-news-day/pipeline";
 import { runHrRadar } from "./hr-radar/pipeline";
+import { runRadarProducto } from "./radar-producto/pipeline";
 import { hasPipeline, type PipelineId } from "./pipelines";
 import { resolveAnthropicKey, resolveSlackToken } from "@/lib/secrets";
 import {
@@ -37,6 +38,7 @@ export interface RunOutcome {
 const RUNNERS: Record<PipelineId, typeof runIaNewsDay> = {
   "ia-news-day": runIaNewsDay,
   "hr-radar": runHrRadar,
+  "radar-producto": runRadarProducto,
 };
 type NewsletterId = PipelineId;
 

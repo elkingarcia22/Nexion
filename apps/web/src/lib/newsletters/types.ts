@@ -57,6 +57,8 @@ export interface Article {
   priority: SourcePriority;
   publishedAt: string;
   domain: string;
+  /** The source's newsletter-specific fields (e.g. competitor for Radar de Producto). */
+  sourceMetadata?: Record<string, unknown>;
 }
 
 export interface SelectedArticle {

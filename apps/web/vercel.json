@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/newsletters?id=hr-radar",
       "schedule": "0 13 * * 3"
+    },
+    {
+      "path": "/api/cron/newsletters?id=radar-producto",
+      "schedule": "0 13 * * 2"
     }
   ]
 }

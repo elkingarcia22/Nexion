@@ -17,7 +17,8 @@ const HTML_AI_HINTS = [
   "claude",
 ];
 
-type SourceMeta = Pick<NewsletterSource, "name" | "url" | "source_key" | "category" | "priority" | "max_items">;
+type SourceMeta = Pick<NewsletterSource, "name" | "url" | "source_key" | "category" | "priority" | "max_items"> &
+  Partial<Pick<NewsletterSource, "metadata">>;
 
 interface RawEntry {
   title: string;
@@ -80,6 +81,7 @@ function toArticle(entry: RawEntry, meta: SourceMeta): Article {
     sourceKey: meta.source_key,
     category: meta.category,
     priority: meta.priority,
+    sourceMetadata: meta.metadata,
     publishedAt: Number.isNaN(parsedDate.getTime()) ? new Date().toISOString() : parsedDate.toISOString(),
     domain,
   };
