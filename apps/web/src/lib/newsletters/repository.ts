@@ -10,16 +10,38 @@ import type {
   TokenUsage,
 } from "./types";
 
+/**
+ * Explains a wrong SUPABASE_SERVICE_ROLE_KEY instead of failing later with empty reads:
+ * with the anon/publishable key, RLS hides every newsletter row from the server.
+ */
+export function describeServiceKeyProblem(key: string): string | null {
+  const hint = "Revisa SUPABASE_SERVICE_ROLE_KEY en Vercel: debe ser la llave service_role (Supabase → Project Settings → API).";
+  if (key.startsWith("sb_secret_")) return null;
+  if (key.startsWith("sb_publishable_")) return `Se configuró la llave publishable en lugar de la secreta. ${hint}`;
+
+  const payload = key.split(".")[1];
+  if (!payload) return `La llave no tiene formato válido. ${hint}`;
+  try {
+    const role = JSON.parse(Buffer.from(payload, "base64").toString("utf8")).role;
+    return role === "service_role" ? null : `Se configuró la llave "${role}" en lugar de "service_role". ${hint}`;
+  } catch {
+    return `La llave no tiene formato válido. ${hint}`;
+  }
+}
+
 export function createServiceClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("Supabase no está configurado (URL o SERVICE_ROLE_KEY).");
+  const problem = describeServiceKeyProblem(key);
+  if (problem) throw new Error(problem);
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
 export async function getNewsletter(db: SupabaseClient, id: string): Promise<Newsletter> {
   const { data, error } = await db.from("newsletters").select("*").eq("id", id).single();
-  if (error || !data) throw new Error(`No existe el boletín "${id}".`);
+  if (error && error.code !== "PGRST116") throw new Error(`No se pudo leer el boletín "${id}": ${error.message}`);
+  if (!data) throw new Error(`No existe el boletín "${id}".`);
   return data as Newsletter;
 }
 
