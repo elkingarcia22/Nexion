@@ -17,10 +17,10 @@ const DEFAULT_OUTPUT = "supabase/seeds/newsletter_catalogs.sql";
 /** Daily bulletin first, then one per weekday. */
 const SORT_ORDER: Record<string, number> = {
   "ia-news-day": 0,
-  "procesos-rh": 1,
   "radar-producto": 2,
   "hr-radar": 3,
   "ia-usability": 4,
+  "procesos-rh": 5,
 };
 
 function main() {

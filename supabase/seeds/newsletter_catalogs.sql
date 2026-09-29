@@ -250,7 +250,7 @@ where newsletter_id = 'ia-usability'
 
 -- Entendimiento de Procesos RH (procesos-rh): 177 fuentes, 177 activas
 insert into public.newsletters (id, name, description, slack_channel_id, schedule_label, model, is_enabled, sort_order)
-values ('procesos-rh', 'Entendimiento de Procesos RH', 'Explicador semanal de un proceso de RR. HH. (cómo funciona, buenas prácticas y métricas) para que los equipos de producto y UX entiendan el dominio para el que construyen.', 'C0A34HW4HGR', 'Lunes · 8:00 a. m. (Bogotá)', 'claude-haiku-4-5-20251001', false, 1)
+values ('procesos-rh', 'Entendimiento de Procesos RH', 'Explicador semanal de un proceso de RR. HH. (cómo funciona, buenas prácticas y métricas) para que los equipos de producto y UX entiendan el dominio para el que construyen.', 'C0A34HW4HGR', 'Viernes · 8:00 a. m. (Bogotá)', 'claude-haiku-4-5-20251001', false, 5)
 on conflict (id) do update set
   name = excluded.name,
   description = excluded.description,

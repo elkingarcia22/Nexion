@@ -3,7 +3,7 @@
     "id": "procesos-rh",
     "name": "Entendimiento de Procesos RH",
     "description": "Explicador semanal de un proceso de RR. HH. (cómo funciona, buenas prácticas y métricas) para que los equipos de producto y UX entiendan el dominio para el que construyen.",
-    "schedule_label": "Lunes · 8:00 a. m. (Bogotá)",
+    "schedule_label": "Viernes · 8:00 a. m. (Bogotá)",
     "slack_channel_id": "C0A34HW4HGR",
     "model": "claude-haiku-4-5-20251001"
   },
