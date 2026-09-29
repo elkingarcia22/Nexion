@@ -4,11 +4,14 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { REPORT_TYPE_LABELS, REPORT_TYPES, type ReportType } from "@/lib/analytics/periods";
 import type { ActionStatus, AnalyticsAction, AnalyticsProduct, AnalyticsReport } from "@/lib/analytics/types";
+import { canGenerate } from "@/lib/analytics/generators";
 import {
+  generateAnalyticsReport,
   getAnalyticsReportsByIds,
   listAnalyticsActions,
   listAnalyticsProducts,
   listAnalyticsReports,
+  publishAnalyticsReport,
   updateAnalyticsAction,
 } from "@/lib/services/analytics-client-service";
 import { ReportTimeline } from "@/components/analytics/ReportTimeline";
@@ -39,6 +42,9 @@ function AnalyticsView() {
   const [actions, setActions] = useState<AnalyticsAction[]>([]);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"generate" | "publish" | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const product = products.find((p) => p.id === productParam) ?? products[0];
@@ -71,7 +77,7 @@ function AnalyticsView() {
       if (result.success) setReports(result.data);
       else setError(result.error);
     });
-  }, [product, level, monthParam]);
+  }, [product, level, monthParam, reloadKey]);
 
   useEffect(() => {
     if (!product) return;
@@ -89,6 +95,38 @@ function AnalyticsView() {
       setSelected(result.success && result.data[0] ? result.data[0] : reports[0] ?? null);
     });
   }, [reports, reportParam]);
+
+  const handleGenerate = async () => {
+    if (!product || !level) return;
+    setBusy("generate");
+    setError(null);
+    setNotice(null);
+    const result = await generateAnalyticsReport(product.id, level);
+    setBusy(null);
+    if (!result.success) {
+      setError(`No se pudo generar el reporte: ${result.error}`);
+      return;
+    }
+    setNotice(result.data.status === "failed" ? `El reporte quedó con error: ${result.data.error}` : "Vista previa lista. Revísala y publícala en Slack cuando quieras.");
+    navigate({ report: result.data.id, until: null });
+    setReloadKey((key) => key + 1);
+  };
+
+  const handlePublish = async () => {
+    if (!selected) return;
+    setBusy("publish");
+    setError(null);
+    setNotice(null);
+    const result = await publishAnalyticsReport(selected.id);
+    setBusy(null);
+    if (!result.success) {
+      setError(`No se publicó en Slack: ${result.error}`);
+      return;
+    }
+    setSelected(result.data);
+    setNotice(`Publicado en #${product?.slack_channel_name}.`);
+    setReloadKey((key) => key + 1);
+  };
 
   const handleChangeActionStatus = async (action: AnalyticsAction, status: ActionStatus) => {
     setPendingActionId(action.id);
@@ -116,6 +154,12 @@ function AnalyticsView() {
       {error && (
         <p role="alert" className="text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-4">
           {error}
+        </p>
+      )}
+
+      {notice && (
+        <p role="status" className="text-sm text-emerald-200 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl px-5 py-3">
+          {notice}
         </p>
       )}
 
@@ -167,6 +211,16 @@ function AnalyticsView() {
                     </button>
                   ))}
                 </div>
+                {level && canGenerate(product.id, level) && (
+                  <button
+                    onClick={handleGenerate}
+                    disabled={busy !== null}
+                    title="Genera el reporte de la última semana completa como vista previa, sin publicarlo"
+                    className="px-3 py-2 rounded-xl border border-primary/40 text-[11px] font-black uppercase tracking-widest text-white hover:bg-primary/15 transition-colors disabled:opacity-50"
+                  >
+                    {busy === "generate" ? "Generando… (≈1 min)" : "Generar vista previa"}
+                  </button>
+                )}
                 <span className="text-xs text-white/40">
                   Se publica en <span className="font-mono text-white/60">#{product.slack_channel_name}</span>
                   {!product.slack_channel_id && " (canal pendiente de conectar)"}
@@ -193,6 +247,8 @@ function AnalyticsView() {
                 {selected ? (
                   <ReportViewer
                     report={selected}
+                    onPublish={handlePublish}
+                    publishing={busy === "publish"}
                     onOpenChild={(child) => navigate({ level: child.report_type, report: child.id, until: null })}
                   />
                 ) : (

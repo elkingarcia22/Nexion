@@ -26,7 +26,12 @@ export interface ClaudeResult {
   usage: TokenUsage;
 }
 
-export async function callClaude(prompt: string, model: string, apiKey: string): Promise<ClaudeResult> {
+export interface ClaudeOptions {
+  maxTokens?: number;
+  timeoutMs?: number;
+}
+
+export async function callClaude(prompt: string, model: string, apiKey: string, options: ClaudeOptions = {}): Promise<ClaudeResult> {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -36,10 +41,10 @@ export async function callClaude(prompt: string, model: string, apiKey: string):
     },
     body: JSON.stringify({
       model,
-      max_tokens: CLAUDE_MAX_TOKENS,
+      max_tokens: options.maxTokens ?? CLAUDE_MAX_TOKENS,
       messages: [{ role: "user", content: prompt }],
     }),
-    signal: AbortSignal.timeout(CLAUDE_TIMEOUT_MS),
+    signal: AbortSignal.timeout(options.timeoutMs ?? CLAUDE_TIMEOUT_MS),
   });
 
   const data = await response.json().catch(() => ({}));
@@ -80,15 +85,15 @@ const SLACK_ERROR_HINTS: Record<string, string> = {
   is_archived: "El canal del boletín está archivado.",
 };
 
-/** Post a message and return its Slack timestamp. */
-export async function postToSlack(channel: string, text: string, token: string): Promise<string> {
+/** Post a message (optionally as Block Kit blocks, with `text` as the notification fallback) and return its timestamp. */
+export async function postToSlack(channel: string, text: string, token: string, blocks?: unknown[]): Promise<string> {
   const response = await fetch("https://slack.com/api/chat.postMessage", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json; charset=utf-8",
     },
-    body: JSON.stringify({ channel, text, unfurl_links: false, unfurl_media: false }),
+    body: JSON.stringify({ channel, text, unfurl_links: false, unfurl_media: false, ...(blocks ? { blocks } : {}) }),
     signal: AbortSignal.timeout(SLACK_TIMEOUT_MS),
   });
   const data = await response.json();

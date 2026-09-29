@@ -59,3 +59,30 @@ export async function updateAnalyticsAction(
     .eq("id", id);
   return error ? { success: false, error: error.message } : { success: true, data: null };
 }
+
+async function callAnalyticsApi(path: string, body: unknown): Promise<ServiceResult<AnalyticsReport>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return { success: false, error: "Inicia sesión con Google para generar o publicar reportes." };
+  try {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) return { success: false, error: json.error ?? `Error ${response.status}` };
+    return { success: true, data: json.report as AnalyticsReport };
+  } catch {
+    return { success: false, error: "No se pudo contactar al servidor." };
+  }
+}
+
+/** Builds (or rebuilds) a report as a preview; it is not posted to Slack. */
+export function generateAnalyticsReport(product: string, type: ReportType, weekStart?: string) {
+  return callAnalyticsApi("/api/analytics/run", { product, type, weekStart });
+}
+
+export function publishAnalyticsReport(reportId: string) {
+  return callAnalyticsApi(`/api/analytics/reports/${reportId}/publish`, {});
+}

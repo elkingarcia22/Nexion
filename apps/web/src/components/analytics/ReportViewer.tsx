@@ -18,10 +18,13 @@ type View = "dashboard" | "slack";
 interface ReportViewerProps {
   report: AnalyticsReport;
   onOpenChild: (report: AnalyticsReport) => void;
+  /** Present when the report is a preview that can be posted to Slack. */
+  onPublish?: () => void;
+  publishing?: boolean;
 }
 
 /** One report: its Slack message as published, its dashboard, and the lower-level reports it rolls up. */
-export function ReportViewer({ report, onOpenChild }: ReportViewerProps) {
+export function ReportViewer({ report, onOpenChild, onPublish, publishing }: ReportViewerProps) {
   const [view, setView] = useState<View>("dashboard");
   const [children, setChildren] = useState<AnalyticsReport[]>([]);
   const period = periodContaining(report.report_type as ReportType, new Date(`${report.period_start}T00:00:00Z`));
@@ -41,6 +44,15 @@ export function ReportViewer({ report, onOpenChild }: ReportViewerProps) {
           <span className={`px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${HEALTH_LABEL[report.health].className}`}>
             {HEALTH_LABEL[report.health].text}
           </span>
+        )}
+        {onPublish && report.status === "preview" && report.message && (
+          <button
+            onClick={onPublish}
+            disabled={publishing}
+            className="px-3 py-2 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary/80 transition-colors disabled:opacity-50"
+          >
+            {publishing ? "Publicando..." : "Publicar en Slack"}
+          </button>
         )}
         <div role="tablist" aria-label="Vista del reporte" className="flex rounded-xl border border-white/10 overflow-hidden">
           {(["dashboard", "slack"] as const).map((option) => (
