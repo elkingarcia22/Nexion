@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/newsletters?id=radar-producto",
       "schedule": "0 13 * * 2"
+    },
+    {
+      "path": "/api/cron/newsletters?id=ia-usability",
+      "schedule": "0 13 * * 4"
     }
   ]
 }
