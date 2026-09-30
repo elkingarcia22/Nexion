@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { listSheetTabs, readSheetValues, resolveSheetsAccessToken } from "../google-sheets";
-import type { PulseConfig } from "./config";
+import { PULSE_CONFIGS, type PulseConfig } from "./config";
 import type { PulseWindow } from "./sql";
 
 /**
@@ -85,21 +85,29 @@ export function pickQuarterTab(tabs: string[], periodEnd: string): string | null
   return exact ?? [...tabs].reverse().find((tab) => /\bQ[1-4]\b/i.test(tab)) ?? null;
 }
 
-export function parseOkrs(values: string[][], tab: string, terms: string[]): PulseOkrs {
+/**
+ * A KR is the product's when the KR itself mentions it, or its squad is the product's, or its
+ * objective mentions it and the KR is not about another product (merged cells carry objectives down).
+ */
+function isProductKr(kr: { squad: string; objective: string; keyResult: string }, terms: string[], otherTerms: string[], squad?: string): boolean {
+  if (mentions(kr.keyResult, terms)) return true;
+  if (squad && norm(kr.squad) === norm(squad)) return true;
+  return mentions(kr.objective, terms) && !mentions(kr.keyResult, otherTerms);
+}
+
+export function parseOkrs(values: string[][], tab: string, terms: string[], otherTerms: string[] = [], productSquad?: string): PulseOkrs {
   const records = toRecords(values, "Key Result");
   let squad = "";
   let objective = "";
-  let why = "";
   const keyResults: KeyResult[] = [];
   const seen = new Set<string>();
   for (const record of records) {
     // Merged cells: squad, objective and its "why" apply to the rows below until they change.
     squad = record["squad"] || squad;
     objective = record["objetivo"] || objective;
-    why = record["¿porque el objetivo es esencial para la compania?"] || why;
     const keyResult = record["key result"];
     if (!keyResult || seen.has(keyResult)) continue;
-    if (!mentions([squad, objective, why, keyResult, record["comentarios"] ?? "", record["impacto"] ?? ""].join(" "), terms)) continue;
+    if (!isProductKr({ squad, objective, keyResult }, terms, otherTerms, productSquad)) continue;
     seen.add(keyResult);
     const weight = parsePercent(record["peso"] ?? "");
     keyResults.push({
@@ -161,6 +169,14 @@ export function parseFeedback(values: string[][], terms: string[], w: PulseWindo
   };
 }
 
+/** OKR terms of every other product, to keep their KRs out when an objective is shared. */
+function otherProductTerms(config: PulseConfig): string[] {
+  return Object.values(PULSE_CONFIGS)
+    .filter((other) => other.productId !== config.productId)
+    .flatMap((other) => other.okrTerms)
+    .filter((term) => !config.okrTerms.some((own) => norm(own) === norm(term)));
+}
+
 export async function fetchPulseSheets(db: SupabaseClient, config: PulseConfig, w: PulseWindow): Promise<{ okrs: PulseOkrs | null; feedback: PulseFeedback | null }> {
   const token = await resolveSheetsAccessToken(db);
   const tab = pickQuarterTab(await listSheetTabs(token, OKR_SPREADSHEET), w.end);
@@ -169,7 +185,7 @@ export async function fetchPulseSheets(db: SupabaseClient, config: PulseConfig, 
     readSheetValues(token, FEEDBACK_SPREADSHEET, FEEDBACK_TAB),
   ]);
   return {
-    okrs: tab && okrValues ? parseOkrs(okrValues, tab, config.okrTerms) : null,
+    okrs: tab && okrValues ? parseOkrs(okrValues, tab, config.okrTerms, otherProductTerms(config), config.okrSquad) : null,
     feedback: parseFeedback(feedbackValues, config.feedbackTerms, w),
   };
 }

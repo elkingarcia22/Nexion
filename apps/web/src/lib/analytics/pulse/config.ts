@@ -28,6 +28,8 @@ export interface PulseConfig {
   /** Words that tie an OKR row (squad, objective, key result) and an implementation-feedback row to the product. */
   okrTerms: string[];
   feedbackTerms: string[];
+  /** OKR squad that belongs entirely to the product (the Talent squad is shared, so only Hiring has one). */
+  okrSquad?: string;
   /** Slack List with customer cases or feedback; productValue filters its "Producto" column. */
   slackList?: { fileId: string; productValue?: string };
 }
@@ -39,7 +41,8 @@ const HIRING_FEEDBACK_LIST = "F0BAX64GB4N";
 export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   hiring: {
     productId: "hiring",
-    okrTerms: ["hiring", "reclutamiento", "vacante", "serena", "créditos"],
+    okrTerms: ["hiring", "reclutamiento", "vacante", "serena"],
+    okrSquad: "Hiring",
     feedbackTerms: ["hiring", "reclutamiento", "selección"],
     slackList: { fileId: HIRING_FEEDBACK_LIST },
     productName: "Hiring",
@@ -60,7 +63,8 @@ export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   },
   objetivos: {
     productId: "objetivos",
-    okrTerms: ["producto objetivos", "módulo de desempeño", "desempeño objetivos", "objetivos + 360", "clientes objetivos", "refactor gradual de objetivos", "carga de exceles", "empezando por objetivos", "engagement del producto objetivos"],
+    // Specific phrases: plain "objetivos" also matches team KRs like "lograr los objetivos del equipo".
+    okrTerms: ["módulo de objetivos", "producto objetivos", "carga de objetivos", "ciclos de objetivos", "módulo de desempeño", "carga de exceles"],
     feedbackTerms: ["objetivos", "okr"],
     slackList: { fileId: TALENT_CASES_LIST, productValue: "Objetivos" },
     productName: "Objetivos",
@@ -112,7 +116,8 @@ export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   },
   "evaluacion-360": {
     productId: "evaluacion-360",
-    okrTerms: ["360", "evaluación de desempeño"],
+    // "360" alone also matches names like Raven360.
+    okrTerms: ["módulo de 360", "evaluaciones 360", "evaluación 360", "360°", "evaluación de desempeño"],
     feedbackTerms: ["360"],
     productName: "Evaluación 360",
     table: "axs_360_usability_history",
