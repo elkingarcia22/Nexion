@@ -82,6 +82,8 @@ export function buildRollupContext(data: RollupData, productId: string, productN
             at_risk_of_losing_nsm: trim(business.companies.atRisk),
             newly_contracted: business.companies.newlyContracted,
           },
+          okrs: business.okrs ? { quarter_tab: business.okrs.tab, weighted_progress_pct: business.okrs.weightedProgressPct, most_advanced: business.okrs.mostAdvanced?.keyResult ?? null, biggest_gap: business.okrs.biggestGap?.keyResult ?? null, without_defined_target: business.okrs.withoutTarget } : null,
+          implementation_feedback: business.feedback ? { in_period: business.feedback.inPeriod, open_in_period: business.feedback.openInPeriod, undated_open_backlog: business.feedback.undatedOpen } : null,
           customer_cases: business.cases
             ? { list_latest_date: business.cases.latestDate, created_in_period: business.cases.createdInPeriod, pending_total: business.cases.pending, pending_top: business.cases.pendingTop.map(({ client, title, type }) => ({ client, title, type })) }
             : null,

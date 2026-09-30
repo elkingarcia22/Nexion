@@ -141,6 +141,34 @@ export function casesSection(cases: PulseData["cases"], periodEnd: string): stri
   ].join("\n\n");
 }
 
+/** OKR progress of the quarter and implementation feedback (Google Sheets). */
+export function okrSection(data: Pick<PulseData, "okrs" | "feedback">): string | null {
+  const { okrs, feedback } = data;
+  if (!okrs && !feedback) return null;
+  const parts: string[] = [];
+  if (okrs) {
+    parts.push(
+      okrs.keyResults.length
+        ? [
+            `Avance ponderado (${okrs.tab}): *${fmtPct(okrs.weightedProgressPct)}* ${bar(okrs.weightedProgressPct)}`,
+            ...(okrs.mostAdvanced ? [`:white_check_mark: Más avanzado: ${okrs.mostAdvanced.keyResult} (${fmtPct(okrs.mostAdvanced.progressPct)})`] : []),
+            ...(okrs.biggestGap && okrs.biggestGap !== okrs.mostAdvanced ? [`:chart_with_downwards_trend: Mayor brecha: ${okrs.biggestGap.keyResult} (${fmtPct(okrs.biggestGap.progressPct)})`] : []),
+            ...(okrs.withoutTarget ? [`:compass: ${plural(okrs.withoutTarget, "KR sin meta definida", "KRs sin meta definida")}`] : []),
+          ].join("\n")
+        : `No hay KRs de este producto en la pestaña ${okrs.tab}.`
+    );
+  }
+  if (feedback) {
+    parts.push(
+      [
+        `*Feedback de implementación:* ${plural(feedback.inPeriod, "necesidad nueva", "necesidades nuevas")} en el periodo (${fmt(feedback.openInPeriod)} abiertas) · ${plural(feedback.undatedOpen, "abierta sin fecha", "abiertas sin fecha")} en el backlog`,
+        ...feedback.top.slice(0, 3).map((item) => `• *${item.client}* · ${item.need.slice(0, 140)}${item.pain ? ` (dolor ${item.pain.toLowerCase()})` : ""}`),
+      ].join("\n")
+    );
+  }
+  return [":trophy: *OKRs Y FEEDBACK DE IMPLEMENTACIÓN*", ...parts].join("\n\n");
+}
+
 function actions(analysis: RadarAnalysis): string {
   return [
     ":dart: *ACCIONES*",
@@ -165,6 +193,7 @@ export function buildPulseMessage(data: PulseData, config: PulseConfig, analysis
     companies(data),
     support(data),
     casesSection(data.cases, data.period.end),
+    okrSection(data),
     analysis?.actions.length ? actions(analysis) : null,
     analysis?.watch_next.length
       ? [":eyes: *MONITOREAR EN EL PRÓXIMO PULSO*", analysis.watch_next.map((w) => `• ${w.metric} · objetivo: ${DIRECTION_LABEL[w.direction]}`).join("\n")].join("\n\n")

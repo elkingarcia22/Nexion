@@ -84,6 +84,20 @@ export function pulseDatasets(data: PulseData): Dataset[] {
       rows: data.tickets.active.map((t) => ({ key: t.key, summary: t.summary, status: t.status, updated: t.updated })),
     });
   }
+  if (data.okrs?.keyResults.length) {
+    datasets.push({
+      key: "okrs",
+      title: `OKRs (${data.okrs.tab})`,
+      columns: [
+        { key: "objective", label: "Objetivo" },
+        { key: "kr", label: "Key Result" },
+        { key: "weight", label: "Peso", unit: "pct" },
+        { key: "progress", label: "Avance", unit: "pct" },
+      ],
+      rows: data.okrs.keyResults.map((kr) => ({ objective: kr.objective, kr: kr.hasTarget ? kr.keyResult : `${kr.keyResult} (sin meta definida)`, weight: kr.weight, progress: kr.progressPct })),
+      reading: data.okrs.weightedProgressPct !== null ? `Avance ponderado: ${data.okrs.weightedProgressPct}%.` : undefined,
+    });
+  }
   if (data.cases?.pendingTop.length) {
     datasets.push({
       key: "customer_cases",

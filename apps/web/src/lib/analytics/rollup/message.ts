@@ -1,5 +1,5 @@
 import { REPORT_TYPE_LABELS, type ReportType } from "../periods";
-import { casesSection, monthName } from "../pulse/message";
+import { casesSection, monthName, okrSection } from "../pulse/message";
 import { bar, deltaCount, deltaPct, deltaPp, fmt, fmtPct, fmtUsd, plural } from "../radar/format";
 import type { Health } from "../radar/math";
 import type { RadarAnalysis } from "../radar/types";
@@ -182,6 +182,7 @@ export function buildRollupMessage(data: RollupData, productName: string, analys
     businessSection(data),
     companiesSection(data),
     data.business ? casesSection(data.business.cases, data.window.period.end) : null,
+    data.business ? okrSection(data.business) : null,
     actionReview(data),
     analysis?.actions.length ? priorities(analysis) : null,
     analysis?.watch_next.length ? [":eyes: *MONITOREAR*", analysis.watch_next.map((w) => `• ${w.metric} · objetivo: ${DIRECTION_LABEL[w.direction]}`).join("\n")].join("\n\n") : null,

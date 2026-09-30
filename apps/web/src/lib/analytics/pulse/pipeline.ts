@@ -23,6 +23,7 @@ import { PULSE_CONFIGS } from "./config";
 import { fetchTalentTickets, resolveJiraConfig, ticketsForProduct, type TaggedTicket } from "./jira";
 import { buildPulseMessage } from "./message";
 import { fetchPulseCases, type PulseCases } from "./slack-lists";
+import { fetchPulseSheets } from "./sheets";
 import { buildPulseData } from "./metrics";
 import { toPulseReportData } from "./report-data";
 import * as sql from "./sql";
@@ -92,6 +93,16 @@ export async function runBiweeklyPulse(db: SupabaseClient, productId: string, op
     slack_casos: (config.slackList ? resolveSlackToken(db).then((token) => fetchPulseCases(config, token, window)) : Promise.resolve(null)) as Promise<PulseCases | null>,
   });
   if (!config.slackList) delete coverage.slack_casos;
+  const sheets = await fetchPulseSheets(db, config, window).then(
+    (value) => {
+      coverage.google_sheets = { ok: true, detail: value.okrs ? `OKRs de la pestaña ${value.okrs.tab}` : "sin pestaña de OKRs del trimestre" };
+      return value;
+    },
+    (error: Error) => {
+      coverage.google_sheets = { ok: false, detail: error.message.slice(0, 240) };
+      return null;
+    }
+  );
   coverage.mes_de_referencia = { ok: true, detail: window.month };
 
   const data = buildPulseData(config, period, window, {
@@ -101,6 +112,7 @@ export async function runBiweeklyPulse(db: SupabaseClient, productId: string, op
     profitability: values.rentabilidad ?? [],
     tickets: values.jira ? ticketsForProduct(values.jira, config, window) : null,
     cases: values.slack_casos ?? null,
+    sheets,
   });
 
   if (!data) {

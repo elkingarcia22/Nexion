@@ -48,6 +48,23 @@ export function buildPulseContext(data: PulseData, config: PulseConfig, history:
           by_type: data.cases.byType,
         }
       : null,
+    okrs: data.okrs
+      ? {
+          quarter_tab: data.okrs.tab,
+          weighted_progress_pct: data.okrs.weightedProgressPct,
+          key_results: data.okrs.keyResults.slice(0, 10).map(({ objective, keyResult, progressPct, weight, hasTarget }) => ({ objective, keyResult, progressPct, weight, hasTarget })),
+          without_defined_target: data.okrs.withoutTarget,
+        }
+      : null,
+    implementation_feedback: data.feedback
+      ? {
+          in_pulse: data.feedback.inPeriod,
+          open_in_pulse: data.feedback.openInPeriod,
+          resolved_in_pulse: data.feedback.resolvedInPeriod,
+          undated_open_backlog: data.feedback.undatedOpen,
+          top_open: data.feedback.top.map(({ client, need, category, pain }) => ({ client, need, category, pain })),
+        }
+      : null,
     history: { pulses_available: history.length, previous_pulses: history },
     open_actions: openActions,
   };
@@ -78,6 +95,8 @@ export function buildPulsePrompt(context: PulseContext, config: PulseConfig, fee
     "- La rentabilidad es preliminar: gasto acumulado en 0 significa gasto no registrado, no gratis. No afirmes punto de equilibrio si no hay gasto registrado.",
     "- Las empresas listadas son clientes: puedes nombrarlas, pero sin datos de personas.",
     "- Los tickets son de Jira (proyecto PTG); nómbralos por su clave (PTG-1234) y sin URLs.",
+    "- okrs: el avance ponderado solo cuenta KRs con meta definida; los KRs sin meta definida se mencionan como pendientes de definir, no como atraso.",
+    "- implementation_feedback viene de la hoja de implementación: el backlog sin fecha es acumulado, no del pulso.",
     "- customer_cases viene de una lista de Slack de casos y feedback de clientes. Si list_latest_date es muy anterior al pulso, di que la lista no está al día en vez de leerla como actividad reciente.",
     "- Diferencia hechos, interpretaciones e hipótesis; correlación no es causalidad. Sin alarmismo.",
     "- history.pulses_available dice cuántos pulsos previos hay; con menos de 3 no hables de tendencias.",

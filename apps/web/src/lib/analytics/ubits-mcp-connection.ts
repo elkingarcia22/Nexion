@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSecret, UBITS_MCP_CLIENT_SECRET, UBITS_MCP_PENDING_SECRET, UBITS_MCP_TOKEN_SECRET } from "@/lib/secrets";
+import { getSecret, readJsonSecret, saveJsonSecret, UBITS_MCP_CLIENT_SECRET, UBITS_MCP_PENDING_SECRET, UBITS_MCP_TOKEN_SECRET } from "@/lib/secrets";
 import {
   buildAuthorizeUrl,
   createPkcePair,
@@ -41,33 +41,13 @@ export interface McpConnectionStatus {
   usingEnvFallback: boolean;
 }
 
-async function saveSecret(db: SupabaseClient, name: string, value: unknown, userId?: string): Promise<void> {
-  const { error } = await db.from("app_secrets").upsert({
-    name,
-    value: JSON.stringify(value),
-    ...(userId ? { updated_by: userId } : {}),
-    updated_at: new Date().toISOString(),
-  });
-  if (error) throw new Error(`No se pudo guardar "${name}": ${error.message}`);
-}
-
-async function readJsonSecret<T>(db: SupabaseClient, name: string): Promise<T | null> {
-  const value = await getSecret(db, name);
-  if (!value) return null;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return null;
-  }
-}
-
 /** One registered client per redirect URI (localhost and production get their own). */
 async function ensureClient(db: SupabaseClient, redirectUri: string): Promise<string> {
   const saved = await readJsonSecret<RegisteredClient>(db, UBITS_MCP_CLIENT_SECRET);
   if (saved?.redirect_uri === redirectUri) return saved.client_id;
 
   const clientId = await registerClient(await fetchOAuthMetadata(), redirectUri);
-  await saveSecret(db, UBITS_MCP_CLIENT_SECRET, { client_id: clientId, redirect_uri: redirectUri });
+  await saveJsonSecret(db, UBITS_MCP_CLIENT_SECRET, { client_id: clientId, redirect_uri: redirectUri });
   return clientId;
 }
 
@@ -77,7 +57,7 @@ export async function startUbitsMcpConnection(db: SupabaseClient, userId: string
   const { verifier, challenge } = createPkcePair();
   const state = createState();
   const pending: PendingConnection = { state, verifier, user_id: userId, client_id: clientId, redirect_uri: redirectUri, created_at: Date.now() };
-  await saveSecret(db, UBITS_MCP_PENDING_SECRET, pending, userId);
+  await saveJsonSecret(db, UBITS_MCP_PENDING_SECRET, pending, userId);
   return buildAuthorizeUrl({ authorizationEndpoint: metadata.authorization_endpoint, clientId, redirectUri, challenge, state });
 }
 
@@ -96,7 +76,7 @@ export async function completeUbitsMcpConnection(db: SupabaseClient, code: strin
   });
   const rejection = await verifyUbitsMcpToken(response.access_token);
   if (rejection) throw new Error(rejection);
-  await saveSecret(db, UBITS_MCP_TOKEN_SECRET, toStoredToken(response, pending.user_id), pending.user_id);
+  await saveJsonSecret(db, UBITS_MCP_TOKEN_SECRET, toStoredToken(response, pending.user_id), pending.user_id);
 }
 
 export async function getUbitsMcpStatus(db: SupabaseClient): Promise<McpConnectionStatus> {
@@ -142,6 +122,6 @@ export async function resolveUbitsMcpToken(db: SupabaseClient): Promise<string> 
     refresh_token: renewed.refresh_token ?? token.refresh_token,
     connected_at: token.connected_at,
   };
-  await saveSecret(db, UBITS_MCP_TOKEN_SECRET, next);
+  await saveJsonSecret(db, UBITS_MCP_TOKEN_SECRET, next);
   return next.access_token;
 }

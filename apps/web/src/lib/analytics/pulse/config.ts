@@ -25,6 +25,9 @@ export interface PulseConfig {
   /** Jira: words that tie a PTG ticket to this product, and words of other products that exclude it. */
   jiraTerms: string[];
   jiraExcludeTerms: string[];
+  /** Words that tie an OKR row (squad, objective, key result) and an implementation-feedback row to the product. */
+  okrTerms: string[];
+  feedbackTerms: string[];
   /** Slack List with customer cases or feedback; productValue filters its "Producto" column. */
   slackList?: { fileId: string; productValue?: string };
 }
@@ -36,6 +39,8 @@ const HIRING_FEEDBACK_LIST = "F0BAX64GB4N";
 export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   hiring: {
     productId: "hiring",
+    okrTerms: ["hiring", "reclutamiento", "vacante", "serena", "créditos"],
+    feedbackTerms: ["hiring", "reclutamiento", "selección"],
     slackList: { fileId: HIRING_FEEDBACK_LIST },
     productName: "Hiring",
     table: "hiring_usability_history",
@@ -55,6 +60,8 @@ export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   },
   objetivos: {
     productId: "objetivos",
+    okrTerms: ["producto objetivos", "módulo de desempeño", "desempeño objetivos", "objetivos + 360", "clientes objetivos", "refactor gradual de objetivos", "carga de exceles", "empezando por objetivos", "engagement del producto objetivos"],
+    feedbackTerms: ["objetivos", "okr"],
     slackList: { fileId: TALENT_CASES_LIST, productValue: "Objetivos" },
     productName: "Objetivos",
     table: "goals_usability_history",
@@ -71,6 +78,8 @@ export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   },
   "matriz-talento": {
     productId: "matriz-talento",
+    okrTerms: ["matriz de talento", "talent matrix", "9 box", "9-box", "nine box"],
+    feedbackTerms: ["matriz"],
     slackList: { fileId: TALENT_CASES_LIST, productValue: "Matriz de talento" },
     productName: "Matriz de talento",
     table: "matrix_usability_history",
@@ -84,6 +93,8 @@ export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   },
   encuestas: {
     productId: "encuestas",
+    okrTerms: ["encuesta", "survey", "nom035", "nom 035", "clima"],
+    feedbackTerms: ["encuesta", "enc."],
     slackList: { fileId: TALENT_CASES_LIST, productValue: "Encuestas" },
     productName: "Encuestas",
     table: "survey_usability_history",
@@ -101,6 +112,8 @@ export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   },
   "evaluacion-360": {
     productId: "evaluacion-360",
+    okrTerms: ["360", "evaluación de desempeño"],
+    feedbackTerms: ["360"],
     productName: "Evaluación 360",
     table: "axs_360_usability_history",
     usageCondition: "axs_creadas_mes > 0 OR usuarios_con_axs_360_enviada_unicos_mes > 0",

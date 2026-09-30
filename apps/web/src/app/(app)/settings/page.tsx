@@ -7,7 +7,7 @@ import { testJiraConnection } from "@/lib/services/jira-service";
 import { ClaudeSettingsPanel } from "@/components/settings/ClaudeSettingsPanel";
 import { SlackBotSettingsPanel } from "@/components/settings/SlackBotSettingsPanel";
 import { GoogleSettingsPanel } from "@/components/settings/GoogleSettingsPanel";
-import { PosthogSettingsPanel, UbitsMcpSettingsPanel } from "@/components/settings/AnalyticsSourcesPanels";
+import { PosthogSettingsPanel, UbitsMcpSettingsPanel, GoogleSheetsSettingsPanel } from "@/components/settings/AnalyticsSourcesPanels";
 import {
   addPrivateChannelToSync,
   getSlackBotChannels,
@@ -60,7 +60,7 @@ interface SlackChannel {
   num_members: number;
 }
 
-type TabType = "slack" | "drive" | "jira" | "objetivos" | "metricas" | "analisis" | "gemini" | "claude" | "slack_bot" | "google" | "posthog" | "ubits_mcp" | "modulos";
+type TabType = "slack" | "drive" | "jira" | "objetivos" | "metricas" | "analisis" | "gemini" | "claude" | "slack_bot" | "google" | "posthog" | "ubits_mcp" | "google_sheets" | "modulos";
 
 // Private channels known to work (must match slack-service.ts)
 const KNOWN_PRIVATE = [
@@ -78,7 +78,7 @@ export default function SettingsPage() {
   // Deep links (e.g. the Ubits MCP sign-in coming back) open a specific tab via ?tab=.
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("tab");
-    if (requested === "ubits_mcp" || requested === "posthog") setActiveTab(requested);
+    if (requested === "ubits_mcp" || requested === "posthog" || requested === "google_sheets") setActiveTab(requested);
   }, []);
 
   const [user, setUser] = useState<any>(null);
@@ -791,6 +791,7 @@ export default function SettingsPage() {
     { id: "google" as TabType, label: "Google" },
     { id: "posthog" as TabType, label: "PostHog" },
     { id: "ubits_mcp" as TabType, label: "MCP de Ubits" },
+    { id: "google_sheets" as TabType, label: "Google Sheets" },
     { id: "analisis" as TabType, label: "Análisis IA" },
     { id: "objetivos" as TabType, label: "Objetivos" },
     { id: "metricas" as TabType, label: "Métricas" },
@@ -1272,6 +1273,7 @@ export default function SettingsPage() {
       {/* ── Tabs: fuentes de Analítica de producto ── */}
       {activeTab === "posthog" && <PosthogSettingsPanel />}
       {activeTab === "ubits_mcp" && <UbitsMcpSettingsPanel />}
+      {activeTab === "google_sheets" && <GoogleSheetsSettingsPanel />}
 
       {/* ── Tab: Objetivos ── */}
       {activeTab === "objetivos" && (

@@ -190,3 +190,134 @@ export function UbitsMcpSettingsPanel() {
     </section>
   );
 }
+
+interface SheetsStatus {
+  connected: boolean;
+  connectedAt: string | null;
+  clientConfigured: boolean;
+}
+
+const SHEETS_ENDPOINT = "/api/settings/google-sheets";
+
+function takeSheetsFeedback(): Feedback {
+  const params = new URLSearchParams(window.location.search);
+  const error = params.get("sheets_error");
+  const connected = params.get("sheets") === "connected";
+  if (!error && !connected) return null;
+  params.delete("sheets");
+  params.delete("sheets_error");
+  window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  return error ? { tone: "error", text: error } : { tone: "ok", text: "Google Sheets conectado. Nexión renueva el acceso sola." };
+}
+
+/** Read-only Google Sheets access for the OKR and implementation sheets of the product reports. */
+export function GoogleSheetsSettingsPanel() {
+  const [status, setStatus] = useState<SheetsStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback>(null);
+  const [redirectUri, setRedirectUri] = useState("");
+
+  const load = useCallback(async () => {
+    try {
+      setStatus(await callSettingsApi<SheetsStatus>(SHEETS_ENDPOINT, "GET"));
+    } catch (error) {
+      setFeedback({ tone: "error", text: error instanceof Error ? error.message : "No se pudo cargar el estado." });
+    }
+  }, []);
+
+  useEffect(() => {
+    setRedirectUri(`${window.location.origin}/api/settings/google-sheets/callback`);
+    setFeedback(takeSheetsFeedback());
+    load();
+  }, [load]);
+
+  const handleConnect = async () => {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const { authorizeUrl } = await callSettingsApi<{ authorizeUrl: string }>(`${SHEETS_ENDPOINT}/connect`, "POST");
+      window.location.assign(authorizeUrl);
+    } catch (error) {
+      setFeedback({ tone: "error", text: error instanceof Error ? error.message : "No se pudo iniciar la conexión." });
+      setBusy(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!window.confirm("¿Desconectar Google Sheets? Los reportes dejarán de leer OKRs y feedback de implementación.")) return;
+    setBusy(true);
+    try {
+      await callSettingsApi(SHEETS_ENDPOINT, "DELETE");
+      await load();
+      setFeedback({ tone: "ok", text: "Desconectado." });
+    } catch (error) {
+      setFeedback({ tone: "error", text: error instanceof Error ? error.message : "No se pudo desconectar." });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="bg-card rounded-xl border border-white/20 shadow-soft p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34a853" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+          <rect x="4" y="3" width="16" height="18" rx="2" />
+          <path d="M4 9h16M4 15h16M10 9v12" />
+        </svg>
+        <div>
+          <h2 className="text-lg font-semibold text-white">Google Sheets</h2>
+          <p className="text-xs text-white/40">Lectura de las hojas de OKRs y de feedback de implementación para los reportes de producto</p>
+        </div>
+      </div>
+
+      <div className="space-y-4 max-w-lg">
+        <div className="flex items-center gap-2 text-xs">
+          <span className={`w-2 h-2 rounded-full ${status?.connected ? "bg-emerald-400" : "bg-white/20"}`} aria-hidden />
+          {status === null && <span className="text-white/40">Revisando…</span>}
+          {status?.connected && <span className="text-white/70">Conectado{status.connectedAt ? ` desde ${formatDateTime(status.connectedAt)}` : ""} · se renueva solo</span>}
+          {status && !status.connected && <span className="text-white/50">Sin conectar: los reportes no incluyen OKRs ni feedback de implementación</span>}
+        </div>
+
+        {status && !status.clientConfigured && (
+          <p className="text-xs text-amber-200 bg-accent/10 border border-accent/25 rounded-xl px-4 py-3">Primero guarda el cliente OAuth en la pestaña Google.</p>
+        )}
+
+        <div className="text-[10px] text-white/30 ml-1 space-y-1">
+          <p>Conecta con una cuenta de Ubits que tenga acceso a las hojas. Nexión solo pide permiso de lectura de hojas de cálculo.</p>
+          <p>
+            En Google Cloud → cliente OAuth → URIs de redireccionamiento autorizados, agrega:{" "}
+            <span className="font-mono text-white/60 break-all select-all">{redirectUri}</span>
+          </p>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={handleConnect}
+            disabled={busy || status?.clientConfigured === false}
+            className="px-4 py-2 bg-primary text-white text-[10px] font-black tracking-widest uppercase rounded-xl hover:bg-primary/80 transition-all disabled:opacity-50"
+          >
+            {busy ? "Abriendo..." : status?.connected ? "Reconectar Google Sheets" : "Conectar Google Sheets"}
+          </button>
+          {status?.connected && (
+            <button
+              onClick={handleDisconnect}
+              disabled={busy}
+              className="px-4 py-2 text-white/40 hover:text-red-300 text-[10px] font-black tracking-widest uppercase rounded-xl transition-colors disabled:opacity-50"
+            >
+              Desconectar
+            </button>
+          )}
+        </div>
+
+        {feedback && (
+          <div role="status" className={`rounded-xl p-4 border ${feedback.tone === "ok" ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20"}`}>
+            <p className={`text-xs font-bold ${feedback.tone === "ok" ? "text-green-400" : "text-red-400"}`}>
+              {feedback.tone === "ok" ? "✓ " : "Error: "}
+              {feedback.text}
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}

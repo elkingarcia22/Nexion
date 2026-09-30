@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolvePosthogKey, resolveSlackToken } from "@/lib/secrets";
 import { fetchPulseCases, type PulseCases } from "../pulse/slack-lists";
+import { fetchPulseSheets } from "../pulse/sheets";
 import { runHogQL } from "../posthog";
 import { PULSE_CONFIGS } from "../pulse/config";
 import { fetchTalentTickets, resolveJiraConfig, ticketsForProduct, type TaggedTicket } from "../pulse/jira";
@@ -65,13 +66,14 @@ async function freshBusiness(db: SupabaseClient, productId: string, window: Roll
   await mcp.initialize();
   const w = window.businessWindow;
   const jiraConfig = await resolveJiraConfig(db).catch(() => null);
-  const [summary, companies, newArr, profitability, tickets, cases] = await Promise.all([
+  const [summary, companies, newArr, profitability, tickets, cases, sheets] = await Promise.all([
     mcp.runQuery(pulseSql.monthlySummarySql(config, w)),
     mcp.runQuery(pulseSql.companyChangesSql(config, w)),
     mcp.runQuery(pulseSql.newArrSql(config, w)),
     mcp.runQuery(pulseSql.profitabilitySql(config, w)),
     jiraConfig ? fetchTalentTickets(jiraConfig).catch((): TaggedTicket[] | null => null) : Promise.resolve(null),
     config.slackList ? resolveSlackToken(db).then((token) => fetchPulseCases(config, token, w)).catch((): PulseCases | null => null) : Promise.resolve(null),
+    fetchPulseSheets(db, config, w).catch(() => null),
   ]);
   return buildPulseData(config, window.period, w, {
     summary,
@@ -80,6 +82,7 @@ async function freshBusiness(db: SupabaseClient, productId: string, window: Roll
     profitability,
     tickets: tickets ? ticketsForProduct(tickets, config, w) : null,
     cases,
+    sheets,
   });
 }
 

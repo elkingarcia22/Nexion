@@ -9,12 +9,36 @@ export const POSTHOG_KEY_SECRET = "posthog_api_key";
 export const UBITS_MCP_TOKEN_SECRET = "ubits_mcp_token";
 export const UBITS_MCP_CLIENT_SECRET = "ubits_mcp_oauth_client";
 export const UBITS_MCP_PENDING_SECRET = "ubits_mcp_oauth_pending";
+export const GOOGLE_SHEETS_TOKEN_SECRET = "google_sheets_token";
+export const GOOGLE_SHEETS_PENDING_SECRET = "google_sheets_oauth_pending";
 
 /** Server-only: read a secret from `app_secrets` (requires the service-role client). */
 export async function getSecret(db: SupabaseClient, name: string): Promise<string | null> {
   const { data, error } = await db.from("app_secrets").select("value").eq("name", name).maybeSingle();
   if (error) throw new Error(`No se pudo leer la clave "${name}": ${error.message}`);
   return data?.value ?? null;
+}
+
+/** Server-only: store a JSON value in `app_secrets` (OAuth sessions, pending sign-ins). */
+export async function saveJsonSecret(db: SupabaseClient, name: string, value: unknown, userId?: string): Promise<void> {
+  const { error } = await db.from("app_secrets").upsert({
+    name,
+    value: JSON.stringify(value),
+    ...(userId ? { updated_by: userId } : {}),
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw new Error(`No se pudo guardar "${name}": ${error.message}`);
+}
+
+/** Server-only: read a JSON value saved with saveJsonSecret (null when missing or not JSON). */
+export async function readJsonSecret<T>(db: SupabaseClient, name: string): Promise<T | null> {
+  const value = await getSecret(db, name);
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
 }
 
 /** Claude key: the one saved in Configuración wins; ANTHROPIC_API_KEY is the fallback. */
