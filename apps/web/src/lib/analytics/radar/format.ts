@@ -38,3 +38,18 @@ export function listJoin(items: string[]): string {
   if (items.length <= 1) return items.join("");
   return `${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
 }
+
+/** US$12.345 (no decimals above 100, two below). */
+export function fmtUsd(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "N/D";
+  return `${value < 0 ? "-" : ""}US$${fmt(Math.abs(value), Math.abs(value) >= 100 ? 0 : 2)}`;
+}
+
+/** Change of a count in units: "▲ +3", "▼ -2", "→ 0". */
+export function deltaCount(current: number, previous: number | null | undefined, higherIsBetter = true): string {
+  if (previous === null || previous === undefined) return "";
+  const change = current - previous;
+  if (change === 0) return ":white_circle: → 0";
+  const good = change > 0 === higherIsBetter;
+  return `${good ? ":large_green_circle:" : ":red_circle:"} ${change > 0 ? "▲ +" : "▼ "}${fmt(change)}`;
+}

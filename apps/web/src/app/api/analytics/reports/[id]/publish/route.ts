@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { publishReport } from "@/lib/analytics/radar/pipeline";
+import { publishReport } from "@/lib/analytics/report-engine";
 import { getAnalyticsProduct, getReportById } from "@/lib/analytics/repository";
 import { getRequestUserId } from "@/lib/newsletters/auth";
 import { createServiceClient } from "@/lib/newsletters/repository";

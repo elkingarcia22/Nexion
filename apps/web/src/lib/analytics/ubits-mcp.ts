@@ -94,15 +94,24 @@ export class UbitsMcpClient {
     return tools.map((tool) => tool.name);
   }
 
+  /** Calls any MCP tool and returns its raw result (throws when the tool reports an error). */
+  async callTool(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    await this.initialize();
+    const result = (await this.send("tools/call", { name, arguments: args })) ?? {};
+    if (result.isError) {
+      const content = result.content as Array<{ text?: string }> | undefined;
+      throw new Error(`MCP de Ubits (${name}): ${content?.[0]?.text ?? "error desconocido"}`);
+    }
+    return result;
+  }
+
   /** Runs BigQuery SQL through `run_query` and returns the rows. */
   async runQuery(sql: string): Promise<Record<string, unknown>[]> {
-    await this.initialize();
-    const result = await this.send("tools/call", { name: "run_query", arguments: { sql } });
-    if (result?.isError) {
-      const content = result.content as Array<{ text?: string }> | undefined;
-      throw new Error(`BigQuery rechazó la consulta: ${content?.[0]?.text ?? "error desconocido"}`);
+    try {
+      return extractRows(await this.callTool("run_query", { sql }));
+    } catch (error) {
+      throw new Error((error instanceof Error ? error.message : String(error)).replace("MCP de Ubits (run_query):", "BigQuery rechazó la consulta:"));
     }
-    return extractRows(result ?? {});
   }
 }
 

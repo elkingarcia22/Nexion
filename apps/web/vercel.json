@@ -23,6 +23,26 @@
     {
       "path": "/api/cron/analytics?product=hiring&type=radar_semanal",
       "schedule": "0 13 * * 1"
+    },
+    {
+      "path": "/api/cron/analytics?product=hiring&type=pulso_quincenal",
+      "schedule": "30 13 * * 1"
+    },
+    {
+      "path": "/api/cron/analytics?product=objetivos&type=pulso_quincenal",
+      "schedule": "30 13 * * 1"
+    },
+    {
+      "path": "/api/cron/analytics?product=matriz-talento&type=pulso_quincenal",
+      "schedule": "30 13 * * 1"
+    },
+    {
+      "path": "/api/cron/analytics?product=encuestas&type=pulso_quincenal",
+      "schedule": "30 13 * * 1"
+    },
+    {
+      "path": "/api/cron/analytics?product=evaluacion-360&type=pulso_quincenal",
+      "schedule": "30 13 * * 1"
     }
   ]
 }

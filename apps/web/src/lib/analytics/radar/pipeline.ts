@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { callClaude, postToSlack } from "@/lib/newsletters/clients";
-import { resolveAnthropicKey, resolvePosthogKey, resolveSlackToken } from "@/lib/secrets";
+import { resolveAnthropicKey, resolvePosthogKey } from "@/lib/secrets";
 import { lastCompletedPeriod, periodContaining, type Period } from "../periods";
 import { runHogQL } from "../posthog";
 import {
@@ -11,16 +10,15 @@ import {
   recordReportActions,
   saveReport,
   type ReportDraft,
-  updateReport,
 } from "../repository";
-import { toSlackBlocks } from "../slack-blocks";
+import { ANALYSIS_MODEL, publishReport, reportUrl, runAnalysis } from "../report-engine";
 import type { AnalyticsReport, SourceCoverage } from "../types";
 import { planActions } from "./actions";
 import { buildAnalysisContext, buildAnalysisPrompt, parseAnalysis } from "./analysis";
 import type { RadarConfig } from "./config";
 import * as queries from "./hogql";
 import { worstHealth, type Health } from "./math";
-import { SECTION_SEPARATOR, buildRadarMessage } from "./message";
+import { buildRadarMessage } from "./message";
 import { buildCompanies, buildFeatures, buildFriction, buildFunnel, buildRecurrence, buildSummary } from "./metrics";
 import { HIRING_RADAR } from "./products/hiring";
 import { selectReplays } from "./replays";
@@ -29,10 +27,7 @@ import type { OpenAction, RadarAnalysis, RadarHistoryEntry, RadarWeek } from "./
 
 export const RADAR_CONFIGS: Record<string, RadarConfig> = { hiring: HIRING_RADAR };
 
-export const RADAR_MODEL = "claude-sonnet-5-5";
-const ANALYSIS_ATTEMPTS = 2;
-const ANALYSIS_MAX_TOKENS = 6_000;
-const ANALYSIS_TIMEOUT_MS = 120_000;
+export { publishReport };
 const HISTORY_WEEKS = 4;
 const HISTORY_KPIS = ["active_users", "active_companies", "sessions", "key_action_sessions_pct", "user_retention_pct", "funnel_starts", "funnel_complete_pct", "dead_click_sessions_pct"];
 
@@ -108,46 +103,6 @@ function historyEntry(report: AnalyticsReport): RadarHistoryEntry {
   return { period_key: report.period_key, health: report.health, headline: report.analysis?.headline ?? null, kpis, watch_next: watch };
 }
 
-async function analyze(context: ReturnType<typeof buildAnalysisContext>, config: RadarConfig, apiKey: string) {
-  let feedback: string | undefined;
-  let usage = { inputTokens: 0, outputTokens: 0 };
-  for (let attempt = 1; attempt <= ANALYSIS_ATTEMPTS; attempt++) {
-    try {
-      const result = await callClaude(buildAnalysisPrompt(context, config, feedback), RADAR_MODEL, apiKey, { maxTokens: ANALYSIS_MAX_TOKENS, timeoutMs: ANALYSIS_TIMEOUT_MS });
-      usage = { inputTokens: usage.inputTokens + result.usage.inputTokens, outputTokens: usage.outputTokens + result.usage.outputTokens };
-      const parsed = parseAnalysis(result.text, context);
-      if (parsed.ok) return { analysis: parsed.analysis, usage };
-      feedback = parsed.error;
-    } catch (error) {
-      feedback = error instanceof Error ? error.message : "error desconocido";
-    }
-  }
-  return { analysis: null, usage, error: `El análisis con IA falló: ${feedback}` };
-}
-
-function appUrl(): string | undefined {
-  const configured = process.env.NEXT_PUBLIC_APP_URL;
-  if (configured && !configured.includes("localhost")) return configured.replace(/\/$/, "");
-  return process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined;
-}
-
-/** Posts a stored report to its product channel; keeps it as a preview if Slack refuses. */
-export async function publishReport(db: SupabaseClient, report: AnalyticsReport, channelId: string | null): Promise<{ report: AnalyticsReport; slackError?: string }> {
-  if (!report.message) return { report, slackError: "El reporte no tiene mensaje para Slack." };
-  if (!channelId) return { report, slackError: "El producto no tiene canal de Slack conectado." };
-  try {
-    const token = await resolveSlackToken(db);
-    const fallback = report.analysis?.headline ?? "Radar semanal de producto";
-    const ts = await postToSlack(channelId, fallback, token, toSlackBlocks(report.message, SECTION_SEPARATOR));
-    await updateReport(db, report.id, { status: "published", slack_ts: ts, error: null });
-    return { report: { ...report, status: "published", slack_ts: ts, error: null } };
-  } catch (error) {
-    const slackError = error instanceof Error ? error.message : "Slack rechazó el mensaje.";
-    await updateReport(db, report.id, { error: `No se publicó en Slack: ${slackError}` });
-    return { report: { ...report, error: `No se publicó en Slack: ${slackError}` }, slackError };
-  }
-}
-
 export async function runWeeklyRadar(db: SupabaseClient, productId: string, options: RadarRunOptions): Promise<RadarRunOutcome> {
   const config = RADAR_CONFIGS[productId];
   if (!config) throw new Error(`"${productId}" todavía no tiene Radar semanal configurado.`);
@@ -183,18 +138,21 @@ export async function runWeeklyRadar(db: SupabaseClient, productId: string, opti
     .map((a) => ({ action_key: a.action_key, title: a.title, status: a.status, origin_period_key: a.origin_period_key }));
 
   const context = buildAnalysisContext(week, previous.map(historyEntry), openActions, config);
-  const { analysis: rawAnalysis, usage, error: analysisError } = await analyze(context, config, anthropicKey);
+  const { analysis: rawAnalysis, usage, error: analysisError } = await runAnalysis(
+    (feedback) => buildAnalysisPrompt(context, config, feedback),
+    (text) => parseAnalysis(text, context),
+    anthropicKey
+  );
   coverage.analisis_ia = rawAnalysis ? { ok: true } : { ok: false, detail: analysisError };
 
   const plan = rawAnalysis ? planActions(rawAnalysis.actions, actions, period.key) : null;
   const analysis: RadarAnalysis | null = rawAnalysis && plan ? { ...rawAnalysis, actions: plan.actions } : null;
   const health: Health = analysis?.status ?? worstHealth([week.summary.health, week.funnel.health, week.recurrence.health]);
-  const url = appUrl();
-  const message = buildRadarMessage(week, config, analysis, health, url ? `${url}/analytics?product=${productId}&level=radar_semanal` : undefined);
+  const message = buildRadarMessage(week, config, analysis, health, reportUrl(productId, "radar_semanal"));
 
   const draft: ReportDraft = {
     ...base,
-    model: analysis ? RADAR_MODEL : null,
+    model: analysis ? ANALYSIS_MODEL : null,
     status: "preview",
     health,
     data: toReportData(week, config),

@@ -79,8 +79,8 @@ async function callAnalyticsApi(path: string, body: unknown): Promise<ServiceRes
 }
 
 /** Builds (or rebuilds) a report as a preview; it is not posted to Slack. */
-export function generateAnalyticsReport(product: string, type: ReportType, weekStart?: string) {
-  return callAnalyticsApi("/api/analytics/run", { product, type, weekStart });
+export function generateAnalyticsReport(product: string, type: ReportType, date?: string) {
+  return callAnalyticsApi("/api/analytics/run", { product, type, date });
 }
 
 export function publishAnalyticsReport(reportId: string) {

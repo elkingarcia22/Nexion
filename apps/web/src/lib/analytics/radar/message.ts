@@ -3,9 +3,10 @@ import type { Health } from "./math";
 import type { FeatureStatus } from "./metrics";
 import type { RadarAnalysis, RadarWeek } from "./types";
 import { bar, deltaPct, deltaPp, fmt, fmtPct, listJoin, plural } from "./format";
+import { SECTION_SEPARATOR } from "../report-engine";
 
 /** Slack mrkdwn for the weekly radar. Sections are joined by SECTION_SEPARATOR (one Slack block each). */
-export const SECTION_SEPARATOR = "\n\n━━━━━━━━━━━━━━━━━━\n\n";
+export { SECTION_SEPARATOR };
 const TOP_FEATURES = 5;
 const TOP_SCREENS = 3;
 const TOP_COMPANIES = 3;

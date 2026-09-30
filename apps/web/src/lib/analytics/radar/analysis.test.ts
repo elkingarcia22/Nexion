@@ -46,7 +46,6 @@ describe("parseAnalysis", () => {
     expect(parseAnalysis("no json", context)).toEqual({ ok: false, error: "no devolvió un objeto JSON" });
     expect(parseAnalysis(reply({ headline: "" }), context)).toMatchObject({ ok: false, error: "faltan headline o summary" });
     expect(parseAnalysis(reply({ closing: "Ver https://posthog.com" }), context)).toMatchObject({ ok: false });
-    expect(parseAnalysis(reply({ watch_next: [{ metric: "deadClickPct", reason: "x", direction: "decrease" }] }), context)).toMatchObject({ ok: false });
   });
 });
 
@@ -58,5 +57,24 @@ describe("helpers", () => {
 
   it("localizes decimals only next to % or pp", () => {
     expect(localizeNumbers("34.69% y +2.04 pp; versión 1.5")).toBe("34,7% y +2 pp; versión 1.5");
+  });
+});
+
+describe("parseAnalysis visible text", () => {
+  it("drops watch items named with context keys instead of rejecting the reading", () => {
+    const parsed = parseAnalysis(
+      reply({ watch_next: [{ metric: "deadClickPct", reason: "x", direction: "decrease" }, { metric: "Empresas con criterio NSM (sep.)", reason: "y", direction: "stable" }] }),
+      context
+    );
+    expect(parsed.ok && parsed.analysis.watch_next.map((w) => w.metric)).toEqual(["Empresas con criterio NSM (sep.)"]);
+  });
+
+  it("accepts brand names and abbreviations that only look technical", () => {
+    expect(parseAnalysis(reply({ closing: "Validar en HubSpot, p.ej. los negocios de sep." }), context).ok).toBe(true);
+  });
+
+  it("rejects context keys leaking into the prose", () => {
+    const leaked = parseAnalysis(reply({ closing: "Revisar companies.newly_contracted cuanto antes." }), context);
+    expect(leaked).toMatchObject({ ok: false });
   });
 });

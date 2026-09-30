@@ -1,0 +1,160 @@
+import { SECTION_SEPARATOR } from "../report-engine";
+import type { Health } from "../radar/math";
+import { bar, deltaCount, deltaPct, fmt, fmtPct, fmtUsd, plural } from "../radar/format";
+import type { RadarAnalysis } from "../radar/types";
+import type { PulseConfig } from "./config";
+import type { CompanyChange, PulseData } from "./metrics";
+
+/** Slack mrkdwn for the biweekly pulse; every number comes from PulseData. */
+const TOP_COMPANIES = 4;
+const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+const HEALTH_LINE: Record<Health, string> = {
+  green: ":large_green_circle: Evolución favorable",
+  yellow: ":large_yellow_circle: Seguimiento recomendado",
+  red: ":red_circle: Atención prioritaria",
+};
+const OWNER_LABEL = { product: "Producto", design: "Diseño", engineering: "Ingeniería", data: "Datos" } as const;
+const DIRECTION_LABEL = { increase: "aumentar", decrease: "disminuir", stable: "mantener", investigate: "investigar" } as const;
+
+export function monthName(month: string): string {
+  const [year, m] = month.split("-").map(Number);
+  return `${MONTHS[m - 1]} ${year}`;
+}
+
+function header(data: PulseData, config: PulseConfig, analysis: RadarAnalysis | null): string {
+  const month = monthName(data.window.month);
+  return [
+    `:large_blue_diamond: *${config.productName.toUpperCase()} · PULSO QUINCENAL*`,
+    `:date: ${data.period.label}`,
+    `:hourglass_flowing_sand: Datos de negocio de ${month}${data.window.monthIsPartial ? " (mes en curso, cifras parciales al corte)" : ""}`,
+    analysis
+      ? ":sparkles: Lectura asistida por Claude sobre BigQuery, HubSpot y Jira."
+      : ":information_source: Lectura calculada solo con los datos (el análisis con IA no estuvo disponible).",
+  ].join("\n");
+}
+
+function executive(data: PulseData, config: PulseConfig, analysis: RadarAnalysis | null, health: Health): string {
+  const c = data.current;
+  return [
+    ":compass: *LECTURA EJECUTIVA*",
+    HEALTH_LINE[health],
+    `*${analysis?.headline ?? `${fmt(c.nsm)} de ${fmt(c.contracted)} empresas con ${config.productName} cumplen el criterio NSM`}*`,
+    analysis?.summary ?? `${fmt(c.withUsage)} empresas usaron el producto en el mes y ${plural(c.atRisk, "empresa está", "empresas están")} en riesgo de perder el criterio NSM.`,
+  ].join("\n\n");
+}
+
+function adoption(data: PulseData, config: PulseConfig): string {
+  const c = data.current;
+  const p = data.previous;
+  return [
+    ":bar_chart: *ADOPCIÓN Y CRITERIO NSM*",
+    [
+      `:office: Empresas con ${config.productName} contratado: *${fmt(c.contracted)}* ${deltaCount(c.contracted, p?.contracted)}`,
+      `:zap: ${config.usageLabel}: *${fmt(c.withUsage)}* (${fmtPct(c.usagePct)}) ${deltaCount(c.withUsage, p?.withUsage)}${data.window.monthIsPartial ? " · mes parcial" : ""}`,
+      `:star: Empresas con criterio NSM: *${fmt(c.nsm)}* (${fmtPct(c.nsmPct)}) ${deltaCount(c.nsm, p?.nsm)}`,
+      `:warning: En riesgo de perder el criterio NSM: *${fmt(c.atRisk)}* ${deltaCount(c.atRisk, p?.atRisk, false)}`,
+    ].join("\n"),
+    [
+      `Contratadas ${bar(100)} ${fmt(c.contracted)}`,
+      `Con uso ${bar(c.usagePct)} ${fmtPct(c.usagePct)}`,
+      `Criterio NSM ${bar(c.nsmPct)} ${fmtPct(c.nsmPct)}`,
+    ].join("\n"),
+    `_Criterio NSM: ${config.nsmCriterion}._`,
+  ].join("\n\n");
+}
+
+function activity(data: PulseData, config: PulseConfig): string {
+  const p = data.previous;
+  return [
+    `:gear: *ACTIVIDAD DEL MES*${data.window.monthIsPartial ? " _(parcial al corte)_" : ""}`,
+    config.activity
+      .map((metric) => {
+        const value = data.current.activity[metric.key] ?? 0;
+        const before = p?.activity[metric.key];
+        return `• ${metric.label}: *${fmt(value)}*${before !== undefined ? ` · mes anterior ${fmt(before)}` : ""}`;
+      })
+      .join("\n"),
+  ].join("\n\n");
+}
+
+function revenue(data: PulseData): string {
+  const c = data.current;
+  const { current: arrNow, previous: arrBefore } = data.newArr;
+  const profit = data.profitability;
+  const lines = [
+    `:moneybag: ARR del producto (empresas contratadas): *${fmtUsd(c.arr)}* · de empresas con criterio NSM: ${fmtUsd(c.arrNsm)}`,
+    `:handshake: ARR reconocido en HubSpot en la quincena: *${fmtUsd(arrNow.arr)}* (${plural(arrNow.deals, "negocio", "negocios")}) · quincena anterior ${fmtUsd(arrBefore.arr)} ${deltaPct(arrNow.arr, arrBefore.arr)}`,
+  ];
+  if (profit) {
+    lines.push(
+      profit.spendAccumulated > 0
+        ? `:chart_with_upwards_trend: Rentabilidad preliminar: ARR acumulado ${fmtUsd(profit.arrAccumulated)} frente a gasto acumulado ${fmtUsd(profit.spendAccumulated)} · recuperación ${fmtPct(profit.recoveryPct)} · balance ${fmtUsd(profit.balance)}`
+        : `:chart_with_upwards_trend: Rentabilidad preliminar: ARR acumulado ${fmtUsd(profit.arrAccumulated)}; no hay gasto registrado para calcular recuperación.`
+    );
+  }
+  return [":dollar: *INGRESOS Y RENTABILIDAD PRELIMINAR*", lines.join("\n"), "_El ARR de HubSpot puede incluir negocios que agrupan varios productos._"].join("\n\n");
+}
+
+function companyLine(company: CompanyChange): string {
+  return `• *${company.name}* · ${fmtUsd(company.arr)}${company.risk && company.risk !== "No NSM" && company.risk !== "Sin riesgo" ? ` · ${company.risk.toLowerCase()}` : ""}${company.usedThisMonth ? "" : " · sin uso este mes"}`;
+}
+
+function companies(data: PulseData): string {
+  const { lostNsm, gainedNsm, atRisk, newlyContracted } = data.companies;
+  const block = (title: string, list: CompanyChange[]) => (list.length ? [`${title} (${fmt(list.length)})`, ...list.slice(0, TOP_COMPANIES).map(companyLine)].join("\n") : "");
+  const parts = [
+    block(":small_red_triangle_down: Perdieron el criterio NSM", lostNsm),
+    block(":warning: En riesgo de perderlo", atRisk),
+    block(":small_red_triangle: Lo alcanzaron", gainedNsm),
+    newlyContracted ? `:new: ${plural(newlyContracted, "empresa nueva", "empresas nuevas")} con el producto contratado` : "",
+  ].filter(Boolean);
+  return [":office: *EMPRESAS A SEGUIR*", parts.length ? parts.join("\n\n") : "No hubo cambios de criterio NSM ni empresas en riesgo este mes."].join("\n\n");
+}
+
+function support(data: PulseData): string | null {
+  const t = data.tickets;
+  if (!t) return null;
+  const link = (ticket: { key: string; url: string; summary: string }) => `• <${ticket.url}|${ticket.key}> ${ticket.summary}`;
+  return [
+    ":tools: *SOPORTE (JIRA)*",
+    `${plural(t.createdInPeriod, "ticket nuevo", "tickets nuevos")} en la quincena (${fmt(t.createdPrevious)} en la anterior) · ${plural(t.active.length, "activo", "activos")} · ${plural(t.resolvedInPeriod.length, "resuelto", "resueltos")} en la quincena`,
+    ...(t.active.length ? ["*Activos*", t.active.slice(0, 4).map(link).join("\n")] : []),
+  ].join("\n\n");
+}
+
+function actions(analysis: RadarAnalysis): string {
+  return [
+    ":dart: *ACCIONES*",
+    ...analysis.actions.map((a, index) =>
+      [
+        `${index + 1}. *${a.title}*`,
+        `Evidencia: ${a.evidence}`,
+        `Próximo paso: ${a.nextStep}`,
+        `${a.continuesActionKey ? "↻ En seguimiento" : "+ Nueva"} · Responsable: ${OWNER_LABEL[a.owner]}`,
+      ].join("\n")
+    ),
+  ].join("\n\n");
+}
+
+export function buildPulseMessage(data: PulseData, config: PulseConfig, analysis: RadarAnalysis | null, health: Health, url?: string): string {
+  const sections = [
+    header(data, config, analysis),
+    executive(data, config, analysis, health),
+    adoption(data, config),
+    activity(data, config),
+    revenue(data),
+    companies(data),
+    support(data),
+    analysis?.actions.length ? actions(analysis) : null,
+    analysis?.watch_next.length
+      ? [":eyes: *MONITOREAR EN EL PRÓXIMO PULSO*", analysis.watch_next.map((w) => `• ${w.metric} · objetivo: ${DIRECTION_LABEL[w.direction]}`).join("\n")].join("\n\n")
+      : null,
+    [
+      ":white_check_mark: *CIERRE*",
+      analysis?.closing || "Revisar las empresas que perdieron o están por perder el criterio NSM antes del próximo pulso.",
+      ...(url ? [`<${url}|Ver el reporte completo en Nexión>`] : []),
+    ].join("\n\n"),
+  ];
+  return sections.filter((section): section is string => Boolean(section)).join(SECTION_SEPARATOR);
+}

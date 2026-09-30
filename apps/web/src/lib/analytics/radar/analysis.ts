@@ -6,7 +6,11 @@ import type { OpenAction, RadarAction, RadarAnalysis, RadarHistoryEntry, RadarWe
  * The AI reading of a week. The model only interprets: every number shown in Slack comes from
  * the deterministic metrics, and its output is checked before it is used.
  */
-const MAX_WORDS_HEADLINE = 25;
+/** The prompt asks for 20 words; a little over is accepted rather than spending a retry on it. */
+const MAX_WORDS_HEADLINE = 30;
+const PROMPT_WORDS_HEADLINE = 20;
+/** camelCase, snake_case or dotted paths: context keys, not prose. */
+const TECHNICAL_KEY = /\b[a-z]+[A-Z]\w*|\b[a-z]+_[a-z]|\b[a-z_]+\.[a-z_]+[.[_][a-z0-9]/;
 const OWNERS = ["product", "design", "engineering", "data"] as const;
 const DIRECTIONS = ["increase", "decrease", "stable", "investigate"] as const;
 const CONFIDENCES = ["high", "medium", "low"] as const;
@@ -39,7 +43,7 @@ export type AnalysisContext = ReturnType<typeof buildAnalysisContext>;
 
 const SCHEMA = `{
   "status": "red | yellow | green",
-  "headline": "Titular natural de máximo ${MAX_WORDS_HEADLINE} palabras",
+  "headline": "Titular natural de máximo ${PROMPT_WORDS_HEADLINE} palabras",
   "summary": "Resumen ejecutivo de máximo 90 palabras",
   "closing": "Cierre de máximo 45 palabras: qué vigilar o decidir",
   "insights": [{"title": "", "fact": "hecho respaldado por una cifra del contexto", "interpretation": "lectura sin afirmar causalidad", "confidence": "high | medium | low", "evidence": ["ruta.en.el.contexto"]}],
@@ -63,9 +67,11 @@ export function buildAnalysisPrompt(context: AnalysisContext, config: RadarConfi
     "- signal_key identifica el problema (no la redacción): mismo problema, mismo signal_key.",
     "- Escribe en español natural, profesional y conciso, en frases completas.",
     "- Cifras en formato colombiano: coma decimal y máximo un decimal (43,9%; +6,9 pp).",
+    "- En ningún texto visible menciones claves ni rutas del contexto; esas solo van en evidence.",
     "- En watch_next.metric usa el nombre legible de la métrica en español (por ejemplo \"Sesiones con dead clicks\"), nunca claves ni rutas del contexto.",
     "",
     "CANTIDADES: 3 a 5 insights, 2 a 4 hypotheses, 3 a 5 actions, 3 a 5 watch_next.",
+    "BREVEDAD: cada fact, interpretation, evidence y next_step en máximo 40 palabras; el JSON completo debe caber sin cortarse.",
     "evidence debe usar rutas reales del contexto, por ejemplo funnel.current.completePct o friction_top_screens[0].frictionPct.",
     "",
     "Devuelve únicamente JSON válido con este esquema, sin Markdown ni texto adicional:",
@@ -108,7 +114,10 @@ function slug(value: string): string {
 
 export type ParsedAnalysis = { ok: true; analysis: RadarAnalysis } | { ok: false; error: string };
 
-export function parseAnalysis(raw: string, context: AnalysisContext): ParsedAnalysis {
+/** Any report context the model read: it must list the open actions it may continue. */
+export type ReadableContext = { open_actions: Array<{ action_key: string }> };
+
+export function parseAnalysis(raw: string, context: ReadableContext): ParsedAnalysis {
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
   if (start < 0 || end <= start) return { ok: false, error: "no devolvió un objeto JSON" };
@@ -154,7 +163,8 @@ export function parseAnalysis(raw: string, context: AnalysisContext): ParsedAnal
     ).filter((action) => action.title),
     watch_next: list("watch_next")
       .map((item) => ({ metric: text(item.metric, 160), reason: text(item.reason, 300), direction: pick(item.direction, DIRECTIONS, "investigate") }))
-      .filter((item) => item.metric),
+      // A watch item named with a context key is dropped instead of rejecting the whole reading.
+      .filter((item) => item.metric && !TECHNICAL_KEY.test(item.metric)),
   };
 
   const problem = validate(analysis);
@@ -179,6 +189,6 @@ function validate(analysis: RadarAnalysis): string | null {
   if (analysis.insights.some((insight) => insight.evidence.length === 0)) return "algún insight no cita rutas de evidencia válidas del contexto";
   const visible = [analysis.headline, analysis.summary, analysis.closing, ...analysis.actions.flatMap((a) => [a.title, a.evidence, a.nextStep])].join(" ");
   if (FORBIDDEN.some((pattern) => pattern.test(visible))) return "incluye URLs, emails o identificadores";
-  if (analysis.watch_next.some((item) => /[a-z][A-Z]|[._\[\]]/.test(item.metric))) return "watch_next.metric usa claves técnicas en vez de nombres legibles";
+  if (TECHNICAL_KEY.test(visible.replace(/\bUS\$[\d.,]+/g, ""))) return "los textos mencionan claves o rutas del contexto (por ejemplo companies.newly_contracted); escribe en lenguaje natural";
   return null;
 }
