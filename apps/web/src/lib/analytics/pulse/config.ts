@@ -25,11 +25,18 @@ export interface PulseConfig {
   /** Jira: words that tie a PTG ticket to this product, and words of other products that exclude it. */
   jiraTerms: string[];
   jiraExcludeTerms: string[];
+  /** Slack List with customer cases or feedback; productValue filters its "Producto" column. */
+  slackList?: { fileId: string; productValue?: string };
 }
+
+/** "Casos de implementación" (Talent products) and "Tickets & Feedback" (Hiring) Slack Lists. */
+const TALENT_CASES_LIST = "F0AG57R62SZ";
+const HIRING_FEEDBACK_LIST = "F0BAX64GB4N";
 
 export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   hiring: {
     productId: "hiring",
+    slackList: { fileId: HIRING_FEEDBACK_LIST },
     productName: "Hiring",
     table: "hiring_usability_history",
     usageCondition: "total_eventos_mes > 0",
@@ -48,6 +55,7 @@ export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   },
   objetivos: {
     productId: "objetivos",
+    slackList: { fileId: TALENT_CASES_LIST, productValue: "Objetivos" },
     productName: "Objetivos",
     table: "goals_usability_history",
     usageCondition: "usuarios_con_objetivos_unicos_mes > 0",
@@ -63,6 +71,7 @@ export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   },
   "matriz-talento": {
     productId: "matriz-talento",
+    slackList: { fileId: TALENT_CASES_LIST, productValue: "Matriz de talento" },
     productName: "Matriz de talento",
     table: "matrix_usability_history",
     usageCondition: "matrices_creadas_mes > 0",
@@ -75,6 +84,7 @@ export const PULSE_CONFIGS: Record<string, PulseConfig> = {
   },
   encuestas: {
     productId: "encuestas",
+    slackList: { fileId: TALENT_CASES_LIST, productValue: "Encuestas" },
     productName: "Encuestas",
     table: "survey_usability_history",
     usageCondition: "encuestas_creadas_mes > 0 OR usuarios_con_encuestas_unicas_mes > 0",

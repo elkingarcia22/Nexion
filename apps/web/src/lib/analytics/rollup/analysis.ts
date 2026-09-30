@@ -82,6 +82,9 @@ export function buildRollupContext(data: RollupData, productId: string, productN
             at_risk_of_losing_nsm: trim(business.companies.atRisk),
             newly_contracted: business.companies.newlyContracted,
           },
+          customer_cases: business.cases
+            ? { list_latest_date: business.cases.latestDate, created_in_period: business.cases.createdInPeriod, pending_total: business.cases.pending, pending_top: business.cases.pendingTop.map(({ client, title, type }) => ({ client, title, type })) }
+            : null,
           support_tickets: business.tickets
             ? { active: business.tickets.active.map(({ key, summary, status }) => ({ key, summary, status })), created_in_period: business.tickets.createdInPeriod, resolved_in_period: business.tickets.resolvedInPeriod.length }
             : null,

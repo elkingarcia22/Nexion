@@ -84,6 +84,20 @@ export function pulseDatasets(data: PulseData): Dataset[] {
       rows: data.tickets.active.map((t) => ({ key: t.key, summary: t.summary, status: t.status, updated: t.updated })),
     });
   }
+  if (data.cases?.pendingTop.length) {
+    datasets.push({
+      key: "customer_cases",
+      title: "Casos y feedback pendientes (lista de Slack)",
+      columns: [
+        { key: "client", label: "Cliente" },
+        { key: "title", label: "Caso" },
+        { key: "type", label: "Tipo" },
+        { key: "date", label: "Fecha" },
+      ],
+      rows: data.cases.pendingTop.map((c) => ({ client: c.client, title: c.title, type: c.type, date: c.date })),
+      reading: `${data.cases.pending} pendientes en total; la lista tiene casos hasta el ${data.cases.latestDate ?? "—"}.`,
+    });
+  }
   return datasets;
 }
 

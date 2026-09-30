@@ -2,6 +2,7 @@ import { num, pct, round2, variationPct, type Health } from "../radar/math";
 import type { Period } from "../periods";
 import type { PulseConfig } from "./config";
 import type { PulseTickets } from "./jira";
+import type { PulseCases } from "./slack-lists";
 import type { PulseWindow } from "./sql";
 
 type Row = Record<string, unknown>;
@@ -52,6 +53,8 @@ export interface PulseData {
   profitability: Profitability | null;
   companies: { lostNsm: CompanyChange[]; gainedNsm: CompanyChange[]; atRisk: CompanyChange[]; newlyContracted: number };
   tickets: PulseTickets | null;
+  /** Customer cases and feedback from the product's Slack List. */
+  cases: PulseCases | null;
   health: Health;
 }
 
@@ -125,7 +128,7 @@ export function buildPulseData(
   config: PulseConfig,
   period: Period,
   window: PulseWindow,
-  sources: { summary: Row[]; companies: Row[]; newArr: Row[]; profitability: Row[]; tickets: PulseTickets | null }
+  sources: { summary: Row[]; companies: Row[]; newArr: Row[]; profitability: Row[]; tickets: PulseTickets | null; cases?: PulseCases | null }
 ): PulseData | null {
   const currentRow = sources.summary.find((row) => row.mes === window.month);
   if (!currentRow) return null;
@@ -141,6 +144,7 @@ export function buildPulseData(
     profitability: toProfitability(sources.profitability),
     companies: toCompanyChanges(sources.companies),
     tickets: sources.tickets,
+    cases: sources.cases ?? null,
     health: pulseHealth(current, previous, sources.tickets),
   };
 }

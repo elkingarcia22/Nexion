@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { resolveAnthropicKey } from "@/lib/secrets";
+import { resolveAnthropicKey, resolveSlackToken } from "@/lib/secrets";
 import { lastCompletedPeriod, periodContaining } from "../periods";
 import { planActions } from "../radar/actions";
 import { parseAnalysis } from "../radar/analysis";
@@ -22,6 +22,7 @@ import { buildPulseContext, buildPulsePrompt, type PulseHistoryEntry } from "./a
 import { PULSE_CONFIGS } from "./config";
 import { fetchTalentTickets, resolveJiraConfig, ticketsForProduct, type TaggedTicket } from "./jira";
 import { buildPulseMessage } from "./message";
+import { fetchPulseCases, type PulseCases } from "./slack-lists";
 import { buildPulseData } from "./metrics";
 import { toPulseReportData } from "./report-data";
 import * as sql from "./sql";
@@ -88,7 +89,9 @@ export async function runBiweeklyPulse(db: SupabaseClient, productId: string, op
     hubspot_arr: mcp.runQuery(sql.newArrSql(config, window)),
     rentabilidad: mcp.runQuery(sql.profitabilitySql(config, window)),
     jira: jiraConfig ? fetchTalentTickets(jiraConfig) : Promise.reject<TaggedTicket[]>(new Error("Jira no está conectado en Configuración → Jira.")),
+    slack_casos: (config.slackList ? resolveSlackToken(db).then((token) => fetchPulseCases(config, token, window)) : Promise.resolve(null)) as Promise<PulseCases | null>,
   });
+  if (!config.slackList) delete coverage.slack_casos;
   coverage.mes_de_referencia = { ok: true, detail: window.month };
 
   const data = buildPulseData(config, period, window, {
@@ -97,6 +100,7 @@ export async function runBiweeklyPulse(db: SupabaseClient, productId: string, op
     newArr: values.hubspot_arr ?? [],
     profitability: values.rentabilidad ?? [],
     tickets: values.jira ? ticketsForProduct(values.jira, config, window) : null,
+    cases: values.slack_casos ?? null,
   });
 
   if (!data) {

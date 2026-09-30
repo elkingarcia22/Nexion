@@ -123,6 +123,24 @@ function support(data: PulseData): string | null {
   ].join("\n\n");
 }
 
+const STALE_LIST_DAYS = 30;
+
+/** Customer cases and feedback from the product's Slack List, with a warning when the list is not kept up to date. */
+export function casesSection(cases: PulseData["cases"], periodEnd: string): string | null {
+  if (!cases) return null;
+  const stale = cases.latestDate && (Date.parse(periodEnd) - Date.parse(cases.latestDate)) / 86_400_000 > STALE_LIST_DAYS;
+  return [
+    ":speech_balloon: *CASOS Y FEEDBACK DE CLIENTES (LISTA DE SLACK)*",
+    [
+      `${plural(cases.createdInPeriod, "caso nuevo", "casos nuevos")} en el periodo · ${plural(cases.pending, "pendiente", "pendientes")} en total`,
+      ...(stale ? [`:warning: La lista no se actualiza desde el ${cases.latestDate}: los pendientes pueden no reflejar el estado actual.`] : []),
+    ].join("\n"),
+    ...(cases.pendingTop.length
+      ? [["*Pendientes prioritarios*", ...cases.pendingTop.slice(0, 4).map((c) => `• *${c.client}* · ${c.title}${c.type ? ` (${c.type.toLowerCase()})` : ""}`)].join("\n")]
+      : []),
+  ].join("\n\n");
+}
+
 function actions(analysis: RadarAnalysis): string {
   return [
     ":dart: *ACCIONES*",
@@ -146,6 +164,7 @@ export function buildPulseMessage(data: PulseData, config: PulseConfig, analysis
     revenue(data),
     companies(data),
     support(data),
+    casesSection(data.cases, data.period.end),
     analysis?.actions.length ? actions(analysis) : null,
     analysis?.watch_next.length
       ? [":eyes: *MONITOREAR EN EL PRÓXIMO PULSO*", analysis.watch_next.map((w) => `• ${w.metric} · objetivo: ${DIRECTION_LABEL[w.direction]}`).join("\n")].join("\n\n")

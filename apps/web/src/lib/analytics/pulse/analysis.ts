@@ -38,6 +38,16 @@ export function buildPulseContext(data: PulseData, config: PulseConfig, history:
           created_previous_14_days: data.tickets.createdPrevious,
         }
       : null,
+    customer_cases: data.cases
+      ? {
+          list_latest_date: data.cases.latestDate,
+          created_in_pulse: data.cases.createdInPeriod,
+          resolved_in_pulse: data.cases.resolvedInPeriod,
+          pending_total: data.cases.pending,
+          pending_top: data.cases.pendingTop.map(({ client, title, detail, type, priority, date }) => ({ client, title, detail, type, priority, date })),
+          by_type: data.cases.byType,
+        }
+      : null,
     history: { pulses_available: history.length, previous_pulses: history },
     open_actions: openActions,
   };
@@ -68,6 +78,7 @@ export function buildPulsePrompt(context: PulseContext, config: PulseConfig, fee
     "- La rentabilidad es preliminar: gasto acumulado en 0 significa gasto no registrado, no gratis. No afirmes punto de equilibrio si no hay gasto registrado.",
     "- Las empresas listadas son clientes: puedes nombrarlas, pero sin datos de personas.",
     "- Los tickets son de Jira (proyecto PTG); nómbralos por su clave (PTG-1234) y sin URLs.",
+    "- customer_cases viene de una lista de Slack de casos y feedback de clientes. Si list_latest_date es muy anterior al pulso, di que la lista no está al día en vez de leerla como actividad reciente.",
     "- Diferencia hechos, interpretaciones e hipótesis; correlación no es causalidad. Sin alarmismo.",
     "- history.pulses_available dice cuántos pulsos previos hay; con menos de 3 no hables de tendencias.",
     "- Si una acción de open_actions sigue vigente, repítela con su action_key en continues_action_key en vez de duplicarla.",
