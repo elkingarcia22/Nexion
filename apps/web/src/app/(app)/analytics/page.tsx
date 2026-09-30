@@ -82,7 +82,7 @@ function AnalyticsView() {
   useEffect(() => {
     if (!product) return;
     listAnalyticsActions(product.id).then((result) => setActions(result.success ? result.data : []));
-  }, [product]);
+  }, [product, reloadKey]);
 
   // The selected report comes from the URL; a drilled-down child may be outside the loaded page, so fetch it.
   useEffect(() => {

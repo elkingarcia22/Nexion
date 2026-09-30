@@ -36,8 +36,8 @@ export interface RadarConfig {
   pathPrefix: string;
   features: FeatureFamily[];
   funnel: { label: string; steps: FunnelStep[]; confirmEvent?: string; confirmLabel?: string };
-  /** Readable names for known screens (friction, routes). Longest matching prefix wins. */
-  screenLabels: Array<{ prefix: string; label: string }>;
+  /** Readable names for known screens (friction, routes). Longest matching prefix wins; `exact` matches only that path. */
+  screenLabels: Array<{ prefix: string; label: string; exact?: boolean }>;
   /** Product-specific replay categories, checked after the generic error ones. */
   replayCategories: ReplayCategory[];
   /** Words the analysis uses for the core object ("vacante", "objetivo"…). */
@@ -59,7 +59,7 @@ export function screenLabel(config: RadarConfig, path: string): string {
   if (path.includes("/undefined")) return `Ruta inválida (${path})`;
   if (path === "/" || path === "") return "Inicio de la plataforma";
   const match = config.screenLabels
-    .filter((entry) => path.startsWith(entry.prefix))
+    .filter((entry) => (entry.exact ? path === entry.prefix : path.startsWith(entry.prefix)))
     .sort((a, b) => b.prefix.length - a.prefix.length)[0];
   return match ? match.label : path;
 }

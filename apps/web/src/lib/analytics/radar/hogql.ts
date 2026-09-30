@@ -45,8 +45,13 @@ function periodColumn(weekStart: string, column = "timestamp"): string {
 
 const RECURRENCE_COLUMNS = ["actual", "anterior", "previa", "recurrentes", "recurrentes_anterior", "reactivados", "nuevos", "no_regresaron", "multidia", "multidia_anterior"];
 
-/** Lowercased path with numeric ids collapsed (/job/dashboard/70 → /job/dashboard/:id), so screens group. */
-const SCREEN = "replaceRegexpAll(lower(coalesce(properties.$pathname, '')), '/[0-9]+', '/:id')";
+/**
+ * Lowercased path with UUID and numeric segments collapsed (/job/dashboard/70 → /job/dashboard/:id,
+ * /workflowdetail/<uuid> → /workflowdetail/:id), so every record of a screen counts as one screen.
+ */
+const SCREEN =
+  "replaceRegexpAll(replaceRegexpAll(lower(coalesce(properties.$pathname, '')), " +
+  "'/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', '/:id'), '/[0-9]+(/|$)', '/:id\\\\1')";
 
 const IS_404 = "position(toString(properties.$exception_values), 'status code 404') > 0";
 const FRICTION_EVENTS = "event IN ('$dead_click', '$rageclick', '$exception')";
