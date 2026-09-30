@@ -20,12 +20,12 @@ import * as queries from "./hogql";
 import { worstHealth, type Health } from "./math";
 import { buildRadarMessage } from "./message";
 import { buildCompanies, buildFeatures, buildFriction, buildFunnel, buildRecurrence, buildSummary } from "./metrics";
-import { HIRING_RADAR } from "./products/hiring";
+import { RADAR_CONFIGS } from "./products";
 import { selectReplays } from "./replays";
 import { toReportAnalysis, toReportData } from "./report-data";
 import type { OpenAction, RadarAnalysis, RadarHistoryEntry, RadarWeek } from "./types";
 
-export const RADAR_CONFIGS: Record<string, RadarConfig> = { hiring: HIRING_RADAR };
+export { RADAR_CONFIGS };
 
 export { publishReport };
 const HISTORY_WEEKS = 4;
@@ -39,6 +39,8 @@ export interface RadarRunOptions {
   now?: Date;
   /** Development only: compute everything but write nothing and post nothing. */
   dryRun?: boolean;
+  /** False for backfills of past periods: their proposed actions would be stale. */
+  recordActions?: boolean;
 }
 
 export interface RadarRunOutcome {
@@ -167,7 +169,7 @@ export async function runWeeklyRadar(db: SupabaseClient, productId: string, opti
   }
 
   let report = await saveReport(db, draft);
-  if (plan) await recordReportActions(db, productId, report, plan.created, plan.continuedKeys);
+  if (plan && options.recordActions !== false) await recordReportActions(db, productId, report, plan.created, plan.continuedKeys);
   if (!options.publish) return { report };
 
   const published = await publishReport(db, report, product.slack_channel_id);

@@ -119,3 +119,18 @@ export async function recordReportActions(
     if (error) throw new Error(`No se pudo actualizar el seguimiento de acciones: ${error.message}`);
   }
 }
+
+/** Reports of one level for the given period keys (the children a roll-up is built from), oldest first. */
+export async function listReportsByKeys(db: SupabaseClient, productId: string, type: ReportType, periodKeys: string[]): Promise<AnalyticsReport[]> {
+  if (!periodKeys.length) return [];
+  const { data, error } = await db
+    .from("analytics_reports")
+    .select("*")
+    .eq("product_id", productId)
+    .eq("report_type", type)
+    .in("period_key", periodKeys)
+    .neq("status", "failed")
+    .order("period_start", { ascending: true });
+  if (error) throw new Error(`No se pudieron leer los reportes de ${type}: ${error.message}`);
+  return (data ?? []) as AnalyticsReport[];
+}

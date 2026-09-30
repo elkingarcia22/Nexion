@@ -36,6 +36,8 @@ export interface PulseRunOptions {
   date?: string;
   now?: Date;
   dryRun?: boolean;
+  /** False for backfills of past periods: their proposed actions would be stale. */
+  recordActions?: boolean;
 }
 
 export interface PulseRunOutcome {
@@ -143,7 +145,7 @@ export async function runBiweeklyPulse(db: SupabaseClient, productId: string, op
   }
 
   let report = await saveReport(db, draft);
-  if (plan) await recordReportActions(db, productId, report, plan.created, plan.continuedKeys);
+  if (plan && options.recordActions !== false) await recordReportActions(db, productId, report, plan.created, plan.continuedKeys);
   if (!options.publish) return { report };
 
   const published = await publishReport(db, report, product.slack_channel_id);

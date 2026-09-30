@@ -43,6 +43,86 @@
     {
       "path": "/api/cron/analytics?product=evaluacion-360&type=pulso_quincenal",
       "schedule": "30 13 * * 1"
+    },
+    {
+      "path": "/api/cron/analytics?product=hiring&type=mensual",
+      "schedule": "0 14 1 * *"
+    },
+    {
+      "path": "/api/cron/analytics?product=hiring&type=trimestral",
+      "schedule": "20 14 1 1,4,7,10 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=hiring&type=semestral",
+      "schedule": "40 14 1 1,7 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=hiring&type=anual",
+      "schedule": "0 15 1 1 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=objetivos&type=mensual",
+      "schedule": "0 14 1 * *"
+    },
+    {
+      "path": "/api/cron/analytics?product=objetivos&type=trimestral",
+      "schedule": "20 14 1 1,4,7,10 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=objetivos&type=semestral",
+      "schedule": "40 14 1 1,7 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=objetivos&type=anual",
+      "schedule": "0 15 1 1 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=matriz-talento&type=mensual",
+      "schedule": "0 14 1 * *"
+    },
+    {
+      "path": "/api/cron/analytics?product=matriz-talento&type=trimestral",
+      "schedule": "20 14 1 1,4,7,10 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=matriz-talento&type=semestral",
+      "schedule": "40 14 1 1,7 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=matriz-talento&type=anual",
+      "schedule": "0 15 1 1 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=encuestas&type=mensual",
+      "schedule": "0 14 1 * *"
+    },
+    {
+      "path": "/api/cron/analytics?product=encuestas&type=trimestral",
+      "schedule": "20 14 1 1,4,7,10 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=encuestas&type=semestral",
+      "schedule": "40 14 1 1,7 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=encuestas&type=anual",
+      "schedule": "0 15 1 1 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=evaluacion-360&type=mensual",
+      "schedule": "0 14 1 * *"
+    },
+    {
+      "path": "/api/cron/analytics?product=evaluacion-360&type=trimestral",
+      "schedule": "20 14 1 1,4,7,10 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=evaluacion-360&type=semestral",
+      "schedule": "40 14 1 1,7 *"
+    },
+    {
+      "path": "/api/cron/analytics?product=evaluacion-360&type=anual",
+      "schedule": "0 15 1 1 *"
     }
   ]
 }

@@ -101,7 +101,8 @@ function AnalyticsView() {
     setBusy("generate");
     setError(null);
     setNotice(null);
-    const result = await generateAnalyticsReport(product.id, level);
+    // With a month picked in "Ir a una fecha", build the period of this level that contains it.
+    const result = await generateAnalyticsReport(product.id, level, monthParam ? `${monthParam}-15` : undefined);
     setBusy(null);
     if (!result.success) {
       setError(`No se pudo generar el reporte: ${result.error}`);
@@ -215,7 +216,7 @@ function AnalyticsView() {
                   <button
                     onClick={handleGenerate}
                     disabled={busy !== null}
-                    title="Genera el reporte de la última semana completa como vista previa, sin publicarlo"
+                    title={monthParam ? "Genera el periodo que contiene el mes elegido, como vista previa" : "Genera el último periodo completo como vista previa, sin publicarlo"}
                     className="px-3 py-2 rounded-xl border border-primary/40 text-[11px] font-black uppercase tracking-widest text-white hover:bg-primary/15 transition-colors disabled:opacity-50"
                   >
                     {busy === "generate" ? "Generando… (≈1 min)" : "Generar vista previa"}

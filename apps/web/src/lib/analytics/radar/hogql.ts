@@ -35,12 +35,35 @@ function baseFilter(config: RadarConfig): string {
   ].join("\n  AND ");
 }
 
-function twoWeekWindow(weekStart: string): string {
-  return `timestamp >= ${weekBoundary(weekStart, -1)} AND timestamp < ${weekBoundary(weekStart, 1)}`;
+/**
+ * Dates (YYYY-MM-DD, Bogotá) of a comparison: [start, end) is the reported period and
+ * [previousStart, start) the one it is compared with. Weeks, months and quarters all use it.
+ */
+export interface QueryRange {
+  previousStart: string;
+  start: string;
+  end: string;
 }
 
-function periodColumn(weekStart: string, column = "timestamp"): string {
-  return `if(${column} >= ${weekBoundary(weekStart, 0)}, 'actual', 'anterior') AS periodo`;
+export function weekRange(weekStart: string): QueryRange {
+  return { previousStart: shiftDate(weekStart, -7), start: weekStart, end: shiftDate(weekStart, 7) };
+}
+
+function asRange(range: string | QueryRange): QueryRange {
+  return typeof range === "string" ? weekRange(range) : range;
+}
+
+/** Midnight in Bogotá of a date, as a UTC instant. */
+function at(date: string): string {
+  return `toDateTime('${date} 05:00:00', 'UTC')`;
+}
+
+function comparisonWindow(r: QueryRange): string {
+  return `timestamp >= ${at(r.previousStart)} AND timestamp < ${at(r.end)}`;
+}
+
+function periodColumn(r: QueryRange, column = "timestamp"): string {
+  return `if(${column} >= ${at(r.start)}, 'actual', 'anterior') AS periodo`;
 }
 
 const RECURRENCE_COLUMNS = ["actual", "anterior", "previa", "recurrentes", "recurrentes_anterior", "reactivados", "nuevos", "no_regresaron", "multidia", "multidia_anterior"];
@@ -56,9 +79,10 @@ const SCREEN =
 const IS_404 = "position(toString(properties.$exception_values), 'status code 404') > 0";
 const FRICTION_EVENTS = "event IN ('$dead_click', '$rageclick', '$exception')";
 
-export function summaryQuery(config: RadarConfig, weekStart: string): string {
+export function summaryQuery(config: RadarConfig, range: string | QueryRange): string {
+  const r = asRange(range);
   const keys = quoteList(keyEvents(config));
-  return `SELECT ${periodColumn(weekStart)},
+  return `SELECT ${periodColumn(r)},
   uniqExact(properties.$session_id) AS sesiones,
   uniqExact(person_id) AS usuarios,
   uniqExact(person.properties.company_id) AS empresas,
@@ -75,27 +99,29 @@ export function summaryQuery(config: RadarConfig, weekStart: string): string {
   uniqExactIf(person_id, coalesce(toString(person.properties.company_id), '') = '') AS usuarios_sin_empresa,
   uniqExactIf(person_id, coalesce(person.properties.user_email, '') = '' AND position(coalesce(distinct_id, ''), '@') = 0) AS usuarios_sin_identidad
 FROM events
-WHERE ${twoWeekWindow(weekStart)}
+WHERE ${comparisonWindow(r)}
   AND ${baseFilter(config)}
 GROUP BY periodo`;
 }
 
-export function featureUsageQuery(config: RadarConfig, weekStart: string): string {
+export function featureUsageQuery(config: RadarConfig, range: string | QueryRange): string {
+  const r = asRange(range);
   const branches = config.features.map((family) => `event IN (${quoteList(family.events)}), '${family.key}'`).join(",\n    ");
-  return `SELECT ${periodColumn(weekStart)},
+  return `SELECT ${periodColumn(r)},
   multiIf(${branches}, 'other') AS funcionalidad,
   uniqExact(person_id) AS usuarios,
   uniqExact(person.properties.company_id) AS empresas,
   uniqExact(properties.$session_id) AS sesiones,
   count() AS eventos
 FROM events
-WHERE ${twoWeekWindow(weekStart)}
+WHERE ${comparisonWindow(r)}
   AND event IN (${quoteList(keyEvents(config))})
   AND ${baseFilter(config)}
 GROUP BY periodo, funcionalidad`;
 }
 
-export function funnelQuery(config: RadarConfig, weekStart: string): string {
+export function funnelQuery(config: RadarConfig, range: string | QueryRange): string {
+  const r = asRange(range);
   const { steps, confirmEvent } = config.funnel;
   const path = "lower(coalesce(properties.$pathname, ''))";
   const stepColumns = steps.map((step, index) => `minIf(timestamp, ${path} = '${step.path}') AS s${index}`).join(",\n    ");
@@ -115,12 +141,12 @@ export function funnelQuery(config: RadarConfig, weekStart: string): string {
     min(timestamp) AS session_start,
     ${stepColumns}${confirmColumn}
   FROM events
-  WHERE ${twoWeekWindow(weekStart)}
+  WHERE ${comparisonWindow(r)}
     AND (${path} IN (${quoteList(steps.map((step) => step.path))})${confirmEvent ? ` OR event = '${confirmEvent}'` : ""})
     AND ${baseFilter(config)}
   GROUP BY session_id
 )
-SELECT ${periodColumn(weekStart, "session_start")},
+SELECT ${periodColumn(r, "session_start")},
   ${stepCounts}${confirmCounts},
   uniqExactIf(person_id, toUnixTimestamp(s0) > 0) AS usuarios_inicio,
   uniqExactIf(company_id, company_id != '' AND toUnixTimestamp(s0) > 0) AS empresas_inicio,
@@ -167,9 +193,10 @@ SELECT ${RECURRENCE_COLUMNS.flatMap((column) => [`user_summary.usuarios_${column
 FROM user_summary CROSS JOIN company_summary`;
 }
 
-export function frictionQuery(config: RadarConfig, weekStart: string): string {
+export function frictionQuery(config: RadarConfig, range: string | QueryRange): string {
+  const r = asRange(range);
   const path = "lower(coalesce(properties.$pathname, ''))";
-  return `SELECT ${periodColumn(weekStart)},
+  return `SELECT ${periodColumn(r)},
   if(${SCREEN} = '', '(sin_ruta)', ${SCREEN}) AS pantalla,
   uniqExact(properties.$session_id) AS sesiones,
   uniqExactIf(properties.$session_id, ${FRICTION_EVENTS}) AS sesiones_friccion,
@@ -180,7 +207,7 @@ export function frictionQuery(config: RadarConfig, weekStart: string): string {
   uniqExactIf(person_id, ${FRICTION_EVENTS}) AS usuarios_afectados,
   uniqExactIf(person.properties.company_id, ${FRICTION_EVENTS} AND coalesce(toString(person.properties.company_id), '') != '') AS empresas_afectadas
 FROM events
-WHERE ${twoWeekWindow(weekStart)}
+WHERE ${comparisonWindow(r)}
   AND (position(${path}, '${config.pathPrefix}') = 1 OR position(${path}, '/undefined') > 0)
   AND ${baseFilter(config)}
 GROUP BY periodo, pantalla
@@ -189,7 +216,8 @@ LIMIT ${FRICTION_LIMIT}`;
 }
 
 /** Companies of the reported week ranked by how much friction their users hit. */
-export function companyRiskQuery(config: RadarConfig, weekStart: string): string {
+export function companyRiskQuery(config: RadarConfig, range: string | QueryRange): string {
+  const r = asRange(range);
   return `SELECT any(person.properties.company_name) AS empresa,
   uniqExact(person_id) AS usuarios,
   uniqExact(properties.$session_id) AS sesiones,
@@ -199,7 +227,7 @@ export function companyRiskQuery(config: RadarConfig, weekStart: string): string
   countIf(event = '$exception' AND ${IS_404}) AS errores_404,
   countIf(event = '$exception' AND NOT ${IS_404}) AS errores_no_404
 FROM events
-WHERE timestamp >= ${weekBoundary(weekStart, 0)} AND timestamp < ${weekBoundary(weekStart, 1)}
+WHERE timestamp >= ${at(r.start)} AND timestamp < ${at(r.end)}
   AND coalesce(toString(person.properties.company_id), '') != ''
   AND ${baseFilter(config)}
 GROUP BY person.properties.company_id

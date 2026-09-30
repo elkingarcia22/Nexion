@@ -42,7 +42,8 @@ export function listJoin(items: string[]): string {
 /** US$12.345 (no decimals above 100, two below). */
 export function fmtUsd(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return "N/D";
-  return `${value < 0 ? "-" : ""}US$${fmt(Math.abs(value), Math.abs(value) >= 100 ? 0 : 2)}`;
+  const decimals = Math.abs(value) >= 100 || Number.isInteger(value) ? 0 : 2;
+  return `${value < 0 ? "-" : ""}US$${fmt(Math.abs(value), decimals)}`;
 }
 
 /** Change of a count in units: "▲ +3", "▼ -2", "→ 0". */

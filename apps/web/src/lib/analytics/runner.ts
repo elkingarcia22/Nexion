@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ReportType } from "./periods";
 import { runBiweeklyPulse } from "./pulse/pipeline";
 import { runWeeklyRadar } from "./radar/pipeline";
+import { isRollupLevel } from "./rollup/periods";
+import { runRollup } from "./rollup/pipeline";
 import type { AnalyticsReport } from "./types";
 
 export interface RunOptions {
@@ -25,6 +27,7 @@ export async function runReport(db: SupabaseClient, productId: string, type: Rep
     case "pulso_quincenal":
       return runBiweeklyPulse(db, productId, { trigger: options.trigger, publish: options.publish, date: options.date });
     default:
+      if (isRollupLevel(type)) return runRollup(db, productId, type, { trigger: options.trigger, publish: options.publish, date: options.date });
       throw new Error(`El nivel "${type}" todavía no se genera desde Nexión.`);
   }
 }
