@@ -10,9 +10,10 @@ const objetivos = PULSE_CONFIGS.objetivos;
 const OKR_VALUES = [
   ["OKRs Tecnología 2026"],
   ["", "  Squad", "Objetivo", "¿Porqué el objetivo es esencial para la compañía?", "Key Result", "Tipo", "Peso", "Avance", "Resultado"],
-  ["Talent", "Talent Growth", "Aumentar el engagement del producto Objetivos", "Retención", "Lograr 70 empresas con criterio NSM", "Negocio", "50%", "60%", ""],
+  ["Talent", "Talent Growth", "Aumentar el engagement del producto Objetivos", "Retención", "Lograr 70 empresas con criterio NSM en el módulo de Objetivos\nDetalle largo del KR", "Negocio", "50%", "60%", ""],
   ["", "", "", "", "Reducir tickets de carga de exceles a 2 por mes", "Estabilidad", "30%", "0,2", ""],
-  ["", "", "", "", "Generar $X en nuevo ARR", "Negocio", "20%", "", ""],
+  ["", "", "", "", "Generar $X en nuevo ARR del producto Objetivos", "Negocio", "20%", "", ""],
+  ["", "", "", "", "Lograr el 100% de los objetivos del equipo Core", "Equipo", "10%", "0%", ""],
   ["", "Encuestas", "Mejorar encuestas", "", "Lanzar NOM035", "Producto", "100%", "90%", ""],
 ];
 
@@ -20,9 +21,9 @@ describe("parseOkrs", () => {
   it("forward-fills merged cells, keeps the product's KRs and weights progress over defined targets", () => {
     const okrs = parseOkrs(OKR_VALUES, "Q3", objetivos.okrTerms);
     expect(okrs.keyResults.map((kr) => kr.keyResult)).toEqual([
-      "Lograr 70 empresas con criterio NSM",
+      "Lograr 70 empresas con criterio NSM en el módulo de Objetivos\nDetalle largo del KR",
       "Reducir tickets de carga de exceles a 2 por mes",
-      "Generar $X en nuevo ARR",
+      "Generar $X en nuevo ARR del producto Objetivos",
     ]);
     expect(okrs.keyResults[1]).toMatchObject({ squad: "Talent Growth", weight: 30, progressPct: 20 });
     expect(okrs.withoutTarget).toBe(1);
@@ -30,7 +31,9 @@ describe("parseOkrs", () => {
     expect(okrs.weightedProgressPct).toBe(45);
     expect(okrs.mostAdvanced?.progressPct).toBe(60);
     expect(okrs.biggestGap?.progressPct).toBe(20);
-    expect(okrSection({ okrs, feedback: null })).toContain("Avance ponderado (Q3): *45,0%*");
+    const section = okrSection({ okrs, feedback: null });
+    expect(section).toContain("Avance ponderado (Q3): *45,0%*");
+    expect(section).toContain("Más avanzado: Lograr 70 empresas con criterio NSM en el módulo de Objetivos (60,0%)");
   });
 });
 

@@ -4,6 +4,7 @@ import { bar, deltaCount, deltaPct, fmt, fmtPct, fmtUsd, plural } from "../radar
 import type { RadarAnalysis } from "../radar/types";
 import type { PulseConfig } from "./config";
 import type { CompanyChange, PulseData } from "./metrics";
+import { krTitle } from "./sheets";
 
 /** Slack mrkdwn for the biweekly pulse; every number comes from PulseData. */
 const TOP_COMPANIES = 4;
@@ -144,21 +145,21 @@ export function casesSection(cases: PulseData["cases"], periodEnd: string): stri
 /** OKR progress of the quarter and implementation feedback (Google Sheets). */
 export function okrSection(data: Pick<PulseData, "okrs" | "feedback">): string | null {
   const { okrs, feedback } = data;
-  if (!okrs && !feedback) return null;
   const parts: string[] = [];
   if (okrs) {
     parts.push(
       okrs.keyResults.length
         ? [
             `Avance ponderado (${okrs.tab}): *${fmtPct(okrs.weightedProgressPct)}* ${bar(okrs.weightedProgressPct)}`,
-            ...(okrs.mostAdvanced ? [`:white_check_mark: Más avanzado: ${okrs.mostAdvanced.keyResult} (${fmtPct(okrs.mostAdvanced.progressPct)})`] : []),
-            ...(okrs.biggestGap && okrs.biggestGap !== okrs.mostAdvanced ? [`:chart_with_downwards_trend: Mayor brecha: ${okrs.biggestGap.keyResult} (${fmtPct(okrs.biggestGap.progressPct)})`] : []),
+            `${plural(okrs.keyResults.length, "KR", "KRs")} del producto en el trimestre`,
+            ...(okrs.mostAdvanced ? [`:white_check_mark: Más avanzado: ${krTitle(okrs.mostAdvanced.keyResult)} (${fmtPct(okrs.mostAdvanced.progressPct)})`] : []),
+            ...(okrs.biggestGap && okrs.biggestGap !== okrs.mostAdvanced ? [`:chart_with_downwards_trend: Mayor brecha: ${krTitle(okrs.biggestGap.keyResult)} (${fmtPct(okrs.biggestGap.progressPct)})`] : []),
             ...(okrs.withoutTarget ? [`:compass: ${plural(okrs.withoutTarget, "KR sin meta definida", "KRs sin meta definida")}`] : []),
           ].join("\n")
         : `No hay KRs de este producto en la pestaña ${okrs.tab}.`
     );
   }
-  if (feedback) {
+  if (feedback && (feedback.inPeriod || feedback.undatedOpen || feedback.top.length)) {
     parts.push(
       [
         `*Feedback de implementación:* ${plural(feedback.inPeriod, "necesidad nueva", "necesidades nuevas")} en el periodo (${fmt(feedback.openInPeriod)} abiertas) · ${plural(feedback.undatedOpen, "abierta sin fecha", "abiertas sin fecha")} en el backlog`,
@@ -166,7 +167,7 @@ export function okrSection(data: Pick<PulseData, "okrs" | "feedback">): string |
       ].join("\n")
     );
   }
-  return [":trophy: *OKRs Y FEEDBACK DE IMPLEMENTACIÓN*", ...parts].join("\n\n");
+  return parts.length ? [":trophy: *OKRs Y FEEDBACK DE IMPLEMENTACIÓN*", ...parts].join("\n\n") : null;
 }
 
 function actions(analysis: RadarAnalysis): string {

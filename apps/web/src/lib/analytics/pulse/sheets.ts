@@ -86,13 +86,20 @@ export function pickQuarterTab(tabs: string[], periodEnd: string): string | null
 }
 
 /**
- * A KR is the product's when the KR itself mentions it, or its squad is the product's, or its
- * objective mentions it and the KR is not about another product (merged cells carry objectives down).
+ * A KR is the product's when the KR itself mentions it (and not another product), or its squad is
+ * the product's. Objectives are not used: merged cells carry them down onto unrelated KRs.
  */
-function isProductKr(kr: { squad: string; objective: string; keyResult: string }, terms: string[], otherTerms: string[], squad?: string): boolean {
-  if (mentions(kr.keyResult, terms)) return true;
+function isProductKr(kr: { squad: string; keyResult: string }, terms: string[], otherTerms: string[], squad?: string): boolean {
   if (squad && norm(kr.squad) === norm(squad)) return true;
-  return mentions(kr.objective, terms) && !mentions(kr.keyResult, otherTerms);
+  return mentions(kr.keyResult, terms) && !(mentions(kr.keyResult, otherTerms) && !mentions(kr.keyResult.split("\n")[0], terms));
+}
+
+const MAX_KR_CHARS = 140;
+
+/** First line of a KR (many carry a long description below the title). */
+export function krTitle(keyResult: string): string {
+  const first = keyResult.split("\n").map((line) => line.trim()).find(Boolean) ?? "";
+  return first.length > MAX_KR_CHARS ? `${first.slice(0, MAX_KR_CHARS - 1)}…` : first;
 }
 
 export function parseOkrs(values: string[][], tab: string, terms: string[], otherTerms: string[] = [], productSquad?: string): PulseOkrs {
@@ -107,7 +114,7 @@ export function parseOkrs(values: string[][], tab: string, terms: string[], othe
     objective = record["objetivo"] || objective;
     const keyResult = record["key result"];
     if (!keyResult || seen.has(keyResult)) continue;
-    if (!isProductKr({ squad, objective, keyResult }, terms, otherTerms, productSquad)) continue;
+    if (!isProductKr({ squad, keyResult }, terms, otherTerms, productSquad)) continue;
     seen.add(keyResult);
     const weight = parsePercent(record["peso"] ?? "");
     keyResults.push({
@@ -123,7 +130,8 @@ export function parseOkrs(values: string[][], tab: string, terms: string[], othe
 
   const weighted = keyResults.filter((kr) => kr.hasTarget && (kr.weight ?? 0) > 0 && kr.progressPct !== null);
   const totalWeight = weighted.reduce((sum, kr) => sum + (kr.weight ?? 0), 0);
-  const measured = keyResults.filter((kr) => kr.hasTarget && kr.progressPct !== null);
+  // Weightless KRs (peso 0) are placeholders, not gaps.
+  const measured = keyResults.filter((kr) => kr.hasTarget && kr.progressPct !== null && (kr.weight ?? 0) > 0);
   const byProgress = [...measured].sort((a, b) => (b.progressPct ?? 0) - (a.progressPct ?? 0));
   return {
     tab,

@@ -1,6 +1,7 @@
 import type { Dataset, Kpi, ReportData, ReportLink } from "../types";
 import type { PulseConfig } from "./config";
 import type { PulseData } from "./metrics";
+import { krTitle } from "./sheets";
 
 /**
  * Stored shape of a pulse (analytics_reports.data). KPI keys are stable: the monthly report and
@@ -94,7 +95,7 @@ export function pulseDatasets(data: PulseData): Dataset[] {
         { key: "weight", label: "Peso", unit: "pct" },
         { key: "progress", label: "Avance", unit: "pct" },
       ],
-      rows: data.okrs.keyResults.map((kr) => ({ objective: kr.objective, kr: kr.hasTarget ? kr.keyResult : `${kr.keyResult} (sin meta definida)`, weight: kr.weight, progress: kr.progressPct })),
+      rows: data.okrs.keyResults.map((kr) => ({ objective: krTitle(kr.objective), kr: kr.hasTarget ? krTitle(kr.keyResult) : `${krTitle(kr.keyResult)} (sin meta definida)`, weight: kr.weight, progress: kr.progressPct })),
       reading: data.okrs.weightedProgressPct !== null ? `Avance ponderado: ${data.okrs.weightedProgressPct}%.` : undefined,
     });
   }

@@ -1,6 +1,7 @@
 import type { OpenAction } from "../radar/types";
 import type { PulseConfig } from "./config";
 import type { PulseData } from "./metrics";
+import { krTitle } from "./sheets";
 
 /** The history the model compares the pulse against: earlier pulses of the same product. */
 export interface PulseHistoryEntry {
@@ -52,7 +53,7 @@ export function buildPulseContext(data: PulseData, config: PulseConfig, history:
       ? {
           quarter_tab: data.okrs.tab,
           weighted_progress_pct: data.okrs.weightedProgressPct,
-          key_results: data.okrs.keyResults.slice(0, 10).map(({ objective, keyResult, progressPct, weight, hasTarget }) => ({ objective, keyResult, progressPct, weight, hasTarget })),
+          key_results: data.okrs.keyResults.slice(0, 10).map(({ objective, keyResult, progressPct, weight, hasTarget }) => ({ objective: krTitle(objective), keyResult: krTitle(keyResult), progressPct, weight, hasTarget })),
           without_defined_target: data.okrs.withoutTarget,
         }
       : null,
